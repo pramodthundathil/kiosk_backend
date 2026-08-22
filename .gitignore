@@ -1,0 +1,39 @@
+# Django
+*.pyc
+*~
+__pycache__/
+db.sqlite3
+db.sqlite3-journal
+mydata.json
+
+# Media Uploads & Assets
+media/
+/media/
+static/media/
+
+# Environment configurations
+.env
+.env.*
+env/
+venv/
+ENV/
+.venv/
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Project custom agents & logs
+.agents/
+.gemini/
+*.log
