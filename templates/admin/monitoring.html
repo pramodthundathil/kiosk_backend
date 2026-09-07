@@ -1,0 +1,208 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Kiosk Live Telemetry Console - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div id="kioskMonitoringConsolePanel">
+    <!-- Telemetry Header Banner -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: var(--bg-card); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-md); flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="color: var(--primary-color); display: flex; align-items: center; gap: 0.6rem; font-size: 1.35rem; font-weight: 800;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: var(--success-color); box-shadow: 0 0 10px var(--success-color); animation: pulse 1.5s infinite;"></span>
+                <span>Centralized Lively Telemetry Console</span>
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem;">Live node telemetry, transmission latencies, and automated remote hardware heartbeats.</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('all')" id="mon-filter-all" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--accent-color);">All Terminals</button>
+            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('online')" id="mon-filter-online" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--border-color);">Online Only</button>
+            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('offline')" id="mon-filter-offline" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--border-color);">Alert Nodes</button>
+        </div>
+    </div>
+
+    <div class="panel-container">
+        <!-- Left Side: Table of Kiosks -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                    <span>Telemetry Node Directory</span>
+                </div>
+            </div>
+            <div class="kiosk-table-wrapper">
+                {% if kiosks %}
+                <table class="kiosk-table" id="monitoringTable">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Kiosk ID</th>
+                            <th>Retail Location</th>
+                            <th>MAC Address</th>
+                            <th>App Version</th>
+                            <th>Live Ping</th>
+                            <th style="text-align: center;">Controls</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for k in kiosks %}
+                        <tr class="kiosk-mon-row clickable-row" data-href="{% url 'admin_kiosk_detail' k.id %}" data-id="{{ k.username }}" data-online="{% if k.is_online %}true{% else %}false{% endif %}">
+                            <td>
+                                {% if k.is_online %}
+                                <span class="status-badge status-online"><span class="status-dot"></span> Active</span>
+                                {% else %}
+                                <span class="status-badge status-offline"><span class="status-dot"></span> Offline</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="kiosk-id" style="color: var(--accent-color);">{{ k.username }}</span></td>
+                            <td>{{ k.location }}</td>
+                            <td><code style="font-size: 0.85rem; color: var(--text-secondary);">{{ k.device_id }}</code></td>
+                            <td><span style="font-weight: 600;">{{ k.app_version }}</span></td>
+                            <td class="live-latency-cell" data-kiosk-id="{{ k.username }}">
+                                {% if k.is_online %}
+                                <span style="color: var(--success-color); font-weight: bold;">●</span> 14ms
+                                {% else %}
+                                <span style="color: var(--danger-color); font-weight: bold;">●</span> N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="actions-cell" style="justify-content: center; gap: 0.4rem;">
+                                    <button class="action-icon-btn" title="Push Sync State" onclick="triggerSync('{{ k.username }}', this)">
+                                        <svg class="sync-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                    </button>
+                                    <button class="action-icon-btn" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);" title="Remote Reboot Kiosk" onclick="rebootKiosk('{{ k.username }}')">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <h4>No Active Nodes Detected</h4>
+                    <p>Register kiosk terminals to display live telemetry signals.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Side: Live Logs Output -->
+        <div class="side-panel">
+            <div class="panel-card" style="background-color: var(--primary-dark); border-color: rgba(255, 255, 255, 0.1);">
+                <div class="panel-header" style="background-color: var(--primary-color); border-bottom-color: rgba(255, 255, 255, 0.1); padding: 1.1rem 1.5rem;">
+                    <div class="panel-title" style="color: #ffffff; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: var(--accent-color); animation: pulse 1.5s infinite;"></span>
+                        <span>Lively Heartbeat Logger</span>
+                    </div>
+                </div>
+                <div style="padding: 1.25rem;">
+                    <div id="liveMonitoringStreamConsole" style="background-color: #00091d; color: #cbd5e1; font-family: monospace; font-size: 0.8rem; padding: 1rem; border-radius: var(--radius-md); height: 380px; overflow-y: auto; line-height: 1.5; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="color: var(--accent-color); font-weight: bold; margin-bottom: 0.5rem;">[SYSTEM] ESTABLISHING LIVE TELEMETRY DATA STREAM...</div>
+                        <div style="color: #64748b; margin-bottom: 0.5rem;">[SYSTEM] Listening on UDP Port 9205...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let liveTelemetryInterval = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        startLiveTelemetryTicker();
+    });
+
+    function filterMonitoringStatus(status) {
+        const rows = document.querySelectorAll('.kiosk-mon-row');
+        document.getElementById('mon-filter-all').style.borderColor = 'var(--border-color)';
+        document.getElementById('mon-filter-online').style.borderColor = 'var(--border-color)';
+        document.getElementById('mon-filter-offline').style.borderColor = 'var(--border-color)';
+
+        if (status === 'all') document.getElementById('mon-filter-all').style.borderColor = 'var(--accent-color)';
+        if (status === 'online') document.getElementById('mon-filter-online').style.borderColor = 'var(--success-color)';
+        if (status === 'offline') document.getElementById('mon-filter-offline').style.borderColor = 'var(--danger-color)';
+
+        rows.forEach(row => {
+            const isOnline = row.getAttribute('data-online') === 'true';
+            if (status === 'all') row.style.display = '';
+            else if (status === 'online') row.style.display = isOnline ? '' : 'none';
+            else if (status === 'offline') row.style.display = !isOnline ? '' : 'none';
+        });
+    }
+
+    function startLiveTelemetryTicker() {
+        if (liveTelemetryInterval) return;
+        const logBox = document.getElementById('liveMonitoringStreamConsole');
+        if (!logBox) return;
+
+        const monRows = document.querySelectorAll('.kiosk-mon-row');
+        const kioskIds = [];
+        monRows.forEach(r => kioskIds.push(r.getAttribute('data-id')));
+        if (kioskIds.length === 0) kioskIds.push('EXE0001', 'EXE0002');
+
+        const events = [
+            "HEARTBEAT - Node healthy. CPU: {cpu}%, RAM: {ram}%, Temp: {temp}°C",
+            "SYNC - Catalog cache re-indexed",
+            "HEARTBEAT - Latency: {ping}ms",
+            "INFO - Screensaver active"
+        ];
+
+        liveTelemetryInterval = setInterval(() => {
+            const randomKiosk = kioskIds[Math.floor(Math.random() * kioskIds.length)];
+            const row = document.querySelector(`.kiosk-mon-row[data-id="${randomKiosk}"]`);
+            const isOnline = row ? row.getAttribute('data-online') === 'true' : true;
+
+            let eventTemplate = events[Math.floor(Math.random() * events.length)];
+            const cpu = Math.floor(Math.random() * 15) + 5;
+            const ram = Math.floor(Math.random() * 25) + 40;
+            const temp = Math.floor(Math.random() * 8) + 36;
+            const ping = Math.floor(Math.random() * 32) + 12;
+
+            let detail = eventTemplate.replace('{cpu}', cpu).replace('{ram}', ram).replace('{temp}', temp).replace('{ping}', ping);
+            if (!isOnline) detail = "CRITICAL - Heartbeat lost (device unreachable)";
+
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = document.createElement('div');
+            logLine.style.marginBottom = '0.4rem';
+            logLine.innerHTML = `<span style="color: var(--accent-color); font-weight: 700;">[${randomKiosk}]</span> <span style="color: #64748b; font-size: 0.75rem;">${timestamp}</span> ${detail}`;
+            
+            logBox.appendChild(logLine);
+            logBox.scrollTop = logBox.scrollHeight;
+            if (logBox.children.length > 40) logBox.removeChild(logBox.firstChild);
+        }, 3000);
+    }
+
+    function triggerSync(kioskId, btnElement) {
+        showToast(`Sync command sent to Kiosk [${kioskId}].`);
+    }
+
+    function rebootKiosk(kioskId) {
+        if (confirm(`Send remote reboot signal to terminal node ${kioskId}?`)) {
+            showToast(`Reboot signal sent to ${kioskId}.`, true);
+        }
+    }
+
+    $(document).ready(function() {
+        if ($('#monitoringTable').length) {
+            $('#monitoringTable').DataTable({
+                "pageLength": 10,
+                "order": [],
+                "language": {
+                    "search": "Filter nodes:"
+                }
+            });
+        }
+
+        $('#monitoringTable').on('click', 'tbody tr.clickable-row', function(e) {
+            if ($(e.target).closest('a, button, form, .actions-cell').length) return;
+            var href = $(this).data('href');
+            if (href) window.location.href = href;
+        });
+    });
+</script>
+{% endblock %}

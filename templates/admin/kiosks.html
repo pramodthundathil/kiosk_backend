@@ -1,0 +1,401 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Kiosks Management - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="margin-bottom: 2rem;">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            <span>Physical Kiosk Terminals Directory</span>
+        </div>
+        <div class="panel-actions" style="gap: 0.75rem;">
+            <div class="toolbar-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="kioskSearchInput" onkeyup="filterKiosks()" placeholder="Search ID, Location, MAC or Profile...">
+            </div>
+            <a href="{% url 'admin_kiosk_add' %}" class="btn btn-accent" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Register Kiosk</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="kiosk-table-wrapper">
+        {% if kiosks %}
+        <table class="kiosk-table" id="kioskTable">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Device Name & ID</th>
+                    <th>Assigned Store</th>
+                    <th>Profile</th>
+                    <th>Coordinates (Lat, Long)</th>
+                    <th>App / Sync Ver</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for k in kiosks %}
+                <tr class="kiosk-row clickable-row" data-href="{% url 'admin_kiosk_detail' k.id %}" data-search="{{ k.name }} {{ k.store_name }} {{ k.device_id }} {{ k.profile_name }}">
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            {% if k.is_online %}
+                            <span class="status-badge status-online">
+                                <span class="status-dot"></span> <span>Online</span>
+                            </span>
+                            {% else %}
+                            <span class="status-badge status-offline">
+                                <span class="status-dot"></span> <span>Offline</span>
+                            </span>
+                            {% endif %}
+                            
+                            {% if k.is_deployed %}
+                            <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem; padding: 2px 6px;">
+                                &#10003; Deployed
+                            </span>
+                            {% else %}
+                            <span class="role-badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.72rem; padding: 2px 6px;">
+                                Staging / Un-deployed
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <strong style="color: var(--primary-color); display: block;">{{ k.name }}</strong>
+                        <code style="font-size: 0.8rem; color: var(--text-secondary);">{{ k.device_id }}</code>
+                        {% if k.device_info and k.device_info != 'Android Kiosk Display' %}
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">{{ k.device_info }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if k.store_id %}
+                            <span style="font-weight: 500; color: var(--text-primary);">{{ k.store_name }}</span>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-style: italic; font-size: 0.85rem;">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="role-badge" style="background: var(--bg-body); color: var(--text-primary); border: 1px solid var(--border-color);">
+                            {{ k.profile_name }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if k.latitude or k.longitude %}
+                        <div style="font-size: 0.82rem; font-family: monospace; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            <span>{{ k.latitude|default:"-" }}, {{ k.longitude|default:"-" }}</span>
+                        </div>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.82rem;">Not Set</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-size: 0.85rem;">
+                            <span style="font-weight: 500;">{{ k.app_version }}</span>
+                            <span style="font-size: 0.78rem; color: var(--text-secondary); display: block;">Target: <strong style="color: var(--accent-color);">v{{ k.desired_content_version }}</strong></span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="actions-cell" style="justify-content: center; gap: 0.4rem;">
+                            <!-- Update/Edit Button -->
+                            <a href="{% url 'admin_kiosk_edit' k.id %}" class="action-icon-btn" title="Edit Kiosk Settings" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </a>
+                            <!-- Force Sync Button -->
+                            <form action="{% url 'admin_kiosks' %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="force_sync">
+                                <input type="hidden" name="kiosk_id" value="{{ k.id }}">
+                                <button type="submit" class="action-icon-btn" title="Force Sync Content Version">
+                                    <svg class="sync-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                </button>
+                            </form>
+                            <!-- View Diagnostics Button -->
+                            <button class="action-icon-btn" title="Inspect Terminal Logs" onclick="viewLogs('{{ k.name }}', '{{ k.store_name }}', '{{ k.device_id }}', '{{ k.app_version }}', '{{ k.is_online }}', '{{ k.device_info }}')">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            </button>
+                            <!-- Delete Button -->
+                            <form action="{% url 'admin_kiosks' %}" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to remove kiosk {{ k.name }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_kiosk">
+                                <input type="hidden" name="kiosk_id" value="{{ k.id }}">
+                                <button type="submit" class="action-icon-btn" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);" title="Delete Kiosk">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h4>No Kiosk Terminals Registered</h4>
+            <p>Register your first Android Kiosk tablet device to sync catalog content and monitor live telemetry.</p>
+            <a href="{% url 'admin_kiosk_add' %}" class="btn btn-accent" style="text-decoration: none;">
+                <span>Register Kiosk Device</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- REGISTER KIOSK MODAL -->
+<div class="modal-overlay" id="registerModal">
+    <div class="modal-card" style="max-width: 620px;">
+        <div class="modal-header">
+            <h3>Register New Kiosk Terminal</h3>
+            <button class="modal-close-btn" onclick="closeModal('registerModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_kiosks' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="register_kiosk">
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                
+                <!-- Section 1: Device Identification & Credentials -->
+                <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">
+                        1. Device Identification & Credentials
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.75rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">UNIQUE DEVICE ID / MAC *</label>
+                            <input type="text" name="device_id" placeholder="e.g. MAC-94:EA:44:A2:33" required>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">KIOSK DISPLAY NAME</label>
+                            <input type="text" name="name" placeholder="e.g. Entrance Display 1">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">CUSTOM DEVICE SECRET / CREDENTIAL (OPTIONAL)</label>
+                        <input type="password" name="custom_secret" placeholder="Leave blank to auto-generate secure 32-char hex secret">
+                        <small style="color: var(--text-secondary); font-size: 0.78rem; display: block; margin-top: 0.25rem;">The credential hash will be stored securely for DRF JWT authentication.</small>
+                    </div>
+                </div>
+
+                <!-- Section 2: Store & Kiosk Profile -->
+                <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">
+                        2. Store & Kiosk Profile Assignment
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">STORE LOCATION (OPTIONAL)</label>
+                            <select name="store_id">
+                                <option value="">-- Unassigned (Optional) --</option>
+                                {% for s in stores %}
+                                <option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="location" placeholder="Or enter new store location..." style="margin-top: 0.5rem;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">KIOSK PROFILE</label>
+                            <select name="profile_id">
+                                <option value="">-- Standard Profile --</option>
+                                {% for p in profiles %}
+                                <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: GPS Coordinates & Deployment -->
+                <div>
+                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">
+                        3. GPS Coordinates & Deployment Status
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.85rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">LATITUDE (OPTIONAL)</label>
+                            <input type="number" step="any" name="latitude" placeholder="e.g. 12.971598">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">LONGITUDE (OPTIONAL)</label>
+                            <input type="number" step="any" name="longitude" placeholder="e.g. 77.594566">
+                        </div>
+                    </div>
+
+                    <div style="background: var(--bg-body); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem;">
+                        <input type="checkbox" name="is_deployed" id="regIsDeployed" style="width: 18px; height: 18px; cursor: pointer;">
+                        <div>
+                            <label for="regIsDeployed" style="font-weight: 600; font-size: 0.85rem; cursor: pointer; display: block;">Mark as Physically Deployed</label>
+                            <span style="font-size: 0.78rem; color: var(--text-secondary);">Enable if kiosk device is physically installed and ready at target location.</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('registerModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Confirm Registration</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- UPDATE KIOSK MODAL -->
+<div class="modal-overlay" id="updateModal">
+    <div class="modal-card" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Edit Kiosk Settings</h3>
+            <button class="modal-close-btn" onclick="closeModal('updateModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_kiosks' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_kiosk">
+            <input type="hidden" name="kiosk_id" id="editKioskId">
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">KIOSK DISPLAY NAME</label>
+                        <input type="text" name="name" id="editKioskName" required>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">TARGET CONTENT VERSION</label>
+                        <input type="text" name="desired_content_version" id="editKioskVersion">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">STORE (OPTIONAL)</label>
+                        <select name="store_id" id="editKioskStore">
+                            <option value="">-- Unassigned (Optional) --</option>
+                            {% for s in stores %}
+                            <option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">KIOSK PROFILE</label>
+                        <select name="profile_id" id="editKioskProfile">
+                            <option value="">-- Standard Profile --</option>
+                            {% for p in profiles %}
+                            <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">LATITUDE (OPTIONAL)</label>
+                        <input type="number" step="any" name="latitude" id="editKioskLatitude" placeholder="e.g. 12.971598">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">LONGITUDE (OPTIONAL)</label>
+                        <input type="number" step="any" name="longitude" id="editKioskLongitude" placeholder="e.g. 77.594566">
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-body); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem;">
+                    <input type="checkbox" name="is_deployed" id="editKioskIsDeployed" style="width: 18px; height: 18px; cursor: pointer;">
+                    <div>
+                        <label for="editKioskIsDeployed" style="font-weight: 600; font-size: 0.85rem; cursor: pointer; display: block;">Mark as Physically Deployed</label>
+                        <span style="font-size: 0.78rem; color: var(--text-secondary);">Toggle deployment status for physical kiosk unit.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('updateModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- DIAGNOSTICS LOGS MODAL -->
+<div class="modal-overlay" id="logsModal">
+    <div class="modal-card" style="max-width: 550px;">
+        <div class="modal-header">
+            <h3 id="logsTitle">Kiosk Diagnostics</h3>
+            <button class="modal-close-btn" onclick="closeModal('logsModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="background: var(--bg-body); padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; border: 1px solid var(--border-color); font-size: 0.85rem;">
+                <div>Location: <strong id="logsLocation">-</strong></div>
+                <div>Device ID: <strong id="logsDeviceID">-</strong></div>
+                <div>Hardware: <strong id="logsHardware">-</strong></div>
+            </div>
+            <div id="logsConsole" style="background-color: var(--primary-dark); color: #cbd5e1; font-family: monospace; font-size: 0.8rem; padding: 1rem; border-radius: var(--radius-md); max-height: 200px; overflow-y: auto;">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('logsModal')">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        if ($('#kioskTable').length) {
+            var table = $('#kioskTable').DataTable({
+                "pageLength": 10,
+                "order": [],
+                "dom": '<"top"l>rt<"bottom"ip><"clear">',
+                "language": {
+                    "search": "Filter kiosks:"
+                }
+            });
+
+            $('#kioskSearchInput').on('keyup', function() {
+                table.search(this.value).draw();
+            });
+        }
+
+        // Redirect to single kiosk view when row is clicked
+        $('#kioskTable').on('click', 'tbody tr.clickable-row', function(e) {
+            if ($(e.target).closest('a, button, form, input, select, .action-icon-btn, .actions-cell').length) {
+                return;
+            }
+            var href = $(this).data('href');
+            if (href) {
+                window.location.href = href;
+            }
+        });
+    });
+
+    function openRegisterModal() {
+        document.getElementById('registerModal').classList.add('active');
+    }
+    function openUpdateModal(id, name, storeId, profileId, version, lat, lng, isDeployed) {
+        document.getElementById('editKioskId').value = id;
+        document.getElementById('editKioskName').value = name;
+        document.getElementById('editKioskStore').value = storeId;
+        document.getElementById('editKioskProfile').value = profileId;
+        document.getElementById('editKioskVersion').value = version;
+        document.getElementById('editKioskLatitude').value = lat || '';
+        document.getElementById('editKioskLongitude').value = lng || '';
+        document.getElementById('editKioskIsDeployed').checked = (isDeployed === true || isDeployed === 'true');
+        document.getElementById('updateModal').classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+    function viewLogs(name, location, deviceId, version, isOnline, hardware) {
+        document.getElementById('logsTitle').textContent = `Diagnostics: ${name}`;
+        document.getElementById('logsLocation').textContent = location;
+        document.getElementById('logsDeviceID').textContent = deviceId;
+        document.getElementById('logsHardware').textContent = hardware;
+        
+        const consoleBox = document.getElementById('logsConsole');
+        consoleBox.innerHTML = `
+            <div>[INFO] Device Handshake status: OK</div>
+            <div>[INFO] Current App Version: ${version}</div>
+            <div>[INFO] Display hardware model: ${hardware}</div>
+            <div style="color: var(--success-color);">[SUCCESS] Heartbeat verified.</div>
+        `;
+        document.getElementById('logsModal').classList.add('active');
+    }
+</script>
+{% endblock %}

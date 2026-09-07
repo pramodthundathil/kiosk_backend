@@ -111,27 +111,44 @@ body {
 }
 
 /* Form Styles */
+.form-control,
 input[type="text"],
 input[type="password"],
 input[type="email"],
+input[type="number"],
+textarea,
 select {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background-color: #ffffff;
-    color: var(--text-primary);
-    font-size: 0.95rem;
-    transition: all var(--transition-fast);
-    outline: none;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    background-color: #ffffff !important;
+    color: var(--text-primary) !important;
+    font-size: 0.95rem !important;
+    font-family: var(--font-sans) !important;
+    transition: all var(--transition-fast) !important;
+    outline: none !important;
+    box-shadow: none;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
 }
 
+.form-control:focus,
 input[type="text"]:focus,
 input[type="password"]:focus,
 input[type="email"]:focus,
+input[type="number"]:focus,
+textarea:focus,
 select:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 3px rgba(226, 138, 0, 0.2) !important;
+}
+
+/* Hide Spin Buttons on Number Inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 /* Signin Page Specific Layout */
@@ -514,6 +531,96 @@ select:focus {
     box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
+/* Responsive Nav More Dropdown System */
+.nav-more-wrapper {
+    position: relative;
+    display: none; /* hidden by default, enabled on 769px to 1280px */
+}
+
+.nav-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.5rem 0.95rem;
+    border-radius: var(--radius-full);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    outline: none;
+}
+
+.nav-more-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-more-btn.active {
+    color: #ffffff;
+    background-color: rgba(226, 138, 0, 0.25);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(226, 138, 0, 0.25);
+}
+
+.nav-more-btn .more-caret {
+    transition: transform var(--transition-fast);
+}
+
+.nav-more-btn.open .more-caret {
+    transform: rotate(180deg);
+}
+
+.nav-more-dropdown {
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    right: 0;
+    min-width: 210px;
+    background: rgba(0, 33, 101, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    padding: 0.5rem;
+    display: none;
+    flex-direction: column;
+    gap: 0.25rem;
+    z-index: 100;
+    animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.nav-more-dropdown.show {
+    display: flex !important;
+}
+
+.nav-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.85rem;
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.nav-dropdown-item:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.nav-dropdown-item.active {
+    color: #ffffff;
+    background-color: var(--accent-color);
+    font-weight: 600;
+}
+
 .nav-user {
     display: flex;
     align-items: center;
@@ -712,6 +819,7 @@ select:focus {
 /* Kiosk Table */
 .kiosk-table-wrapper {
     overflow-x: auto;
+    padding: 1.25rem 1.5rem;
 }
 
 .kiosk-table {
@@ -722,7 +830,7 @@ select:focus {
 
 .kiosk-table th {
     background-color: var(--bg-body);
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.25rem;
     font-weight: 600;
     color: var(--text-secondary);
     font-size: 0.85rem;
@@ -732,7 +840,7 @@ select:focus {
 }
 
 .kiosk-table td {
-    padding: 1.15rem 1.5rem;
+    padding: 1.15rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
     font-size: 0.925rem;
@@ -1198,6 +1306,15 @@ select:focus {
         width: 100%;
         justify-content: center;
     }
+
+    .nav-more-wrapper {
+        display: none !important;
+    }
+
+    .nav-overflow-md,
+    .nav-overflow-lg {
+        display: flex !important;
+    }
 }
 
 @keyframes slideDownMenu {
@@ -1210,3 +1327,296 @@ select:focus {
         transform: translateY(0);
     }
 }
+
+/* Additional UI Enhancements for Multi-Page Admin Sub-Navigation */
+.panel-nav a.nav-item,
+.page-tabs a.nav-item {
+    text-decoration: none;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+}
+
+.panel-nav a.nav-item:hover,
+.panel-nav a.nav-item.active,
+.page-tabs a.nav-item:hover,
+.page-tabs a.nav-item.active {
+    color: var(--accent-color);
+    background-color: rgba(226, 138, 0, 0.1);
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    letter-spacing: 0.2px;
+}
+
+.filter-pill {
+    white-space: nowrap;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.filter-pill.active {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
+}
+
+.media-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-normal);
+}
+
+/* Breadcrumb Navigation Component */
+.admin-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.admin-breadcrumbs .crumb-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: color var(--transition-fast);
+}
+
+.admin-breadcrumbs .crumb-link:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.admin-breadcrumbs .crumb-separator {
+    color: var(--text-muted);
+    font-weight: 400;
+    user-select: none;
+}
+
+.admin-breadcrumbs .crumb-current {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Responsive Navigation Engine for Top Header Bar (Desktop-Down)
+   ========================================================================== */
+
+/* Base (> 1280px): All 7 links inline, More dropdown button hidden */
+header.top-nav .nav-more-wrapper {
+    display: none;
+}
+
+.nav-more-dropdown .dropdown-item-md {
+    display: none;
+}
+
+/* Breakpoint 1: <= 1280px (Laptops / Medium Screens) */
+/* Hide Users & Staff, Monitoring, Media Assets from top bar; show More dropdown */
+@media (max-width: 1280px) {
+    header.top-nav {
+        padding: 0 1.25rem;
+    }
+
+    header.top-nav .nav-collapse {
+        margin-left: 1.25rem;
+    }
+
+    header.top-nav .nav-menu {
+        gap: 0.35rem;
+    }
+
+    header.top-nav .nav-item {
+        padding: 0.45rem 0.85rem;
+        font-size: 0.875rem;
+    }
+
+    header.top-nav .nav-overflow-lg {
+        display: none !important;
+    }
+
+    header.top-nav .nav-more-wrapper {
+        display: inline-block !important;
+    }
+}
+
+/* Breakpoint 2: <= 1199px (Tablets / Small Laptops) */
+/* Hide Products and Stores from top bar as well; show them in More dropdown */
+@media (max-width: 1199px) {
+    header.top-nav {
+        padding: 0 0.75rem;
+    }
+
+    header.top-nav .nav-brand-tag {
+        display: none !important;
+    }
+
+    header.top-nav .user-name {
+        display: none !important;
+    }
+
+    header.top-nav .nav-collapse {
+        margin-left: 0.75rem;
+    }
+
+    header.top-nav .nav-menu {
+        gap: 0.25rem;
+    }
+
+    header.top-nav .nav-item {
+        padding: 0.4rem 0.65rem;
+        font-size: 0.825rem;
+    }
+
+    header.top-nav .nav-overflow-md {
+        display: none !important;
+    }
+
+    .nav-more-dropdown .dropdown-item-md {
+        display: flex !important;
+    }
+}
+
+/* Breakpoint 3: <= 768px (Mobile Drawer) */
+@media (max-width: 768px) {
+    header.top-nav .nav-more-wrapper {
+        display: none !important;
+    }
+
+    header.top-nav .nav-menu .nav-overflow-md,
+    header.top-nav .nav-menu .nav-overflow-lg {
+        display: flex !important;
+    }
+}
+
+/* DataTables Custom Design System Integration */
+.dataTables_wrapper {
+    width: 100%;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    padding: 0.5rem 0.25rem;
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    color: var(--text-secondary) !important;
+    margin-bottom: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0 0.25rem;
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    color: var(--text-secondary) !important;
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.25rem 0.25rem 0.25rem;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    outline: none;
+    font-weight: 500;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    outline: none;
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 2px rgba(0, 33, 101, 0.1);
+}
+
+.dataTables_wrapper table.dataTable {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin: 0.75rem 0 !important;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.dataTables_wrapper table.dataTable thead th {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding: 1rem 1.25rem !important;
+    border-bottom: none !important;
+}
+
+.dataTables_wrapper table.dataTable tbody td {
+    padding: 1.1rem 1.25rem !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    vertical-align: middle;
+}
+
+/* Clickable Table Rows */
+tr.clickable-row {
+    cursor: pointer;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+tr.clickable-row:hover {
+    background-color: rgba(0, 33, 101, 0.05) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.35rem 0.75rem !important;
+    margin: 0 2px !important;
+    border-radius: var(--radius-sm) !important;
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    font-weight: 500;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: var(--primary-color) !important;
+    color: #ffffff !important;
+    border-color: var(--primary-color) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--primary-light) !important;
+    color: #ffffff !important;
+    border-color: var(--primary-light) !important;
+}
+
+

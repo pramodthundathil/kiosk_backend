@@ -1,0 +1,243 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Edit Kiosk - {{ kiosk.name }} - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 1100px; margin: 0 auto 2rem auto;">
+    <div class="panel-header">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span>Edit Kiosk: {{ kiosk.name }}</span>
+        </div>
+        <a href="{% url 'admin_kiosks' %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            <span>Back to Kiosks</span>
+        </a>
+    </div>
+
+    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.75rem;">
+
+        <!-- Dedicated Card: Password Credential Reset / Update -->
+        <div style="background: rgba(245, 158, 11, 0.08); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid rgba(245, 158, 11, 0.3);">
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>Device Password Credential Management</span>
+            </div>
+            
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                Device ID for physical kiosk login: <code style="font-size: 0.9rem; font-weight: 700; color: var(--primary-color);">{{ kiosk.device_id }}</code>
+            </p>
+
+            <form action="{% url 'admin_kiosk_edit' kiosk.id %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_credentials">
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="password" class="form-control" id="editSecretInput" name="new_secret" placeholder="Enter new password / secret..." required style="flex: 1;">
+                    <button type="button" class="btn btn-secondary" onclick="toggleEditPasswordVisibility()" title="Show/Hide Password" style="padding: 0 0.75rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="generateEditAutoPassword()">Auto-Generate</button>
+                    <button type="submit" class="btn btn-accent">Update Password</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Main Form: Kiosk Configuration & Hardware Specs & Profile Features -->
+        <form action="{% url 'admin_kiosk_edit' kiosk.id %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_kiosk">
+            <input type="hidden" name="update_profile_features" value="true">
+
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+                <!-- General Settings -->
+                <div style="background: var(--bg-body); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <span>General & Store Configuration</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">KIOSK DISPLAY NAME</label>
+                            <input type="text" class="form-control" name="name" value="{{ kiosk.name }}" required style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">TARGET CONTENT VERSION</label>
+                            <input type="text" class="form-control" name="desired_content_version" value="{{ kiosk.desired_content_version }}" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">STORE (OPTIONAL)</label>
+                            <select name="store_id" class="form-control" style="width: 100%;">
+                                <option value="">-- Unassigned (Optional) --</option>
+                                {% for s in stores %}
+                                <option value="{{ s.id }}" {% if kiosk.store_id == s.id %}selected{% endif %}>{{ s.name }} ({{ s.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ASSIGNED KIOSK PROFILE</label>
+                            <select name="profile_id" class="form-control" style="width: 100%;">
+                                <option value="">-- Select Profile --</option>
+                                {% for p in profiles %}
+                                <option value="{{ p.id }}" {% if kiosk.profile_id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Feature Toggles & Screensaver Options -->
+                {% if kiosk.profile %}
+                <div style="background: var(--bg-body); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        <span>Profile Feature Modules & Screensaver Options ({{ kiosk.profile.name }})</span>
+                    </div>
+
+                    <div style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.65rem; color: var(--text-secondary);">ENABLED CONTENT DISPLAY MODULES:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.65rem; margin-bottom: 1rem;">
+                        <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="show_products" {% if kiosk.profile.show_products %}checked{% endif %}> Show Products
+                        </label>
+                        <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="show_brochures" {% if kiosk.profile.show_brochures %}checked{% endif %}> Show Brochures
+                        </label>
+                        <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="show_technical_documents" {% if kiosk.profile.show_technical_documents %}checked{% endif %}> Show Tech Specs
+                        </label>
+                        <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="show_pricing" {% if kiosk.profile.show_pricing %}checked{% endif %}> Show Pricing
+                        </label>
+                        <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="show_videos" {% if kiosk.profile.show_videos %}checked{% endif %}> Show Videos
+                        </label>
+                        <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="show_3d_assets" {% if kiosk.profile.show_3d_assets %}checked{% endif %}> Show 3D Assets
+                        </label>
+                        <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="show_whiteboard" {% if kiosk.profile.show_whiteboard %}checked{% endif %}> Show Whiteboard
+                        </label>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 0.75rem;">
+                        <label style="font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem;">
+                            <input type="checkbox" name="screensaver_enabled" {% if kiosk.profile.screensaver_enabled %}checked{% endif %}> Enable Idle Screensaver
+                        </label>
+                        <div>
+                            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.2rem;">SCREENSAVER TIMEOUT (SECONDS)</label>
+                            <input type="number" class="form-control" name="screensaver_timeout_seconds" value="{{ kiosk.profile.screensaver_timeout_seconds|default:300 }}" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- GPS Coordinates & Deployment Status -->
+                <div style="background: var(--bg-body); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>GPS Location Coordinates & Deployment</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">LATITUDE (OPTIONAL)</label>
+                            <input type="number" step="any" class="form-control" name="latitude" value="{{ kiosk.latitude|default:'' }}" placeholder="e.g. 12.971598" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">LONGITUDE (OPTIONAL)</label>
+                            <input type="number" step="any" class="form-control" name="longitude" value="{{ kiosk.longitude|default:'' }}" placeholder="e.g. 77.594566" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div style="background: var(--bg-card); padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem;">
+                        <input type="checkbox" name="is_deployed" id="editIsDeployed" {% if kiosk.is_deployed %}checked{% endif %} style="width: 20px; height: 20px; cursor: pointer;">
+                        <div>
+                            <label for="editIsDeployed" style="font-weight: 600; font-size: 0.88rem; cursor: pointer; display: block;">Mark Terminal as Physically Deployed</label>
+                            <span style="font-size: 0.78rem; color: var(--text-secondary);">Currently: {% if kiosk.is_deployed %}<strong style="color: var(--success-color);">Deployed since {{ kiosk.deployed_at|date:"Y-m-d H:i" }}</strong>{% else %}<span style="color: #f59e0b;">Staging / Un-deployed</span>{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hardware Specifications -->
+                <div style="background: var(--bg-body); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+                        <span>Device Hardware Specifications (Optional)</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">MANUFACTURER</label>
+                            <input type="text" class="form-control" name="manufacturer" value="{{ kiosk.manufacturer|default:'' }}" placeholder="e.g. Samsung" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">DEVICE MODEL</label>
+                            <input type="text" class="form-control" name="device_model" value="{{ kiosk.device_model|default:'' }}" placeholder="e.g. Galaxy Tab A8" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">SERIAL NUMBER</label>
+                            <input type="text" class="form-control" name="serial_number" value="{{ kiosk.serial_number|default:'' }}" placeholder="e.g. SN-894819" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">ANDROID OS</label>
+                            <input type="text" class="form-control" name="android_version" value="{{ kiosk.android_version|default:'' }}" placeholder="e.g. Android 13" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">APP VERSION</label>
+                            <input type="text" class="form-control" name="app_version" value="{{ kiosk.app_version|default:'' }}" placeholder="e.g. v1.2.0" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">SCREEN WIDTH (PX)</label>
+                            <input type="number" class="form-control" name="screen_width" value="{{ kiosk.screen_width|default:'' }}" placeholder="1920" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.82rem; display: block; margin-bottom: 0.35rem;">SCREEN HEIGHT (PX)</label>
+                            <input type="number" class="form-control" name="screen_height" value="{{ kiosk.screen_height|default:'' }}" placeholder="1080" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Controls -->
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                    <a href="{% url 'admin_kiosks' %}" class="btn btn-secondary" style="text-decoration: none;">Cancel</a>
+                    <button type="submit" class="btn btn-accent" style="padding: 0.65rem 1.5rem; font-size: 0.95rem;">Save Changes</button>
+                </div>
+
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function generateEditAutoPassword() {
+        const chars = '0123456789abcdef';
+        let secret = '';
+        for (let i = 0; i < 32; i++) {
+            secret += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const input = document.getElementById('editSecretInput');
+        input.value = secret;
+        input.type = 'text';
+    }
+
+    function toggleEditPasswordVisibility() {
+        const input = document.getElementById('editSecretInput');
+        if (input.type === 'password') {
+            input.type = 'text';
+        } else {
+            input.type = 'password';
+        }
+    }
+</script>
+{% endblock %}

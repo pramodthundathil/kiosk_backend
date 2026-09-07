@@ -3,27 +3,22 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages  
 
 def signin(request):
-    if request.method  == "POST":
-        username = request.POST['username']
-        password = request.POST['password']
+    if request.user.is_authenticated:
+        return redirect('admin_dashboard')
+
+    if request.method == "POST":
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
+            if not user.is_active:
+                messages.error(request, "Your account has been disabled. Please contact an administrator.")
+                return redirect('signin')
+
             login(request, user)
-            if user.is_kiosk:
-                messages.error(request, "You are not authorized to view this page.")
-                logout(request)
-                return redirect('signin')
-            elif user.is_admin_role:
-                messages.info(request, "You are logged in as an admin.")
-                return redirect('admin_dashboard')
-            elif user.is_staff_role:
-                messages.info(request, "You are logged in as staff.")
-                return redirect('admin_dashboard')
-            else:
-                messages.error(request, "Your account has an invalid role configuration.")
-                logout(request)
-                return redirect('signin')
+            messages.success(request, f"Welcome back, {user.username}!")
+            return redirect('admin_dashboard')
         else:
             messages.error(request, "Invalid username or password. Please try again.")
             return redirect('signin')
@@ -33,5 +28,29 @@ def signin(request):
 
 def signout(request):
     logout(request)
+    messages.info(request, "You have been logged out successfully.")
     return redirect('signin')
+
+
+from rest_framework import views, status
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from .serializers import CMSLoginSerializer, issue_cms_jwt_tokens
+
+class CMSAuthLoginView(views.APIView):
+    """
+    POST /api/cms/auth/login/
+    Authenticates CMS Users (Super Admin, Admin, Managers) and returns CMS JWT access & refresh tokens.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = CMSLoginSerializer
+
+    def post(self, request):
+        serializer = CMSLoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.validated_data['user']
+        tokens = issue_cms_jwt_tokens(user)
+        return Response(tokens, status=status.HTTP_200_OK)
 

@@ -1,0 +1,336 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Kiosk Terminal Details - {{ kiosk.name }} - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 1200px; margin: 0 auto 2rem auto;">
+    
+    <!-- Top Action Header Banner -->
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="width: 48px; height: 48px; background: var(--primary-light); color: white; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            </div>
+            <div>
+                <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                    <span>{{ kiosk.name }}</span>
+                    {% if is_online %}
+                    <span class="status-badge status-online">
+                        <span class="status-dot"></span> <span>Online</span>
+                    </span>
+                    {% else %}
+                    <span class="status-badge status-offline">
+                        <span class="status-dot"></span> <span>Offline</span>
+                    </span>
+                    {% endif %}
+
+                    {% if kiosk.is_deployed %}
+                    <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        &#10003; Physically Deployed
+                    </span>
+                    {% else %}
+                    <span class="role-badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        Staging / Un-deployed
+                    </span>
+                    {% endif %}
+                </h2>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <span>Device ID: <code style="font-weight: 700; color: var(--primary-color);">{{ kiosk.device_id }}</code></span>
+                    <span>&bull;</span>
+                    <span>Store: <strong>{% if kiosk.store %}{{ kiosk.store.name }}{% else %}Unassigned{% endif %}</strong></span>
+                    <span>&bull;</span>
+                    <span>Profile: <strong>{% if kiosk.profile %}{{ kiosk.profile.name }}{% else %}Standard Profile{% endif %}</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-actions" style="gap: 0.6rem; flex-wrap: wrap;">
+            <!-- Back Button -->
+            <a href="{% url 'admin_kiosks' %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Back to Kiosks</span>
+            </a>
+
+            <!-- EDIT KIOSK BUTTON (Prominent Option to Edit) -->
+            <a href="{% url 'admin_kiosk_edit' kiosk.id %}" class="btn btn-accent" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span>Edit Kiosk Settings</span>
+            </a>
+
+            <!-- Force Sync -->
+            <form action="{% url 'admin_kiosks' %}" method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="force_sync">
+                <input type="hidden" name="kiosk_id" value="{{ kiosk.id }}">
+                <button type="submit" class="btn btn-secondary" title="Force Sync Content Version">
+                    <svg class="sync-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>Force Sync</span>
+                </button>
+            </form>
+
+            <!-- Delete -->
+            <form action="{% url 'admin_kiosks' %}" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to remove kiosk {{ kiosk.name }}?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_kiosk">
+                <input type="hidden" name="kiosk_id" value="{{ kiosk.id }}">
+                <button type="submit" class="btn btn-secondary" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);" title="Delete Kiosk">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <span>Delete</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+
+        <!-- Active Alerts Alert Banner (if any) -->
+        {% if open_alerts %}
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1rem 1.25rem; border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="font-weight: 700; color: var(--danger-color); display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>Active Unresolved Alerts ({{ open_alerts|length }})</span>
+            </div>
+            {% for alert in open_alerts %}
+            <div style="font-size: 0.85rem; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center;">
+                <span>&bull; {{ alert.message|default:alert.alert_type }}</span>
+                <span style="font-size: 0.78rem; color: var(--text-secondary);">{{ alert.opened_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Information Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;">
+            
+            <!-- Card 1: Device Identification & Hardware Specs -->
+            <div style="background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+                        <span>Hardware & Device Specifications</span>
+                    </span>
+                    <a href="{% url 'admin_kiosk_edit' kiosk.id %}" style="font-size: 0.78rem; text-decoration: none; color: var(--accent-color); font-weight: 600;">Edit &rarr;</a>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Display Name:</span>
+                        <strong style="color: var(--text-primary);">{{ kiosk.name }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Device ID / MAC:</span>
+                        <code style="font-size: 0.85rem; font-weight: bold; color: var(--primary-color);">{{ kiosk.device_id }}</code>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Manufacturer:</span>
+                        <span>{{ kiosk.manufacturer|default:"Samsung / Android Generic" }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Device Model:</span>
+                        <span>{{ kiosk.device_model|default:"Android Kiosk Terminal" }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Serial Number:</span>
+                        <code>{{ kiosk.serial_number|default:"N/A" }}</code>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Android OS Version:</span>
+                        <span>{{ kiosk.android_version|default:"Android OS" }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Kiosk App Version:</span>
+                        <strong style="color: var(--primary-color);">{{ kiosk.app_version|default:"v1.0.0" }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-secondary);">Screen Dimensions:</span>
+                        <span>{% if kiosk.screen_width and kiosk.screen_height %}{{ kiosk.screen_width }} x {{ kiosk.screen_height }} px{% else %}Standard HD Display{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: Store & GPS Location Details -->
+            <div style="background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>Store Location & GPS Coordinates</span>
+                    </span>
+                    <a href="{% url 'admin_kiosk_edit' kiosk.id %}" style="font-size: 0.78rem; text-decoration: none; color: var(--accent-color); font-weight: 600;">Edit &rarr;</a>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Assigned Store:</span>
+                        <strong style="color: var(--primary-color);">{% if kiosk.store %}{{ kiosk.store.name }}{% else %}Unassigned Store{% endif %}</strong>
+                    </div>
+                    {% if kiosk.store %}
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Store Code:</span>
+                        <code>{{ kiosk.store.code }}</code>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">City / Region:</span>
+                        <span>{{ kiosk.store.city|default:"-" }}{% if kiosk.store.state %}, {{ kiosk.store.state }}{% endif %}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Address:</span>
+                        <span>{{ kiosk.store.address|default:"Branch Store Address" }}</span>
+                    </div>
+                    {% endif %}
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Latitude (Lat):</span>
+                        <span>{{ kiosk.latitude|default:"Not set" }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Longitude (Lng):</span>
+                        <span>{{ kiosk.longitude|default:"Not set" }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-secondary);">Physical Deployment:</span>
+                        {% if kiosk.is_deployed %}
+                        <strong style="color: var(--success-color);">Active (Since {{ kiosk.deployed_at|date:"Y-m-d" }})</strong>
+                        {% else %}
+                        <span style="color: #f59e0b;">Staging / In Prep</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Profile & Feature Display Modules -->
+            <div style="background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        <span>Profile & Content Modules</span>
+                    </span>
+                    <a href="{% url 'admin_kiosk_edit' kiosk.id %}" style="font-size: 0.78rem; text-decoration: none; color: var(--accent-color); font-weight: 600;">Edit &rarr;</a>
+                </div>
+
+                {% if kiosk.profile %}
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Profile Name:</span>
+                        <strong style="color: var(--primary-color);">{{ kiosk.profile.name }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Profile Code:</span>
+                        <code>{{ kiosk.profile.code }}</code>
+                    </div>
+
+                    <div style="margin-top: 0.25rem;">
+                        <span style="color: var(--text-secondary); display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.8rem;">ENABLED CONTENT MODULES:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            {% if kiosk.profile.show_products %}<span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">&#10003; Products</span>{% endif %}
+                            {% if kiosk.profile.show_brochures %}<span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">&#10003; Brochures</span>{% endif %}
+                            {% if kiosk.profile.show_technical_documents %}<span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">&#10003; Tech Specs</span>{% endif %}
+                            {% if kiosk.profile.show_pricing %}<span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">&#10003; Pricing</span>{% endif %}
+                            {% if kiosk.profile.show_videos %}<span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">&#10003; Videos</span>{% endif %}
+                            {% if kiosk.profile.show_3d_assets %}<span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">&#10003; 3D Assets</span>{% endif %}
+                            {% if kiosk.profile.show_whiteboard %}<span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">&#10003; Whiteboard</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; margin-top: 0.25rem;">
+                        <span style="color: var(--text-secondary);">Screensaver Option:</span>
+                        <span>{% if kiosk.profile.screensaver_enabled %}Enabled ({{ kiosk.profile.screensaver_timeout_seconds }}s){% else %}Disabled{% endif %}</span>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic;">No kiosk profile configured.</p>
+                {% endif %}
+            </div>
+
+            <!-- Card 4: Network Telemetry & Content Sync Version -->
+            <div style="background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h5l2-7 4 14 2-7h5"></path></svg>
+                        <span>Telemetry & Synchronization Status</span>
+                    </span>
+                    <a href="{% url 'admin_kiosk_edit' kiosk.id %}" style="font-size: 0.78rem; text-decoration: none; color: var(--accent-color); font-weight: 600;">Edit &rarr;</a>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Current Status:</span>
+                        {% if is_online %}
+                        <span class="status-badge status-online"><span class="status-dot"></span> Online & Operational</span>
+                        {% else %}
+                        <span class="status-badge status-offline"><span class="status-dot"></span> Offline / Standby</span>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Last Heartbeat Ping:</span>
+                        <strong>{{ kiosk.last_heartbeat_at|date:"Y-m-d H:i:s"|default:"Never Heartbeated" }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Last Successful Sync:</span>
+                        <strong>{{ kiosk.last_sync_at|date:"Y-m-d H:i:s"|default:"Never Synced" }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Installed Content Version:</span>
+                        <span>v{{ kiosk.current_content_version|default:"1" }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Target Desired Version:</span>
+                        <strong style="color: var(--accent-color);">v{{ kiosk.desired_content_version|default:"1" }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-secondary);">Registered Date:</span>
+                        <span>{{ kiosk.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Recent Activity & Diagnostic Event Logs -->
+        <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="font-weight: 700; font-size: 0.95rem; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                <span>Recent Event Logs & Diagnostic Activity</span>
+            </div>
+
+            {% if recent_events %}
+            <div style="overflow-x: auto;">
+                <table class="kiosk-table" style="font-size: 0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Event Type</th>
+                            <th>Severity</th>
+                            <th>Message / Payload Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in recent_events %}
+                        <tr>
+                            <td style="color: var(--text-secondary); font-family: monospace;">{{ event.created_at|date:"Y-m-d H:i:s" }}</td>
+                            <td><strong style="color: var(--primary-color);">{{ event.get_event_type_display }}</strong></td>
+                            <td>
+                                <span class="role-badge" style="
+                                    {% if event.severity == 'ERROR' or event.severity == 'CRITICAL' %}background: #fee2e2; color: #991b1b;
+                                    {% elif event.severity == 'WARNING' %}background: #fef3c7; color: #92400e;
+                                    {% else %}background: #e0e7ff; color: #3730a3;{% endif %}
+                                ">
+                                    {{ event.severity }}
+                                </span>
+                            </td>
+                            <td>{{ event.message|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic; text-align: center; padding: 1rem 0;">
+                No recent event logs recorded for this kiosk.
+            </p>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

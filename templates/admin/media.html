@@ -1,0 +1,147 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Media Assets Management - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="margin-bottom: 2rem;">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polygon points="12 11 12 17 17 14 12 11"></polygon></svg>
+            <span>Media Assets & Documents Manager ({{ total_media }})</span>
+        </div>
+        <div class="panel-actions" style="gap: 0.75rem;">
+            <div class="toolbar-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="mediaSearchInput" onkeyup="filterMedia()" placeholder="Search title or file type...">
+            </div>
+            <button class="btn btn-accent" onclick="openModal('uploadMediaModal')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Upload Media Asset</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Media Cards Grid -->
+    <div style="padding: 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;" id="mediaGrid">
+        {% if media_items %}
+            {% for item in media_items %}
+            <div class="media-card media-item-card" data-search="{{ item.title }} {{ item.get_asset_type_display }}" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;">
+                <div style="height: 140px; background: var(--primary-dark); display: flex; align-items: center; justify-content: center; position: relative;">
+                    {% if item.asset_type == 'VIDEO' %}
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    {% elif item.asset_type == 'PDF_BROCHURE' %}
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    {% else %}
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                    {% endif %}
+                    <span class="role-badge" style="position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); color: #fff;">{{ item.get_asset_type_display }}</span>
+                </div>
+                <div style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <strong style="color: var(--primary-color); font-size: 1rem; display: block; margin-bottom: 0.35rem;">{{ item.title }}</strong>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary);">Target Profile: {% if item.kiosk_profile %}{{ item.kiosk_profile.name }}{% else %}All Kiosk Devices{% endif %}</p>
+                        {% if item.file_size_mb %}<p style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.2rem;">Size: {{ item.file_size_mb }} MB</p>{% endif %}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                        {% if item.file %}
+                        <a href="{{ item.file.url }}" target="_blank" class="btn btn-secondary btn-sm">View File</a>
+                        {% elif item.external_url %}
+                        <a href="{{ item.external_url }}" target="_blank" class="btn btn-secondary btn-sm">Open Link</a>
+                        {% else %}
+                        <span style="font-size: 0.8rem; color: var(--text-light);">No File attached</span>
+                        {% endif %}
+                        <form action="{% url 'admin_media' %}" method="post" onsubmit="return confirm('Delete media asset {{ item.title }}?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_media">
+                            <input type="hidden" name="asset_id" value="{{ item.id }}">
+                            <button type="submit" class="btn btn-secondary btn-sm" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="empty-state" style="grid-column: 1 / -1;">
+            <h4>No Media Assets Uploaded</h4>
+            <p>Upload promotional videos, PDF product catalogs, and tech specs to display on physical kiosks.</p>
+            <button class="btn btn-accent" onclick="openModal('uploadMediaModal')">
+                <span>Upload Media Asset</span>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- UPLOAD MEDIA MODAL -->
+<div class="modal-overlay" id="uploadMediaModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Upload New Media Asset</h3>
+            <button class="modal-close-btn" onclick="closeModal('uploadMediaModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_media' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="upload_media">
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">TITLE *</label>
+                    <input type="text" name="title" placeholder="e.g. Copper Bonding Process Video" required>
+                </div>
+                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ASSET TYPE</label>
+                        <select name="asset_type">
+                            {% for code, label in asset_types %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">KIOSK PROFILE</label>
+                        <select name="profile_id">
+                            <option value="">All Kiosks (Global)</option>
+                            {% for p in profiles %}
+                            <option value="{{ p.id }}">{{ p.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">UPLOAD FILE (MP4, PDF, PNG)</label>
+                    <input type="file" name="file">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">OR EXTERNAL LINK / STREAM URL</label>
+                    <input type="url" name="external_url" placeholder="https://youtube.com/...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('uploadMediaModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Upload Asset</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+    function filterMedia() {
+        const val = document.getElementById('mediaSearchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.media-item-card');
+        cards.forEach(c => {
+            const text = c.getAttribute('data-search').toLowerCase();
+            c.style.display = text.includes(val) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Users & Staff Management - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="margin-bottom: 2rem;">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span>CMS Users & Staff Access Directory ({{ total_users }})</span>
+        </div>
+        <div class="panel-actions" style="gap: 0.75rem;">
+            <div class="toolbar-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="userSearchInput" onkeyup="filterUsers()" placeholder="Search username or email...">
+            </div>
+            <button class="btn btn-accent" onclick="openModal('addUserModal')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Add User / Staff</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="kiosk-table-wrapper">
+        {% if users %}
+        <table class="kiosk-table" id="userTable">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Email</th>
+                    <th>Assigned Stores</th>
+                    <th>Account Status</th>
+                    <th>Joined Date</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr class="user-row" data-search="{{ u.username }} {{ u.email }} {{ u.get_role_display }}">
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                            <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.85rem; font-weight: bold; background: var(--primary-light); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                {{ u.username|slice:":1"|upper }}
+                            </div>
+                            <strong style="color: var(--primary-color);">{{ u.username }}</strong>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="role-badge" style="
+                            {% if u.role == 'super_admin' %}background: #fee2e2; color: #991b1b;
+                            {% elif u.role == 'admin' %}background: #e0e7ff; color: #3730a3;
+                            {% elif u.role == 'content_manager' %}background: #fef3c7; color: #92400e;
+                            {% elif u.role == 'store_manager' %}background: #dcfce7; color: #166534;
+                            {% else %}background: var(--bg-body); color: var(--text-primary);{% endif %}
+                        ">
+                            {{ u.get_role_display }}
+                        </span>
+                    </td>
+                    <td>{{ u.email|default:"No email set" }}</td>
+                    <td>
+                        {% if u.assigned_stores.exists %}
+                            {% for store in u.assigned_stores.all %}
+                                <span class="role-badge" style="background: var(--bg-body); border: 1px solid var(--border-color); font-size: 0.75rem;">{{ store.name }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span style="color: var(--text-secondary); font-size: 0.85rem;">All Stores / Unrestricted</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                        <span class="status-badge status-online"><span class="status-dot"></span> Active</span>
+                        {% else %}
+                        <span class="status-badge status-offline"><span class="status-dot"></span> Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--text-secondary); font-size: 0.85rem;">{{ u.date_joined|date:"Y-m-d" }}</td>
+                    <td>
+                        <div class="actions-cell" style="justify-content: center; gap: 0.4rem;">
+                            <!-- Edit User -->
+                            <button class="action-icon-btn" title="Edit User Role" onclick="openEditUser('{{ u.id }}', '{{ u.username }}', '{{ u.role }}', '{{ u.is_active|yesno:'true,false' }}')">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            {% if u != request.user %}
+                            <!-- Delete User -->
+                            <form action="{% url 'admin_users' %}" method="post" style="display: inline;" onsubmit="return confirm('Delete user {{ u.username }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_user">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <button type="submit" class="action-icon-btn" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);" title="Delete User">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h4>No CMS Users Found</h4>
+            <p>Add staff members to grant permission to manage content, stores, or kiosk devices.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addUserModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Add New CMS User / Staff</h3>
+            <button class="modal-close-btn" onclick="closeModal('addUserModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_users' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_user">
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">USERNAME *</label>
+                        <input type="text" name="username" placeholder="e.g. store_manager_cbm" required>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">EMAIL ADDRESS</label>
+                        <input type="email" name="email" placeholder="user@excelearthings.com">
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PASSWORD *</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ASSIGNED ROLE *</label>
+                        <select name="role">
+                            {% for role_code, role_name in roles %}
+                            <option value="{{ role_code }}">{{ role_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ASSIGNED STORES (For Store Managers)</label>
+                    <select name="assigned_stores" multiple style="height: 90px;">
+                        {% for store in stores %}
+                        <option value="{{ store.id }}">{{ store.name }} ({{ store.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Create User Account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Edit User Role & Permissions</h3>
+            <button class="modal-close-btn" onclick="closeModal('editUserModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_users' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_user">
+            <input type="hidden" name="user_id" id="editUserId">
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">USERNAME</label>
+                    <input type="text" id="editUsername" disabled style="background-color: var(--bg-body);">
+                </div>
+                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ROLE</label>
+                        <select name="role" id="editUserRole">
+                            {% for role_code, role_name in roles %}
+                            <option value="{{ role_code }}">{{ role_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ACCOUNT STATUS</label>
+                        <select name="is_active" id="editUserActive">
+                            <option value="true">Active Account</option>
+                            <option value="false">Disabled / Suspended</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Update User</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        if ($('#userTable').length) {
+            var table = $('#userTable').DataTable({
+                "pageLength": 10,
+                "order": [],
+                "dom": '<"top"l>rt<"bottom"ip><"clear">',
+                "language": {
+                    "search": "Filter users:"
+                }
+            });
+
+            $('#userSearchInput').on('keyup', function() {
+                table.search(this.value).draw();
+            });
+        }
+    });
+
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+    function openEditUser(id, username, role, isActive) {
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editUsername').value = username;
+        document.getElementById('editUserRole').value = role;
+        document.getElementById('editUserActive').value = isActive;
+        openModal('editUserModal');
+    }
+</script>
+{% endblock %}

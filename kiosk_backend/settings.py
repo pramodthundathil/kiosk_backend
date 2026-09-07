@@ -43,13 +43,21 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "storages",
     "adminpannel",
     "authentication",
+    "accounts",
+    "stores",
+    "kiosks",
+    "products",
+    "content",
+    "monitoring",
     "rest_framework",
     "corsheaders",
     "cms",
     "drf_spectacular",
 ]
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -173,3 +181,51 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# Large File Upload Configuration (Supports up to 2GB uploads)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2147483648  # 2 GB max upload request body size
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760    # 10 MB limit in RAM before streaming upload to temp file on disk
+
+# AWS Storage & Large File Upload Configuration
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "ap-south-1")
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com" if AWS_STORAGE_BUCKET_NAME else None
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_MAX_MEMORY_SIZE = 10485760  # 10 MB memory buffer before disk staging for S3 uploads
+
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": "media",
+                "file_overwrite": False,
+                "default_acl": None,
+                "signature_version": "s3v4",
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+# Celery & Redis Configuration
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat Periodic Schedule
+CELERY_BEAT_SCHEDULE = {
+    "check-kiosk-status-every-30s": {
+        "task": "monitoring.tasks.check_kiosk_status",
+        "schedule": 30.0,
+    },
+}
+
