@@ -27,8 +27,16 @@ class ScreensaverSerializer(serializers.ModelSerializer):
 
 
 class KioskLoginSerializer(serializers.Serializer):
-    device_id = serializers.CharField(required=True, max_length=100)
+    device_id = serializers.CharField(required=False, max_length=100, allow_blank=True)
+    mac_address = serializers.CharField(required=False, max_length=100, allow_blank=True)
     device_secret = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        device_id = attrs.get('device_id') or attrs.get('mac_address')
+        if not device_id:
+            raise serializers.ValidationError("Either device_id or mac_address is required.")
+        attrs['device_id'] = device_id.strip()
+        return attrs
 
 class KioskProfileSerializer(serializers.ModelSerializer):
     class Meta:

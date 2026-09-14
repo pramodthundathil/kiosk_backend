@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import status, views
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -26,10 +27,12 @@ class KioskAuthLoginView(views.APIView):
         device_secret = serializer.validated_data['device_secret']
 
         try:
-            kiosk = KioskDevice.objects.select_related('store', 'profile', 'credential').get(device_id=device_id)
+            kiosk = KioskDevice.objects.select_related('store', 'profile', 'credential').get(
+                Q(device_id__iexact=device_id) | Q(serial_number__iexact=device_id)
+            )
         except KioskDevice.DoesNotExist:
             return Response(
-                {"error": "Invalid device_id or credential."},
+                {"error": "Invalid MAC address / Device ID or credential."},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
