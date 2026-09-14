@@ -1,8 +1,7 @@
 asgiref==3.12.1
 attrs==26.1.0
-Django==6.1
+Django>=5.2,<6.0
 django-cors-headers==4.9.0
-django-rest-framework==0.1.0
 djangorestframework==3.18.0
 djangorestframework_simplejwt==5.5.1
 dotenv==0.9.9
@@ -24,4 +23,4 @@ django-storages==1.14.6
 celery>=5.3.6
 redis>=5.0.1
 django-celery-beat>=2.6.0
-
+pillow>=10.0.0

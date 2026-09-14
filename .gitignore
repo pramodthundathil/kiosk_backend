@@ -18,6 +18,10 @@ env/
 venv/
 ENV/
 .venv/
+kioskenv
+kioskenv/
+
+
 
 # macOS System Files
 .DS_Store
