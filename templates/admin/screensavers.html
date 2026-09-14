@@ -1,0 +1,676 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Screensaver Manager - Excel Earthings Kiosk CMS{% endblock %}
+
+{% block content %}
+<!-- Page Header Banner -->
+<div class="panel-card" style="margin-bottom: 1.5rem;">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+        <div class="panel-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--primary-color);">Kiosk Screensaver Manager</h2>
+                <span style="font-size: 0.825rem; color: var(--text-secondary);">Manage slide images, set display durations, and configure landscape/portrait monitor screensavers</span>
+            </div>
+        </div>
+        <div class="panel-actions" style="gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" onclick="openModal('simulatorModal')" style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-color: rgba(59, 130, 246, 0.4); font-weight: 600; cursor: pointer;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Live Sliding Simulator</span>
+            </button>
+            <a href="{% url 'admin_screensaver_add' %}" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Add New Screensaver</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Metrics Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; padding: 1.25rem 1.5rem; border-top: 1px solid var(--border-color); background: var(--bg-hover);">
+        <div onclick="filterByOrientationTab('')" style="background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="width: 42px; height: 42px; border-radius: 8px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Total Slides</span>
+                <div style="font-size: 1.35rem; font-weight: 700; color: var(--primary-color);">{{ total_screensavers }}</div>
+            </div>
+        </div>
+
+        <div onclick="filterByOrientationTab('LANDSCAPE')" style="background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="width: 42px; height: 42px; border-radius: 8px; background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Landscape (16:9)</span>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #10b981;">{{ landscape_count }}</div>
+            </div>
+        </div>
+
+        <div onclick="filterByOrientationTab('PORTRAIT')" style="background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="width: 42px; height: 42px; border-radius: 8px; background: rgba(168, 85, 247, 0.12); color: #a855f7; display: flex; align-items: center; justify-content: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Portrait (9:16)</span>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #a855f7;">{{ portrait_count }}</div>
+            </div>
+        </div>
+
+        <div onclick="filterByStatusTab('active')" style="background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="width: 42px; height: 42px; border-radius: 8px; background: rgba(245, 158, 11, 0.12); color: #f59e0b; display: flex; align-items: center; justify-content: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Active Slides</span>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #f59e0b;">{{ active_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADVANCED & USER-FRIENDLY FILTER TOOLBAR -->
+<div class="panel-card" style="margin-bottom: 1.5rem; padding: 1.25rem; background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-sm);">
+    
+    <!-- Top Filter Bar: Interactive Segmented Tabs -->
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+        
+        <!-- Orientation Tabs -->
+        <div style="display: flex; background: var(--bg-hover); padding: 4px; border-radius: 10px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 4px;">
+            <button type="button" class="filter-tab-btn {% if not current_orientation %}active-tab{% endif %}" onclick="filterByOrientationTab('')" style="padding: 6px 14px; border-radius: 6px; border: none; font-size: 0.825rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                All Orientations ({{ total_screensavers }})
+            </button>
+            <button type="button" class="filter-tab-btn {% if current_orientation == 'LANDSCAPE' %}active-tab-landscape{% endif %}" onclick="filterByOrientationTab('LANDSCAPE')" style="padding: 6px 14px; border-radius: 6px; border: none; font-size: 0.825rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect></svg>
+                Landscape ({{ landscape_count }})
+            </button>
+            <button type="button" class="filter-tab-btn {% if current_orientation == 'PORTRAIT' %}active-tab-portrait{% endif %}" onclick="filterByOrientationTab('PORTRAIT')" style="padding: 6px 14px; border-radius: 6px; border: none; font-size: 0.825rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"></rect></svg>
+                Portrait ({{ portrait_count }})
+            </button>
+            <button type="button" class="filter-tab-btn {% if current_orientation == 'BOTH' %}active-tab-universal{% endif %}" onclick="filterByOrientationTab('BOTH')" style="padding: 6px 14px; border-radius: 6px; border: none; font-size: 0.825rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+                Universal ({{ both_count }})
+            </button>
+        </div>
+
+        <!-- Status Filter Pills -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Status:</span>
+            <button type="button" class="status-pill-btn {% if not current_status %}active-pill{% endif %}" onclick="filterByStatusTab('')">
+                All
+            </button>
+            <button type="button" class="status-pill-btn {% if current_status == 'active' %}active-pill-success{% endif %}" onclick="filterByStatusTab('active')">
+                ● Active ({{ active_count }})
+            </button>
+            <button type="button" class="status-pill-btn {% if current_status == 'inactive' %}active-pill-inactive{% endif %}" onclick="filterByStatusTab('inactive')">
+                ○ Inactive
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Filter Form: Live Instant Search & Select Filters -->
+    <form id="filterForm" method="get" action="{% url 'admin_screensavers' %}" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+        <input type="hidden" name="orientation" id="hiddenOrientationInput" value="{{ current_orientation }}">
+        <input type="hidden" name="status" id="hiddenStatusInput" value="{{ current_status }}">
+
+        <div style="display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: center; flex: 1; min-width: 300px;">
+            
+            <!-- Live Search Bar with Instant Type Filter & Clear Button -->
+            <div class="toolbar-search" style="min-width: 260px; flex: 1; position: relative;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-light);">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="liveSearchInput" name="q" value="{{ search_query }}" placeholder="Instant search by title, caption..." oninput="handleLiveSearchInput(this.value)" style="width: 100%; padding-right: 32px; font-size: 0.875rem;">
+                
+                <button type="button" id="clearSearchBtn" onclick="clearLiveSearch()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 2px 4px; display: {% if search_query %}block{% else %}none{% endif %};" title="Clear Search">&times;</button>
+            </div>
+
+            <!-- Profile Filter Dropdown -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">Target Profile:</label>
+                <select name="profile_id" onchange="submitFilterForm()" style="padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-hover); color: var(--text-primary); font-size: 0.85rem; font-weight: 500; cursor: pointer;">
+                    <option value="">All Kiosk Profiles</option>
+                    {% for prof in profiles %}
+                    <option value="{{ prof.id }}" {% if current_profile == prof.id|stringformat:"s" %}selected{% endif %}>{{ prof.name }} ({{ prof.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Client-Side Sorting Selector -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">Sort By:</label>
+                <select id="sortSelect" onchange="sortScreensaverCards(this.value)" style="padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-hover); color: var(--text-primary); font-size: 0.85rem; font-weight: 500; cursor: pointer;">
+                    <option value="order">Sequence Order (#)</option>
+                    <option value="title">Title (A - Z)</option>
+                    <option value="duration">Duration (Seconds)</option>
+                    <option value="newest">Newest First</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Live Results Counter & Reset Button -->
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="resultsCountBadge" style="font-size: 0.825rem; font-weight: 600; color: var(--text-secondary); background: var(--bg-hover); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
+                Showing <span id="visibleCount">{{ screensavers|length }}</span> of {{ total_screensavers }} slides
+            </div>
+
+            {% if search_query or current_orientation or current_status or current_profile %}
+            <a href="{% url 'admin_screensavers' %}" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; font-weight: 600; color: var(--danger-color); border-color: rgba(239, 68, 68, 0.3); display: inline-flex; align-items: center; gap: 0.35rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <span>Reset All Filters</span>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Screensaver Grid -->
+<div id="screensaversGridContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    {% if screensavers %}
+        {% for item in screensavers %}
+        <div class="panel-card screensaver-card-item" 
+             data-title="{{ item.title|lower }}" 
+             data-caption="{{ item.caption|lower|default:'' }}" 
+             data-orientation="{{ item.orientation }}" 
+             data-status="{% if item.is_active %}active{% else %}inactive{% endif %}"
+             data-order="{{ item.display_order }}"
+             data-duration="{{ item.duration_seconds }}"
+             style="overflow: hidden; border-radius: 12px; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; position: relative;">
+            
+            <!-- Image Header with Orientation Badge -->
+            <div style="height: 180px; position: relative; background: #0f172a; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                {% if item.image %}
+                <img src="{{ item.image.url }}" alt="{{ item.title }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                {% else %}
+                <div style="color: var(--text-light); text-align: center; font-size: 0.85rem;">No Image Available</div>
+                {% endif %}
+
+                <!-- Orientation Badge Top Right -->
+                {% if item.orientation == 'LANDSCAPE' %}
+                <span style="position: absolute; top: 12px; right: 12px; background: rgba(16, 185, 129, 0.9); color: #fff; font-size: 0.725rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; backdrop-filter: blur(4px);">
+                    Landscape (16:9)
+                </span>
+                {% elif item.orientation == 'PORTRAIT' %}
+                <span style="position: absolute; top: 12px; right: 12px; background: rgba(168, 85, 247, 0.9); color: #fff; font-size: 0.725rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; backdrop-filter: blur(4px);">
+                    Portrait (9:16)
+                </span>
+                {% else %}
+                <span style="position: absolute; top: 12px; right: 12px; background: rgba(59, 130, 246, 0.9); color: #fff; font-size: 0.725rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; backdrop-filter: blur(4px);">
+                    Universal
+                </span>
+                {% endif %}
+
+                <!-- Active / Inactive Badge Top Left -->
+                <span style="position: absolute; top: 12px; left: 12px; background: {% if item.is_active %}rgba(16, 185, 129, 0.85){% else %}rgba(100, 116, 139, 0.85){% endif %}; color: #fff; font-size: 0.7rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; backdrop-filter: blur(4px);">
+                    {% if item.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+
+                <!-- Duration Pill Bottom Left -->
+                <span style="position: absolute; bottom: 10px; left: 12px; background: rgba(0,0,0,0.75); color: #fff; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    {{ item.duration_seconds }}s duration
+                </span>
+            </div>
+
+            <!-- Card Content Body -->
+            <div style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.35rem 0; color: var(--primary-color);">
+                        <a href="{% url 'admin_screensaver_detail' item.id %}" style="color: inherit; text-decoration: none;">{{ item.title }}</a>
+                    </h3>
+                    {% if item.caption %}
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 0.5rem 0; font-style: italic;">"{{ item.caption }}"</p>
+                    {% endif %}
+
+                    <div style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        <span>Target: <strong>{% if item.kiosk_profile %}{{ item.kiosk_profile.name }}{% else %}All Profiles{% endif %}</strong></span>
+                        <span>•</span>
+                        <span>Order: <strong>#{{ item.display_order }}</strong></span>
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 1rem; border-top: 1px solid var(--border-color); gap: 0.5rem;">
+                    <!-- Active Status Toggle Form -->
+                    <form action="{% url 'admin_screensavers' %}" method="post" style="margin: 0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_active">
+                        <input type="hidden" name="screensaver_id" value="{{ item.id }}">
+                        <button type="submit" class="btn btn-sm {% if item.is_active %}btn-secondary{% else %}btn-accent{% endif %}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                            {% if item.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+
+                    <div style="display: flex; gap: 0.4rem;">
+                        <a href="{% url 'admin_screensaver_detail' item.id %}" class="btn btn-secondary btn-sm" title="View Details" style="padding: 0.3rem 0.6rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </a>
+                        <a href="{% url 'admin_screensaver_edit' item.id %}" class="btn btn-secondary btn-sm" title="Edit" style="padding: 0.3rem 0.6rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </a>
+                        <form action="{% url 'admin_screensavers' %}" method="post" onsubmit="return confirm('Delete screensaver {{ item.title|escapejs }}?');" style="margin: 0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_screensaver">
+                            <input type="hidden" name="screensaver_id" value="{{ item.id }}">
+                            <button type="submit" class="btn btn-secondary btn-sm" title="Delete" style="padding: 0.3rem 0.6rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="panel-card" style="grid-column: 1 / -1; padding: 3rem; text-align: center;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(59, 130, 246, 0.1); color: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </div>
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color); margin: 0 0 0.5rem 0;">No Screensavers Found</h3>
+        <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto 1.5rem auto;">Create sliding screensaver images for Landscape or Portrait kiosk monitors to play automatically during idle times.</p>
+        <a href="{% url 'admin_screensaver_add' %}" class="btn btn-accent">Add First Screensaver</a>
+    </div>
+    {% endif %}
+</div>
+
+
+<!-- INTERACTIVE REAL-TIME LIVE SLIDING PREVIEW SIMULATOR MODAL -->
+<div class="modal-overlay" id="simulatorModal">
+    <div class="modal-card" style="max-width: 960px; width: 95%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; padding: 0;">
+        
+        <!-- Simulator Modal Header -->
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; background: #1e293b;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #fff;">Interactive Kiosk Slide Simulator</h3>
+                    <span style="font-size: 0.8rem; color: #94a3b8;">Simulate screensaver slideshow sliding in real-time</span>
+                </div>
+            </div>
+
+            <!-- Monitor Frame Toggle Buttons -->
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="display: flex; background: #0f172a; border-radius: 8px; padding: 4px; border: 1px solid rgba(255,255,255,0.1);">
+                    <button type="button" id="frameModeLandscape" onclick="setSimFrameMode('LANDSCAPE')" style="padding: 6px 12px; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; background: #3b82f6; color: #fff; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect></svg>
+                        Landscape (16:9)
+                    </button>
+                    <button type="button" id="frameModePortrait" onclick="setSimFrameMode('PORTRAIT')" style="padding: 6px 12px; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; background: transparent; color: #94a3b8; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"></rect></svg>
+                        Portrait (9:16)
+                    </button>
+                </div>
+
+                <button type="button" onclick="closeModal('simulatorModal')" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; padding: 4px 8px; line-height: 1;" title="Close Simulator">&times;</button>
+            </div>
+        </div>
+
+        <!-- Simulator Screen Stage -->
+        <div style="padding: 2rem; display: flex; align-items: center; justify-content: center; background: #020617; min-height: 480px; position: relative;">
+            
+            <!-- Monitor Mockup Wrapper -->
+            <div id="simMonitorFrame" style="width: 100%; max-width: 800px; height: 450px; background: #000; border-radius: 12px; border: 12px solid #1e293b; box-shadow: 0 0 40px rgba(0,0,0,0.9); overflow: hidden; position: relative; transition: all 0.4s ease;">
+                
+                <!-- Sliding Container -->
+                <div id="simSlidesTrack" style="width: 100%; height: 100%; display: flex; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1);">
+                    <!-- Slides inserted dynamically by JS -->
+                </div>
+
+                <!-- Overlay Caption Banner -->
+                <div id="simSlideCaption" style="position: absolute; bottom: 0; inset-x: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); padding: 1.5rem; color: #fff; transition: opacity 0.3s ease;">
+                    <div id="simSlideTitle" style="font-size: 1.25rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Slide Title</div>
+                    <div id="simSlideText" style="font-size: 0.9rem; color: #cbd5e1; margin-top: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">Optional caption text</div>
+                </div>
+
+                <!-- Live Slide Progress Bar -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: rgba(255,255,255,0.2);">
+                    <div id="simProgressBar" style="height: 100%; width: 0%; background: #3b82f6; transition: width 0.1s linear;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulator Playback Controls Footer -->
+        <div style="padding: 1rem 1.5rem; background: #1e293b; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button type="button" id="simPrevBtn" onclick="simPrevSlide()" style="background: #334155; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">◄ Prev</button>
+                <button type="button" id="simPlayPauseBtn" onclick="toggleSimPlayback()" style="background: #3b82f6; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">Pause</button>
+                <button type="button" id="simNextBtn" onclick="simNextSlide()" style="background: #334155; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">Next ►</button>
+            </div>
+
+            <div style="color: #94a3b8; font-size: 0.85rem;" id="simSlideCounter">
+                Slide 1 of 1
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS for User-Friendly Filter Styling -->
+<style>
+    .filter-tab-btn {
+        background: transparent;
+        color: var(--text-secondary);
+    }
+    .filter-tab-btn:hover {
+        color: var(--primary-color);
+        background: var(--bg-card);
+    }
+    .filter-tab-btn.active-tab {
+        background: var(--primary-color) !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .filter-tab-btn.active-tab-landscape {
+        background: #10b981 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    }
+    .filter-tab-btn.active-tab-portrait {
+        background: #a855f7 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(168, 85, 247, 0.3);
+    }
+    .filter-tab-btn.active-tab-universal {
+        background: #3b82f6 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+    }
+
+    .status-pill-btn {
+        padding: 5px 12px;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-hover);
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .status-pill-btn:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+    }
+    .status-pill-btn.active-pill {
+        background: var(--primary-color);
+        color: #fff;
+        border-color: var(--primary-color);
+    }
+    .status-pill-btn.active-pill-success {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border-color: rgba(16, 185, 129, 0.4);
+    }
+    .status-pill-btn.active-pill-inactive {
+        background: rgba(148, 163, 184, 0.2);
+        color: var(--text-primary);
+        border-color: rgba(148, 163, 184, 0.5);
+    }
+</style>
+
+<!-- JavaScript for Live Instant Client-Side Search & Filter Interactions -->
+<script>
+    // Standard modal helpers matching admin panel design system
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.add('active');
+        }
+        if (id === 'simulatorModal') {
+            setSimFrameMode('LANDSCAPE');
+        }
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        if (id === 'simulatorModal') {
+            stopSimTimer();
+        }
+    }
+
+    function submitFilterForm() {
+        document.getElementById('filterForm').submit();
+    }
+
+    function filterByOrientationTab(val) {
+        document.getElementById('hiddenOrientationInput').value = val;
+        submitFilterForm();
+    }
+
+    function filterByStatusTab(val) {
+        document.getElementById('hiddenStatusInput').value = val;
+        submitFilterForm();
+    }
+
+    // Instant Real-Time Client Search as User Types
+    function handleLiveSearchInput(query) {
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (query.trim().length > 0) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+
+        const q = query.toLowerCase().trim();
+        const cards = document.querySelectorAll('.screensaver-card-item');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const title = card.getAttribute('data-title') || '';
+            const caption = card.getAttribute('data-caption') || '';
+            if (title.includes(q) || caption.includes(q)) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        const countEl = document.getElementById('visibleCount');
+        if (countEl) countEl.textContent = visibleCount;
+    }
+
+    function clearLiveSearch() {
+        const input = document.getElementById('liveSearchInput');
+        input.value = '';
+        handleLiveSearchInput('');
+        input.focus();
+    }
+
+    // Instant Client-Side Sorting
+    function sortScreensaverCards(sortBy) {
+        const container = document.getElementById('screensaversGridContainer');
+        const cards = Array.from(container.querySelectorAll('.screensaver-card-item'));
+
+        cards.sort((a, b) => {
+            if (sortBy === 'title') {
+                return (a.getAttribute('data-title') || '').localeCompare(b.getAttribute('data-title') || '');
+            } else if (sortBy === 'duration') {
+                return parseInt(b.getAttribute('data-duration') || 0) - parseInt(a.getAttribute('data-duration') || 0);
+            } else if (sortBy === 'newest') {
+                return 0; // standard DOM order fallback
+            } else {
+                // Default: sequence order (#)
+                return parseInt(a.getAttribute('data-order') || 0) - parseInt(b.getAttribute('data-order') || 0);
+            }
+        });
+
+        cards.forEach(card => container.appendChild(card));
+    }
+
+
+    // Simulator Script Integration
+    const simSlidesData = {{ active_slides_json|safe }};
+    let simCurrentMode = 'LANDSCAPE';
+    let simFilteredSlides = [];
+    let simCurrentIndex = 0;
+    let simTimer = null;
+    let simProgressTimer = null;
+    let simIsPlaying = true;
+    let simSlideDurationMs = 10000;
+    let simProgressStartTime = 0;
+
+    function openSimulatorModal() {
+        openModal('simulatorModal');
+    }
+
+    function closeSimulatorModal() {
+        closeModal('simulatorModal');
+    }
+
+    function setSimFrameMode(mode) {
+        simCurrentMode = mode;
+        const btnL = document.getElementById('frameModeLandscape');
+        const btnP = document.getElementById('frameModePortrait');
+        const frame = document.getElementById('simMonitorFrame');
+
+        if (mode === 'LANDSCAPE') {
+            btnL.style.background = '#3b82f6';
+            btnL.style.color = '#fff';
+            btnP.style.background = 'transparent';
+            btnP.style.color = '#94a3b8';
+            frame.style.maxWidth = '800px';
+            frame.style.width = '100%';
+            frame.style.height = '450px';
+        } else {
+            btnP.style.background = '#a855f7';
+            btnP.style.color = '#fff';
+            btnL.style.background = 'transparent';
+            btnL.style.color = '#94a3b8';
+            frame.style.maxWidth = '340px';
+            frame.style.width = '100%';
+            frame.style.height = '600px';
+        }
+        initSimulator();
+    }
+
+    function initSimulator() {
+        stopSimTimer();
+        // First try filtering matching orientation or BOTH
+        simFilteredSlides = simSlidesData.filter(s => s.orientation === simCurrentMode || s.orientation === 'BOTH');
+        
+        // Fallback to all slides if no slides match exact mode so simulator always works
+        if (simFilteredSlides.length === 0 && simSlidesData.length > 0) {
+            simFilteredSlides = simSlidesData;
+        }
+
+        const track = document.getElementById('simSlidesTrack');
+        track.innerHTML = '';
+
+        if (simFilteredSlides.length === 0) {
+            track.innerHTML = `
+                <div style="width: 100%; height: 100%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.9rem; text-align: center; padding: 2rem;">
+                    No screensavers available.<br>Upload screensaver slides to test simulator.
+                </div>`;
+            document.getElementById('simSlideTitle').textContent = 'No Slides Available';
+            document.getElementById('simSlideText').textContent = '';
+            document.getElementById('simSlideCounter').textContent = '0 / 0';
+            return;
+        }
+
+        simFilteredSlides.forEach((slide, i) => {
+            const slideEl = document.createElement('div');
+            slideEl.style.width = '100%';
+            slideEl.style.minWidth = '100%';
+            slideEl.style.flexShrink = '0';
+            slideEl.style.height = '100%';
+            slideEl.style.background = '#000';
+            slideEl.style.position = 'relative';
+            slideEl.style.overflow = 'hidden';
+
+            if (slide.image_url) {
+                slideEl.innerHTML = `<img src="${slide.image_url}" alt="${slide.title}" style="width: 100%; height: 100%; object-fit: cover; display: block;">`;
+            } else {
+                slideEl.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; font-weight: 600;">${slide.title}</div>`;
+            }
+            track.appendChild(slideEl);
+        });
+
+        simCurrentIndex = 0;
+        showSimSlide(0);
+        simIsPlaying = true;
+        document.getElementById('simPlayPauseBtn').textContent = 'Pause';
+        startSimTimer();
+    }
+
+    function showSimSlide(index) {
+        if (simFilteredSlides.length === 0) return;
+
+        simCurrentIndex = (index + simFilteredSlides.length) % simFilteredSlides.length;
+        const track = document.getElementById('simSlidesTrack');
+        
+        // Exact transform formula: shift by 100% of container width per slide index
+        track.style.transform = `translateX(-${simCurrentIndex * 100}%)`;
+
+        const slide = simFilteredSlides[simCurrentIndex];
+        document.getElementById('simSlideTitle').textContent = slide.title;
+        document.getElementById('simSlideText').textContent = slide.caption || (slide.profile_name ? `Target Profile: ${slide.profile_name}` : '');
+        document.getElementById('simSlideCounter').textContent = `Slide ${simCurrentIndex + 1} of ${simFilteredSlides.length}`;
+
+        simSlideDurationMs = (parseInt(slide.duration) || 10) * 1000;
+        resetProgressBar();
+    }
+
+    function resetProgressBar() {
+        const bar = document.getElementById('simProgressBar');
+        bar.style.width = '0%';
+        simProgressStartTime = Date.now();
+
+        if (simProgressTimer) clearInterval(simProgressTimer);
+
+        if (simIsPlaying) {
+            simProgressTimer = setInterval(() => {
+                const elapsed = Date.now() - simProgressStartTime;
+                const pct = Math.min(100, (elapsed / simSlideDurationMs) * 100);
+                bar.style.width = pct + '%';
+                if (pct >= 100) {
+                    clearInterval(simProgressTimer);
+                }
+            }, 100);
+        }
+    }
+
+    function startSimTimer() {
+        stopSimTimer();
+        if (!simIsPlaying || simFilteredSlides.length <= 1) return;
+
+        resetProgressBar();
+        simTimer = setTimeout(() => {
+            simNextSlide();
+        }, simSlideDurationMs);
+    }
+
+    function stopSimTimer() {
+        if (simTimer) clearTimeout(simTimer);
+        if (simProgressTimer) clearInterval(simProgressTimer);
+    }
+
+    function simNextSlide() {
+        showSimSlide(simCurrentIndex + 1);
+        if (simIsPlaying) startSimTimer();
+    }
+
+    function simPrevSlide() {
+        showSimSlide(simCurrentIndex - 1);
+        if (simIsPlaying) startSimTimer();
+    }
+
+    function toggleSimPlayback() {
+        simIsPlaying = !simIsPlaying;
+        const btn = document.getElementById('simPlayPauseBtn');
+        if (simIsPlaying) {
+            btn.textContent = 'Pause';
+            startSimTimer();
+        } else {
+            btn.textContent = 'Play';
+            stopSimTimer();
+        }
+    }
+</script>
+{% endblock %}

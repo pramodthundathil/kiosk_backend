@@ -5,12 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Excel Earthings - Kiosk Administration & CMS{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/admin_styles.css' %}?v=2.0">
+    <link rel="stylesheet" href="{% static 'css/admin_styles.css' %}?v=3.0">
     <!-- DataTables CSS CDN -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <!-- jQuery & DataTables JS CDN -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <!-- Model Viewer CDN for 3D Asset Preview -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 </head>
 <body>
     <!-- Display Floating Django Messages/Alerts -->
@@ -64,6 +66,11 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                     <span>Kiosks</span>
                 </a>
+                <a href="{% url 'admin_screensavers' %}" class="nav-item {% if active_tab == 'screensavers' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <span>Screensavers</span>
+                </a>
+
 
                 <!-- Medium-Screen Overflow items (Products, Stores) -->
                 <a href="{% url 'admin_products' %}" class="nav-item nav-overflow-md {% if active_tab == 'products' %}active{% endif %}">
@@ -75,23 +82,15 @@
                     <span>Stores</span>
                 </a>
                 
-                <!-- Large-Screen Overflow items (Users, Monitoring, Media) -->
-                <a href="{% url 'admin_users' %}" class="nav-item nav-overflow-lg {% if active_tab == 'users' %}active{% endif %}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    <span>Users & Staff</span>
-                </a>
+                <!-- Monitoring -->
                 <a href="{% url 'admin_monitoring' %}" class="nav-item nav-overflow-lg {% if active_tab == 'monitoring' %}active{% endif %}">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="12" rx="2" ry="2"></rect><path d="M6 14v4M10 12v6M14 16v2M18 10v8"></path></svg>
                     <span>Monitoring</span>
                 </a>
-                <a href="{% url 'admin_media' %}" class="nav-item nav-overflow-lg {% if active_tab == 'media' %}active{% endif %}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polygon points="12 11 12 17 17 14 12 11"></polygon></svg>
-                    <span>Media Assets</span>
-                </a>
 
                 <!-- Responsive More Dropdown (Active for 769px to 1280px) -->
                 <div class="nav-more-wrapper">
-                    <button type="button" class="nav-more-btn {% if active_tab == 'products' or active_tab == 'stores' or active_tab == 'users' or active_tab == 'monitoring' or active_tab == 'media' %}active{% endif %}" onclick="toggleNavMoreMenu(event)" aria-expanded="false" aria-label="More Navigation Options">
+                    <button type="button" class="nav-more-btn {% if active_tab == 'products' or active_tab == 'stores' or active_tab == 'monitoring' %}active{% endif %}" onclick="toggleNavMoreMenu(event)" aria-expanded="false" aria-label="More Navigation Options">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                         <span>More</span>
                         <svg class="more-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -105,37 +104,63 @@
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             <span>Stores</span>
                         </a>
-                        <a href="{% url 'admin_users' %}" class="nav-dropdown-item {% if active_tab == 'users' %}active{% endif %}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                            <span>Users & Staff</span>
-                        </a>
                         <a href="{% url 'admin_monitoring' %}" class="nav-dropdown-item {% if active_tab == 'monitoring' %}active{% endif %}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="12" rx="2" ry="2"></rect><path d="M6 14v4M10 12v6M14 16v2M18 10v8"></path></svg>
                             <span>Monitoring</span>
-                        </a>
-                        <a href="{% url 'admin_media' %}" class="nav-dropdown-item {% if active_tab == 'media' %}active{% endif %}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polygon points="12 11 12 17 17 14 12 11"></polygon></svg>
-                            <span>Media Assets</span>
                         </a>
                     </div>
                 </div>
             </nav>
             
-            <div class="nav-user">
-                <div class="user-badge">
-                    <div class="user-avatar">
-                        {{ user.username|slice:":1"|upper }}
+            <!-- User / Admin Dropdown -->
+            <div class="nav-user-wrapper">
+                <button type="button" class="user-dropdown-btn {% if active_tab == 'users' or active_tab == 'media' or active_tab == 'profile' or active_tab == 'settings' %}active{% endif %}" id="userDropdownBtn" onclick="toggleUserDropdown(event)" aria-expanded="false" aria-label="User Account Menu">
+                    <div class="user-badge">
+                        <div class="user-avatar">
+                            {{ user.username|slice:":1"|upper }}
+                        </div>
+                        <div class="user-info-text">
+                            <span class="user-name">{{ user.username }}</span>
+                            <span class="user-role-label">{% if user.get_role_display %}{{ user.get_role_display }}{% else %}Admin{% endif %}</span>
+                        </div>
                     </div>
-                    <span class="user-name">{{ user.username }}</span>
-                </div>
-                <a class="btn-signout" href="{% url 'signout' %}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    <svg class="user-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
-                    <span>Logout</span>
-                </a>
+                </button>
+                <div class="user-dropdown-menu" id="userDropdownMenu">
+                    <div class="dropdown-header">
+                        <div class="user-avatar-large">
+                            {{ user.username|slice:":1"|upper }}
+                        </div>
+                        <div class="user-header-info">
+                            <span class="dropdown-user-title">{{ user.username }}</span>
+                            <span class="dropdown-user-email">{{ user.email|default:"admin@excelearning.com" }}</span>
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a href="{% url 'admin_profile' %}" class="user-dropdown-item {% if active_tab == 'profile' %}active{% endif %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>Profile</span>
+                    </a>
+                    <a href="{% url 'admin_users' %}" class="user-dropdown-item {% if active_tab == 'users' %}active{% endif %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <span>Staff & Users</span>
+                    </a>
+                    <a href="{% url 'admin_media' %}" class="user-dropdown-item {% if active_tab == 'media' %}active{% endif %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polygon points="12 11 12 17 17 14 12 11"></polygon></svg>
+                        <span>Media Assets</span>
+                    </a>
+                    <a href="{% url 'admin_settings' %}" class="user-dropdown-item {% if active_tab == 'settings' %}active{% endif %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <span>Settings</span>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="{% url 'signout' %}" class="user-dropdown-item dropdown-item-danger">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Logout</span>
+                    </a>
+                </div>
             </div>
         </div>
     </header>
@@ -214,6 +239,17 @@
             if (event) event.stopPropagation();
             const dropdown = document.getElementById('navMoreDropdown');
             const btn = document.querySelector('.nav-more-btn');
+            // Close User dropdown if open
+            const userDropdown = document.getElementById('userDropdownMenu');
+            const userBtn = document.getElementById('userDropdownBtn');
+            if (userDropdown && userDropdown.classList.contains('show')) {
+                userDropdown.classList.remove('show');
+                if (userBtn) {
+                    userBtn.classList.remove('open');
+                    userBtn.setAttribute('aria-expanded', 'false');
+                }
+            }
+
             if (dropdown && btn) {
                 const isOpen = dropdown.classList.contains('show');
                 if (isOpen) {
@@ -228,18 +264,81 @@
             }
         }
 
-        // Close dropdown when clicking anywhere outside
-        document.addEventListener('click', (event) => {
-            const dropdown = document.getElementById('navMoreDropdown');
-            const wrapper = document.querySelector('.nav-more-wrapper');
-            if (dropdown && dropdown.classList.contains('show')) {
-                if (!wrapper || !wrapper.contains(event.target)) {
+        // Toggle desktop User Account dropdown
+        function toggleUserDropdown(event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('userDropdownMenu');
+            const btn = document.getElementById('userDropdownBtn');
+            // Close More dropdown if open
+            const moreDropdown = document.getElementById('navMoreDropdown');
+            const moreBtn = document.querySelector('.nav-more-btn');
+            if (moreDropdown && moreDropdown.classList.contains('show')) {
+                moreDropdown.classList.remove('show');
+                if (moreBtn) {
+                    moreBtn.classList.remove('open');
+                    moreBtn.setAttribute('aria-expanded', 'false');
+                }
+            }
+
+            if (dropdown && btn) {
+                const isOpen = dropdown.classList.contains('show');
+                if (isOpen) {
                     dropdown.classList.remove('show');
+                    btn.classList.remove('open');
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    dropdown.classList.add('show');
+                    btn.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            }
+        }
+
+        // Close dropdowns when clicking anywhere outside
+        document.addEventListener('click', (event) => {
+            // More Dropdown
+            const moreDropdown = document.getElementById('navMoreDropdown');
+            const moreWrapper = document.querySelector('.nav-more-wrapper');
+            if (moreDropdown && moreDropdown.classList.contains('show')) {
+                if (!moreWrapper || !moreWrapper.contains(event.target)) {
+                    moreDropdown.classList.remove('show');
                     const btn = document.querySelector('.nav-more-btn');
                     if (btn) {
                         btn.classList.remove('open');
                         btn.setAttribute('aria-expanded', 'false');
                     }
+                }
+            }
+
+            // User Dropdown
+            const userDropdown = document.getElementById('userDropdownMenu');
+            const userWrapper = document.querySelector('.nav-user-wrapper');
+            if (userDropdown && userDropdown.classList.contains('show')) {
+                if (!userWrapper || !userWrapper.contains(event.target)) {
+                    userDropdown.classList.remove('show');
+                    const btn = document.getElementById('userDropdownBtn');
+                    if (btn) {
+                        btn.classList.remove('open');
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+        });
+
+        // Close dropdowns on Escape key
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                const moreDropdown = document.getElementById('navMoreDropdown');
+                if (moreDropdown && moreDropdown.classList.contains('show')) {
+                    moreDropdown.classList.remove('show');
+                    const btn = document.querySelector('.nav-more-btn');
+                    if (btn) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+                }
+                const userDropdown = document.getElementById('userDropdownMenu');
+                if (userDropdown && userDropdown.classList.contains('show')) {
+                    userDropdown.classList.remove('show');
+                    const btn = document.getElementById('userDropdownBtn');
+                    if (btn) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
                 }
             }
         });

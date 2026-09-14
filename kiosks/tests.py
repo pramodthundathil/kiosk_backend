@@ -147,3 +147,16 @@ class KioskAuthenticationTests(TestCase):
         self.assertTrue(profile.show_whiteboard)
         self.assertEqual(profile.screensaver_timeout_seconds, 180)
 
+    def test_kiosk_assigned_products_many_to_many(self):
+        from products.models import Product
+        p1 = Product.objects.create(name="Copper Bonded Rod", sku="CBR-001", price=1200.00)
+        p2 = Product.objects.create(name="Chemical Earthing Compound", sku="CEC-002", price=450.00)
+
+        # Assign products to kiosk
+        self.kiosk.assigned_products.add(p1, p2)
+        self.assertEqual(self.kiosk.assigned_products.count(), 2)
+
+        # Check reverse relation from Product
+        self.assertIn(self.kiosk, p1.assigned_kiosks.all())
+        self.assertIn(self.kiosk, p2.assigned_kiosks.all())
+

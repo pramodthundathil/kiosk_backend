@@ -20,10 +20,10 @@
             <button class="btn btn-secondary" onclick="openModal('categoryModal')">
                 <span>+ Add Category</span>
             </button>
-            <button class="btn btn-accent" onclick="openModal('addProductModal')">
+            <a href="{% url 'admin_product_add' %}" class="btn btn-accent" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>Add Product</span>
-            </button>
+            </a>
         </div>
     </div>
 
@@ -45,8 +45,8 @@
                     <th>Product Name</th>
                     <th>SKU Code</th>
                     <th>Category</th>
-                    <th>Price</th>
-                    <th>Stock</th>
+                    <th>Price & Stock</th>
+                    <th>Media Assets DB</th>
                     <th style="text-align: center;">Actions</th>
                 </tr>
             </thead>
@@ -61,19 +61,34 @@
                         {% endif %}
                     </td>
                     <td>
-                        <strong style="color: var(--primary-color); font-size: 0.95rem;">{{ p.name }}</strong>
+                        <a href="{% url 'admin_product_detail' p.id %}" style="text-decoration: none;">
+                            <strong style="color: var(--primary-color); font-size: 0.95rem;">{{ p.name }}</strong>
+                        </a>
                         {% if p.description %}<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">{{ p.description|truncatewords:8 }}</p>{% endif %}
                     </td>
                     <td><code style="font-size: 0.85rem; color: var(--text-secondary);">{{ p.sku }}</code></td>
                     <td><span class="role-badge" style="background: var(--bg-body); color: var(--text-primary); border: 1px solid var(--border-color);">{% if p.category %}{{ p.category.name }}{% else %}General{% endif %}</span></td>
-                    <td><strong style="color: var(--accent-color);">₹{{ p.price }}</strong></td>
-                    <td><span style="font-weight: 600;">{{ p.stock }} units</span></td>
+                    <td>
+                        <div><strong style="color: var(--accent-color);">₹{{ p.price }}</strong></div>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ p.stock }} in stock</span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
+                            <span class="role-badge" style="background: var(--bg-body); color: var(--text-primary); border: 1px solid var(--border-color); font-size: 0.75rem;">
+                                📁 {{ p.media_assets.count }} Media
+                            </span>
+                            <span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem;">
+                                💻 {{ p.assigned_kiosks.count }} Kiosks
+                            </span>
+                        </div>
+                    </td>
                     <td>
                         <div class="actions-cell" style="justify-content: center; gap: 0.4rem;">
-                            <!-- Edit Button -->
-                            <button class="action-icon-btn" title="Edit Product" onclick="openEditProduct('{{ p.id }}', '{{ p.name|escapejs }}', '{{ p.price }}', '{{ p.stock }}', '{% if p.category %}{{ p.category.id }}{% endif %}', '{{ p.description|escapejs }}')">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
+                            <!-- Manage Specs & Media Workspace Link -->
+                            <a href="{% url 'admin_product_detail' p.id %}" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.75rem; padding: 0.3rem 0.6rem; display: inline-flex; align-items: center; gap: 0.3rem;" title="Manage Specifications & Media Assets">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                <span>Specs & Media</span>
+                            </a>
                             <!-- Delete Button -->
                             <form action="{% url 'admin_products' %}" method="post" style="display: inline;" onsubmit="return confirm('Delete product {{ p.name }}?');">
                                 {% csrf_token %}
@@ -93,9 +108,9 @@
         <div class="empty-state">
             <h4>No Products in Catalog</h4>
             <p>Add products to display them on physical kiosk screens and manage inventory.</p>
-            <button class="btn btn-accent" onclick="openModal('addProductModal')">
+            <a href="{% url 'admin_product_add' %}" class="btn btn-accent" style="text-decoration: none;">
                 <span>Add First Product</span>
-            </button>
+            </a>
         </div>
         {% endif %}
     </div>

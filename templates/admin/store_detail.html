@@ -1,0 +1,407 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Store Details - {{ store.name }} - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 1200px; margin: 0 auto 2rem auto;">
+    
+    <!-- Top Action Header Banner -->
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="width: 48px; height: 48px; background: var(--primary-light); color: white; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
+            <div>
+                <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                    <span>{{ store.name }}</span>
+                    {% if store.is_active %}
+                    <span class="status-badge status-online">
+                        <span class="status-dot"></span> <span>Active Store</span>
+                    </span>
+                    {% else %}
+                    <span class="status-badge status-offline">
+                        <span class="status-dot"></span> <span>Inactive</span>
+                    </span>
+                    {% endif %}
+                </h2>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <span>Store Code: <code style="font-weight: 700; color: var(--primary-color);">{{ store.code }}</code></span>
+                    <span>&bull;</span>
+                    <span>Location: <strong>{{ store.city|default:"Unspecified" }}{% if store.state %}, {{ store.state }}{% endif %}</strong></span>
+                    <span>&bull;</span>
+                    <span>Connected Terminals: <strong>{{ total_kiosks }}</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-actions" style="gap: 0.6rem; flex-wrap: wrap;">
+            <!-- Back Button -->
+            <a href="{% url 'admin_stores' %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Back to Stores</span>
+            </a>
+
+            <!-- EDIT STORE BUTTON -->
+            <button class="btn btn-accent" onclick="openModal('editStoreModal')" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span>Edit Store</span>
+            </button>
+
+            <!-- ASSIGN TERMINAL BUTTON -->
+            <button class="btn btn-secondary" onclick="openModal('assignKioskModal')" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Assign Terminal</span>
+            </button>
+        </div>
+    </div>
+
+    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+
+        <!-- Operational Metrics Cards Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+            <!-- Total Devices -->
+            <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 44px; height: 44px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 700;">Total Connected</div>
+                    <div style="font-size: 1.6rem; font-weight: 800; color: var(--primary-color); margin-top: 0.1rem;">{{ total_kiosks }}</div>
+                </div>
+            </div>
+
+            <!-- Online Devices -->
+            <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 44px; height: 44px; background: rgba(16, 185, 129, 0.12); color: #10b981; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 700;">Online Terminals</div>
+                    <div style="font-size: 1.6rem; font-weight: 800; color: #10b981; margin-top: 0.1rem;">{{ online_count }}</div>
+                </div>
+            </div>
+
+            <!-- Offline / Warning Devices -->
+            <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 44px; height: 44px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 700;">Offline / Warning</div>
+                    <div style="font-size: 1.6rem; font-weight: 800; color: {% if offline_count or warning_count %}#ef4444{% else %}var(--primary-color){% endif %}; margin-top: 0.1rem;">{{ offline_count|add:warning_count }}</div>
+                </div>
+            </div>
+
+            <!-- Branch Staff / Managers -->
+            <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 44px; height: 44px; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 700;">Assigned Staff</div>
+                    <div style="font-size: 1.6rem; font-weight: 800; color: var(--primary-color); margin-top: 0.1rem;">{{ assigned_managers|length }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Details Summary Block -->
+        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--primary-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span>Store Specifications & Contact Details</span>
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; font-size: 0.9rem;">
+                <div>
+                    <span style="color: var(--text-secondary); display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">STORE CODE</span>
+                    <strong style="color: var(--primary-color);"><code style="font-size: 0.9rem;">{{ store.code }}</code></strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-secondary); display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">CONTACT PERSON</span>
+                    <strong style="color: var(--primary-color);">{{ store.contact_person|default:"Not specified" }}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-secondary); display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">CONTACT PHONE</span>
+                    <strong style="color: var(--primary-color);">{{ store.contact_phone|default:"Not specified" }}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-secondary); display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">CITY / STATE</span>
+                    <strong style="color: var(--primary-color);">{{ store.city|default:"-" }}{% if store.state %}, {{ store.state }}{% endif %}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-secondary); display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">COUNTRY</span>
+                    <strong style="color: var(--primary-color);">{{ store.country|default:"India" }}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-secondary); display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">ADDRESS</span>
+                    <strong style="color: var(--primary-color);">{{ store.address|default:"Not specified" }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connected Kiosk Devices Directory Section -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+            <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--primary-color); margin: 0;">
+                        Connected Kiosk Devices & Terminals ({{ total_kiosks }})
+                    </h3>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="toolbar-search">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="kioskSearchInput" placeholder="Filter connected devices...">
+                    </div>
+                    <button class="btn btn-accent btn-sm" onclick="openModal('assignKioskModal')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Assign Device</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="kiosk-table-wrapper">
+                {% if connected_kiosks %}
+                <table class="kiosk-table" id="connectedKiosksTable">
+                    <thead>
+                        <tr>
+                            <th>Device Name</th>
+                            <th>Device ID</th>
+                            <th>Profile</th>
+                            <th>Status</th>
+                            <th>IP Address</th>
+                            <th>App / OS</th>
+                            <th>Last Heartbeat</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in connected_kiosks %}
+                        {% with k=item.kiosk %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'admin_kiosk_detail' k.id %}" style="color: var(--primary-color); font-weight: 700; text-decoration: none;">
+                                    {{ k.name }}
+                                </a>
+                            </td>
+                            <td><code style="font-size: 0.85rem; color: var(--text-secondary);">{{ k.device_id }}</code></td>
+                            <td>
+                                {% if k.profile %}
+                                <span class="role-badge" style="background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);">
+                                    {{ k.profile.name }}
+                                </span>
+                                {% else %}
+                                <span style="color: var(--text-secondary); font-style: italic; font-size: 0.85rem;">Standard</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.is_online %}
+                                <span class="status-badge status-online">
+                                    <span class="status-dot"></span> <span>Online</span>
+                                </span>
+                                {% elif item.status == 'WARNING' %}
+                                <span class="status-badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">
+                                    <span class="status-dot" style="background: #f59e0b;"></span> <span>Warning</span>
+                                </span>
+                                {% elif item.status == 'DISABLED' %}
+                                <span class="status-badge status-offline">
+                                    <span class="status-dot"></span> <span>Disabled</span>
+                                </span>
+                                {% else %}
+                                <span class="status-badge status-offline">
+                                    <span class="status-dot"></span> <span>Offline</span>
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ k.last_ip_address|default:"-" }}</td>
+                            <td>
+                                <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                                    v{{ k.app_version|default:"1.0" }} {% if k.android_version %}(Android {{ k.android_version }}){% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if k.last_heartbeat_at %}
+                                <span style="font-size: 0.82rem;">{{ k.last_heartbeat_at|date:"M d, H:i" }}</span>
+                                {% else %}
+                                <span style="color: var(--text-secondary); font-size: 0.82rem;">Never</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="actions-cell" style="justify-content: center; gap: 0.4rem;">
+                                    <!-- View Details -->
+                                    <a href="{% url 'admin_kiosk_detail' k.id %}" class="action-icon-btn" title="View Terminal Details">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </a>
+                                    <!-- Edit Kiosk -->
+                                    <a href="{% url 'admin_kiosk_edit' k.id %}" class="action-icon-btn" title="Edit Terminal Settings">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </a>
+                                    <!-- Unassign from Store -->
+                                    <form action="{% url 'admin_store_detail' store.id %}" method="post" style="display: inline;" onsubmit="return confirm('Unassign terminal {{ k.name }} from {{ store.name }}?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="unassign_kiosk">
+                                        <input type="hidden" name="kiosk_id" value="{{ k.id }}">
+                                        <button type="submit" class="action-icon-btn" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);" title="Unassign Device from Store">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 0.75rem; color: var(--text-secondary);"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                    <h4>No Kiosk Terminals Connected</h4>
+                    <p>There are no kiosk devices assigned to <strong>{{ store.name }}</strong> yet.</p>
+                    <button class="btn btn-accent" onclick="openModal('assignKioskModal')" style="margin-top: 0.5rem;">
+                        <span>Assign Kiosk Terminal</span>
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Assigned Branch Staff / Managers Section -->
+        {% if assigned_managers %}
+        <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--primary-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                <span>Assigned Store Managers & Staff</span>
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                {% for mgr in assigned_managers %}
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 38px; height: 38px; background: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem;">
+                        {{ mgr.username|slice:":2"|upper }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--primary-color); font-size: 0.9rem;">{{ mgr.get_full_name|default:mgr.username }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ mgr.email|default:mgr.role }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- EDIT STORE MODAL -->
+<div class="modal-overlay" id="editStoreModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Edit Store Details - {{ store.name }}</h3>
+            <button class="modal-close-btn" onclick="closeModal('editStoreModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_store_detail' store.id %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_store">
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">STORE NAME *</label>
+                    <input type="text" name="name" value="{{ store.name }}" required>
+                </div>
+                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CITY</label>
+                        <input type="text" name="city" value="{{ store.city|default:'' }}">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">STATE</label>
+                        <input type="text" name="state" value="{{ store.state|default:'' }}">
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CONTACT PERSON</label>
+                        <input type="text" name="contact_person" value="{{ store.contact_person|default:'' }}">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CONTACT PHONE</label>
+                        <input type="text" name="contact_phone" value="{{ store.contact_phone|default:'' }}">
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ADDRESS</label>
+                    <textarea name="address" rows="3" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.5rem; font-family: inherit;">{{ store.address|default:'' }}</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editStoreModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ASSIGN KIOSK MODAL -->
+<div class="modal-overlay" id="assignKioskModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Assign Kiosk Terminal to {{ store.name }}</h3>
+            <button class="modal-close-btn" onclick="closeModal('assignKioskModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_store_detail' store.id %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="assign_kiosk">
+            <div class="modal-body">
+                {% if unassigned_kiosks %}
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">SELECT UNASSIGNED KIOSK *</label>
+                    <select name="kiosk_id" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.6rem;" required>
+                        <option value="">-- Choose Terminal --</option>
+                        {% for uk in unassigned_kiosks %}
+                        <option value="{{ uk.id }}">{{ uk.name }} ({{ uk.device_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% else %}
+                <div style="text-align: center; padding: 1.5rem; color: var(--text-secondary);">
+                    <p style="margin: 0;">No unassigned kiosk terminals currently available.</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Register a new terminal under <a href="{% url 'admin_kiosk_add' %}">Add Terminal</a> first.</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('assignKioskModal')">Cancel</button>
+                {% if unassigned_kiosks %}
+                <button type="submit" class="btn btn-accent">Assign Terminal</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        if ($('#connectedKiosksTable').length) {
+            var table = $('#connectedKiosksTable').DataTable({
+                "pageLength": 10,
+                "order": [],
+                "dom": '<"top"l>rt<"bottom"ip><"clear">',
+                "language": {
+                    "search": "Filter kiosks:"
+                }
+            });
+
+            $('#kioskSearchInput').on('keyup', function() {
+                table.search(this.value).draw();
+            });
+        }
+    });
+
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+</script>
+{% endblock %}

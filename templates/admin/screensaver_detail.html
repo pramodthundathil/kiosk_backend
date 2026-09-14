@@ -1,0 +1,127 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}{{ screensaver.title }} - Screensaver Detail - Excel Earthings Kiosk CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 1000px; margin: 0 auto 2rem auto;">
+    <!-- Panel Header -->
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--primary-color);">{{ screensaver.title }}</h2>
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">Screensaver Slide Detail & Configuration</span>
+            </div>
+        </div>
+        <div class="panel-actions" style="gap: 0.5rem;">
+            <a href="{% url 'admin_screensaver_edit' screensaver.id %}" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span>Edit</span>
+            </a>
+            <a href="{% url 'admin_screensavers' %}" class="btn btn-secondary btn-sm">◄ Back to List</a>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div style="padding: 1.75rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;">
+            
+            <!-- Left: Full Image Display Card -->
+            <div style="background: #0f172a; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                {% if screensaver.image %}
+                <img src="{{ screensaver.image.url }}" alt="{{ screensaver.title }}" style="width: 100%; height: auto; max-height: 480px; object-fit: contain; background: #000;">
+                {% else %}
+                <div style="padding: 4rem; text-align: center; color: #94a3b8;">No Image Uploaded</div>
+                {% endif %}
+
+                <!-- Badges Overlay -->
+                <div style="position: absolute; top: 12px; right: 12px; display: flex; gap: 8px;">
+                    {% if screensaver.orientation == 'LANDSCAPE' %}
+                    <span style="background: rgba(16, 185, 129, 0.9); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px;">Landscape (16:9)</span>
+                    {% elif screensaver.orientation == 'PORTRAIT' %}
+                    <span style="background: rgba(168, 85, 247, 0.9); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px;">Portrait (9:16)</span>
+                    {% else %}
+                    <span style="background: rgba(59, 130, 246, 0.9); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px;">Universal</span>
+                    {% endif %}
+                </div>
+
+                <div style="position: absolute; top: 12px; left: 12px;">
+                    <span style="background: {% if screensaver.is_active %}rgba(16, 185, 129, 0.9){% else %}rgba(100, 116, 139, 0.9){% endif %}; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
+                        {% if screensaver.is_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Right: Details & Properties Breakdown -->
+            <div style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <h3 style="font-size: 1.35rem; font-weight: 700; color: var(--primary-color); margin: 0 0 0.5rem 0;">{{ screensaver.title }}</h3>
+                    
+                    {% if screensaver.caption %}
+                    <div style="font-size: 1rem; color: #3b82f6; font-style: italic; margin-bottom: 1.25rem; background: rgba(59, 130, 246, 0.08); padding: 0.75rem 1rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        "{{ screensaver.caption }}"
+                    </div>
+                    {% endif %}
+
+                    <!-- Properties Table Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; background: var(--bg-hover); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; display: block;">Display Duration</span>
+                            <strong style="font-size: 1.1rem; color: var(--primary-color);">{{ screensaver.duration_seconds }} seconds</strong>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; display: block;">Slide Order</span>
+                            <strong style="font-size: 1.1rem; color: var(--primary-color);">Sequence #{{ screensaver.display_order }}</strong>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; display: block;">Target Kiosk Profile</span>
+                            <strong style="font-size: 0.95rem; color: var(--primary-color);">
+                                {% if screensaver.kiosk_profile %}{{ screensaver.kiosk_profile.name }} ({{ screensaver.kiosk_profile.code }}){% else %}Global (All Profiles){% endif %}
+                            </strong>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; display: block;">Orientation Mode</span>
+                            <strong style="font-size: 0.95rem; color: var(--primary-color);">{{ screensaver.get_orientation_display }}</strong>
+                        </div>
+                    </div>
+
+                    {% if screensaver.description %}
+                    <div style="margin-bottom: 1.5rem;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 0.25rem;">Description / Internal Notes</span>
+                        <p style="font-size: 0.9rem; color: var(--text-primary); margin: 0; background: var(--bg-card); padding: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                            {{ screensaver.description }}
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <div style="font-size: 0.8rem; color: var(--text-light); border-top: 1px solid var(--border-color); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div>Created: <strong>{{ screensaver.created_at|date:"Y-m-d H:i:s" }}</strong></div>
+                        <div>Last Modified: <strong>{{ screensaver.updated_at|date:"Y-m-d H:i:s" }}</strong></div>
+                    </div>
+                </div>
+
+                <!-- Footer Quick Actions -->
+                <div style="margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                    <form action="{% url 'admin_screensavers' %}" method="post" style="margin: 0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_active">
+                        <input type="hidden" name="screensaver_id" value="{{ screensaver.id }}">
+                        <button type="submit" class="btn {% if screensaver.is_active %}btn-secondary{% else %}btn-accent{% endif %}">
+                            {% if screensaver.is_active %}Deactivate Screensaver{% else %}Activate Screensaver{% endif %}
+                        </button>
+                    </form>
+
+                    <div style="display: flex; gap: 0.75rem;">
+                        <a href="{% url 'admin_screensaver_edit' screensaver.id %}" class="btn btn-secondary">Edit Details</a>
+                        <form action="{% url 'admin_screensaver_delete' screensaver.id %}" method="post" onsubmit="return confirm('Delete screensaver {{ screensaver.title|escapejs }}?');" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

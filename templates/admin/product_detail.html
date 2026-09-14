@@ -1,0 +1,709 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Product Details & Media Workspace - {{ product.name }} - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card product-workspace-card" style="max-width: 1280px; margin: 0 auto 2rem auto;">
+    
+    <!-- Top Action Header Banner -->
+    <div class="panel-header product-header-banner" style="flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="width: 56px; height: 56px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg-body); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
+                {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                {% endif %}
+            </div>
+            <div>
+                <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <span>{{ product.name }}</span>
+                    <span class="role-badge" style="background: var(--bg-body); color: var(--text-primary); border: 1px solid var(--border-color);">
+                        {% if product.category %}{{ product.category.name }}{% else %}General Category{% endif %}
+                    </span>
+                    <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        ₹{{ product.price }}
+                    </span>
+                </h2>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <span>SKU Code: <code style="font-weight: 700; color: var(--primary-color);">{{ product.sku }}</code></span>
+                    <span>&bull;</span>
+                    <span>Stock: <strong>{{ product.stock }} units</strong></span>
+                    <span>&bull;</span>
+                    <span>Total Media Assets: <strong style="color: var(--accent-color);">{{ media_counts.total }} files</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-actions" style="gap: 0.6rem; flex-wrap: wrap;">
+            <a href="{% url 'admin_products' %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Back to Catalog</span>
+            </a>
+            <button class="btn btn-accent" onclick="openModal('uploadProductMediaModal')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>+ Upload Media Asset</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Workspace Content Grid (2 Columns Responsive) -->
+    <div class="product-workspace-grid" style="padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+        
+        <!-- Left Main Column -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- SECTION 1: Basic Information -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <span>Basic Product Details</span>
+                    </h3>
+                </div>
+                <form action="{% url 'admin_product_detail' product.id %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_product">
+                    
+                    <div class="form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PRODUCT NAME *</label>
+                            <input type="text" name="name" value="{{ product.name }}" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">SKU CODE *</label>
+                            <input type="text" name="sku" value="{{ product.sku }}" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        </div>
+                    </div>
+
+                    <div class="form-row-3col" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CATEGORY</label>
+                            <select name="category_id" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                <option value="">-- Select Category --</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if product.category and product.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PRICE (₹)</label>
+                            <input type="number" step="0.01" name="price" value="{{ product.price }}" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">STOCK QUANTITY</label>
+                            <input type="number" name="stock" value="{{ product.stock }}" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">UPDATE PRIMARY PRODUCT IMAGE</label>
+                        <input type="file" name="image" accept="image/*" style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">GENERAL DESCRIPTION</label>
+                        <textarea name="description" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);" placeholder="Detailed overview of the product for display on kiosks...">{{ product.description }}</textarea>
+                    </div>
+
+                    <div style="text-align: right;">
+                        <button type="submit" class="btn btn-accent">Save Basic Info</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SECTION 2: Dynamic Specifications & Details Builder -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                            <span>Dynamic Technical Specifications & Details</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Add custom technical attributes, material parameters, and dimensions dynamically.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addSpecRow()">
+                        <span>+ Add Specification Row</span>
+                    </button>
+                </div>
+
+                <form action="{% url 'admin_product_detail' product.id %}" method="post" id="specForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_specifications">
+                    
+                    <div id="specContainer" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+                        {% if product.specifications %}
+                            {% for key, val in product.specifications.items %}
+                            <div class="spec-row" style="display: grid; grid-template-columns: 1fr 1fr 40px; gap: 0.75rem; align-items: center;">
+                                <input type="text" name="spec_key" value="{{ key }}" placeholder="Specification Name (e.g. Material)" required style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                <input type="text" name="spec_value" value="{{ val }}" placeholder="Value (e.g. Pure Electrolytic Copper)" required style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                <button type="button" class="action-icon-btn" onclick="removeSpecRow(this)" style="color: var(--danger-color); border-color: rgba(239,68,68,0.3);" title="Remove">
+                                    &times;
+                                </button>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Default Initial Empty Spec Rows -->
+                            <div class="spec-row" style="display: grid; grid-template-columns: 1fr 1fr 40px; gap: 0.75rem; align-items: center;">
+                                <input type="text" name="spec_key" value="Material" placeholder="Specification Name" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                <input type="text" name="spec_value" value="" placeholder="Specification Value" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                <button type="button" class="action-icon-btn" onclick="removeSpecRow(this)" style="color: var(--danger-color); border-color: rgba(239,68,68,0.3);" title="Remove">
+                                    &times;
+                                </button>
+                            </div>
+                            <div class="spec-row" style="display: grid; grid-template-columns: 1fr 1fr 40px; gap: 0.75rem; align-items: center;">
+                                <input type="text" name="spec_key" value="Rod Diameter / Size" placeholder="Specification Name" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                <input type="text" name="spec_value" value="" placeholder="Specification Value" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                <button type="button" class="action-icon-btn" onclick="removeSpecRow(this)" style="color: var(--danger-color); border-color: rgba(239,68,68,0.3);" title="Remove">
+                                    &times;
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="spec-form-actions" style="display: flex; justify-content: space-between; align-items: center;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="loadEarthingTemplate()">
+                            ⚡ Load Earthing Specs Template
+                        </button>
+                        <button type="submit" class="btn btn-accent">Save Dynamic Specifications</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SECTION 3: Multi-Media Assets Gallery & Documents -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            <span>Product Multi-Media & Document Gallery</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Images, Videos, PDF Brochures, Tech Sheets, and 3D Asset Models stored in Media DB model.</p>
+                    </div>
+                    <button class="btn btn-accent btn-sm" onclick="openModal('uploadProductMediaModal')">
+                        <span>+ Upload Media Asset</span>
+                    </button>
+                </div>
+
+                <!-- Asset Filter Pills -->
+                <div class="media-filter-container" style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; overflow-x: auto; padding-bottom: 0.3rem;">
+                    <button class="btn btn-secondary btn-sm media-filter-pill active" onclick="filterProductMedia('all', this)">
+                        All Media ({{ media_counts.total }})
+                    </button>
+                    <button class="btn btn-secondary btn-sm media-filter-pill" onclick="filterProductMedia('IMAGE', this)">
+                        📷 Images ({{ media_counts.images }})
+                    </button>
+                    <button class="btn btn-secondary btn-sm media-filter-pill" onclick="filterProductMedia('VIDEO', this)">
+                        🎥 Videos ({{ media_counts.videos }})
+                    </button>
+                    <button class="btn btn-secondary btn-sm media-filter-pill" onclick="filterProductMedia('PDF_BROCHURE', this)">
+                        📄 Brochures ({{ media_counts.brochures }})
+                    </button>
+                    <button class="btn btn-secondary btn-sm media-filter-pill" onclick="filterProductMedia('TECH_SHEET', this)">
+                        🔬 Tech Sheets ({{ media_counts.tech_sheets }})
+                    </button>
+                    <button class="btn btn-secondary btn-sm media-filter-pill" onclick="filterProductMedia('THREE_D', this)">
+                        🧊 3D Models ({{ media_counts.three_d }})
+                    </button>
+                </div>
+
+                <!-- Media Asset Cards Grid -->
+                <div class="product-media-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem;" id="productMediaGrid">
+                    {% if media_items %}
+                        {% for item in media_items %}
+                        <div class="product-media-card" data-type="{{ item.asset_type }}" style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm);">
+                            <div style="height: 130px; background: var(--primary-dark); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; cursor: pointer;" onclick="previewMediaAsset('{{ item.title|escapejs }}', '{{ item.asset_type }}', '{% if item.file %}{{ item.file.url }}{% elif item.external_url %}{{ item.external_url }}{% endif %}', '{{ item.description|escapejs }}', '{{ item.file_size_mb }}')">
+                                {% if item.asset_type == 'IMAGE' and item.file %}
+                                    <img src="{{ item.file.url }}" alt="{{ item.title }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                {% elif item.asset_type == 'VIDEO' %}
+                                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                {% elif item.asset_type == 'PDF_BROCHURE' %}
+                                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                {% elif item.asset_type == 'TECH_SHEET' %}
+                                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                {% elif item.asset_type == 'THREE_D' %}
+                                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                {% else %}
+                                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+                                {% endif %}
+                                <span class="role-badge" style="position: absolute; top: 6px; right: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 0.7rem; padding: 0.2rem 0.4rem;">
+                                    {{ item.get_asset_type_display }}
+                                </span>
+                            </div>
+
+                            <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <strong style="font-size: 0.9rem; color: var(--primary-color); display: block; margin-bottom: 0.25rem; word-break: break-word; cursor: pointer;" onclick="previewMediaAsset('{{ item.title|escapejs }}', '{{ item.asset_type }}', '{% if item.file %}{{ item.file.url }}{% elif item.external_url %}{{ item.external_url }}{% endif %}', '{{ item.description|escapejs }}', '{{ item.file_size_mb }}')">{{ item.title }}</strong>
+                                    {% if item.description %}<p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.35rem;">{{ item.description|truncatewords:6 }}</p>{% endif %}
+                                    {% if item.file_size_mb %}<span style="font-size: 0.7rem; color: var(--text-light);">Size: {{ item.file_size_mb }} MB</span>{% endif %}
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="previewMediaAsset('{{ item.title|escapejs }}', '{{ item.asset_type }}', '{% if item.file %}{{ item.file.url }}{% elif item.external_url %}{{ item.external_url }}{% endif %}', '{{ item.description|escapejs }}', '{{ item.file_size_mb }}')" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <span>Preview Media</span>
+                                    </button>
+                                    
+                                    <form action="{% url 'admin_product_detail' product.id %}" method="post" onsubmit="return confirm('Delete media asset {{ item.title }}?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_media">
+                                        <input type="hidden" name="asset_id" value="{{ item.id }}">
+                                        <button type="submit" class="action-icon-btn" style="color: var(--danger-color); border-color: rgba(239, 68, 68, 0.3);" title="Delete Media Asset">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="empty-state" style="grid-column: 1 / -1; padding: 2rem;">
+                        <h4>No Media Assets Attached</h4>
+                        <p>Upload images, promotional videos, PDF brochures, tech specs, or 3D models for this product.</p>
+                        <button class="btn btn-accent btn-sm" onclick="openModal('uploadProductMediaModal')">
+                            <span>Upload First Media Asset</span>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar Column -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- Quick Media Upload Card -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <h4 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>Quick Media Upload</span>
+                </h4>
+                <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1rem;">Directly save files into <code>MediaAsset</code> DB model attached to this product.</p>
+
+                <form action="{% url 'admin_product_detail' product.id %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="upload_media">
+                    
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">ASSET TYPE</label>
+                        <select name="asset_type" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                            {% for code, label in asset_types %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">TITLE (OPTIONAL)</label>
+                        <input type="text" name="title" placeholder="e.g. Product Brochure PDF" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    </div>
+
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">SELECT FILE(S)</label>
+                        <input type="file" name="files" multiple style="width: 100%; padding: 0.35rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        <span style="font-size: 0.7rem; color: var(--text-light); display: block; margin-top: 0.2rem;">Accepts PNG, JPG, MP4, PDF, GLTF, GLB, USDZ</span>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">OR EXTERNAL LINK / STREAM URL</label>
+                        <input type="url" name="external_url" placeholder="https://..." style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    </div>
+
+                    <button type="submit" class="btn btn-accent" style="width: 100%;">
+                        <span>Upload to Media DB</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Media Breakdown Sidebar Card -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <h4 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.75rem;">Media DB Breakdown</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color);">
+                        <span>📷 Product Images</span>
+                        <strong>{{ media_counts.images }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color);">
+                        <span>🎥 Promo Videos</span>
+                        <strong>{{ media_counts.videos }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color);">
+                        <span>📄 PDF Brochures</span>
+                        <strong>{{ media_counts.brochures }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color);">
+                        <span>🔬 Technical Specs</span>
+                        <strong>{{ media_counts.tech_sheets }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                        <span>🧊 3D Assets & Models</span>
+                        <strong>{{ media_counts.three_d }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kiosk Display Availability Card -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <h4 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                        <span>Kiosk Display List</span>
+                    </h4>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('assignKiosksModal')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">Manage</button>
+                </div>
+                <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.85rem;">Currently assigned to <strong>{{ assigned_kiosks|length }}</strong> kiosk terminal(s).</p>
+
+                {% if assigned_kiosks %}
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 220px; overflow-y: auto; padding-right: 0.2rem;">
+                    {% for k in assigned_kiosks %}
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; background: var(--bg-body); border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.82rem;">
+                        <div style="overflow: hidden;">
+                            <a href="{% url 'admin_kiosk_detail' k.id %}" style="font-weight: 700; color: var(--primary-color); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ k.name }}</a>
+                            <span style="font-size: 0.72rem; color: var(--text-secondary);">{% if k.store %}{{ k.store.name }}{% else %}Unassigned{% endif %}</span>
+                        </div>
+                        <span class="role-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.7rem; padding: 0.15rem 0.35rem; flex-shrink: 0;">Active</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic; background: var(--bg-body); padding: 0.75rem; border-radius: var(--radius-md); text-align: center;">Displayed on all kiosks by default (no specific restriction).</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ASSIGN KIOSKS MODAL -->
+<div class="modal-overlay" id="assignKiosksModal" style="z-index: 1050;" onclick="if(event.target === this) closeModal('assignKiosksModal');">
+    <div class="modal-card" style="max-width: 600px; width: 90vw; max-height: 80vh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
+            <div>
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--primary-color);">Assign Kiosks for Display</h3>
+                <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-secondary);">Select terminals where product <strong>{{ product.name }}</strong> will be listed</p>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeModal('assignKiosksModal')" style="font-size: 1.4rem;">&times;</button>
+        </div>
+
+        <form action="{% url 'admin_product_detail' product.id %}" method="post" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="assign_kiosks">
+
+            <div class="modal-body" style="padding: 1rem 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                {% if all_kiosks %}
+                    {% for k in all_kiosks %}
+                    <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <input type="checkbox" name="kiosk_ids" value="{{ k.id }}" {% if k.id in assigned_kiosk_ids %}checked{% endif %} style="width: 17px; height: 17px; accent-color: var(--accent-color);">
+                            <div>
+                                <strong style="font-size: 0.88rem; color: var(--primary-color); display: block;">{{ k.name }}</strong>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">Device ID: <code>{{ k.device_id }}</code> {% if k.store %}&bull; {{ k.store.name }}{% endif %}</span>
+                            </div>
+                        </div>
+                        <span class="role-badge" style="background: var(--bg-body); color: var(--text-primary); font-size: 0.75rem;">{{ k.status }}</span>
+                    </label>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No registered kiosks found.</p>
+                {% endif %}
+            </div>
+
+            <div class="modal-footer" style="padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.6rem; background: var(--bg-card);">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('assignKiosksModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Save Kiosk Assignment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- UPLOAD PRODUCT MEDIA MODAL -->
+<div class="modal-overlay" id="uploadProductMediaModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Upload Media Asset to Product</h3>
+            <button class="modal-close-btn" onclick="closeModal('uploadProductMediaModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_product_detail' product.id %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="upload_media">
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">TITLE (OPTIONAL)</label>
+                    <input type="text" name="title" placeholder="e.g. 3D Model GLTF / High-Res Brochure">
+                </div>
+
+                <div class="modal-form-2col" style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">ASSET TYPE</label>
+                        <select name="asset_type" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                            {% for code, label in asset_types %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">UPLOAD FILE(S)</label>
+                        <input type="file" name="files" multiple style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">EXTERNAL URL / VIDEO EMBED LINK</label>
+                    <input type="url" name="external_url" placeholder="https://youtube.com/..." style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">DESCRIPTION</label>
+                    <textarea name="description" rows="2" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);" placeholder="Asset details for kiosk displays..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('uploadProductMediaModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Save to Media DB</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MEDIA IN-APP PREVIEW MODAL -->
+<div class="modal-overlay" id="mediaPreviewModal" style="z-index: 1050;" onclick="if(event.target === this) closeMediaPreviewModal();">
+    <div class="modal-card" style="max-width: 920px; width: 92vw; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
+            <div style="display: flex; align-items: center; gap: 0.75rem; overflow: hidden; padding-right: 1rem;">
+                <span id="previewAssetBadge" class="role-badge" style="background: var(--primary-dark); color: #fff; text-transform: uppercase; font-size: 0.7rem; font-weight: 700; flex-shrink: 0;">MEDIA</span>
+                <h3 id="previewModalTitle" style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Media Preview</h3>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
+                <a id="previewDownloadBtn" href="#" download target="_blank" class="btn btn-accent btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Download Item</span>
+                </a>
+                <button class="modal-close-btn" onclick="closeMediaPreviewModal()" aria-label="Close Modal" style="font-size: 1.4rem; width: 32px; height: 32px;">&times;</button>
+            </div>
+        </div>
+
+        <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; background: var(--bg-body); align-items: center; justify-content: center; min-height: 360px;">
+            <!-- Dynamic Content Container -->
+            <div id="previewMediaContainer" style="width: 100%; display: flex; justify-content: center; align-items: center; flex: 1;">
+                <!-- Filled dynamically by JavaScript -->
+            </div>
+
+            <!-- Asset Info Box -->
+            <div id="previewAssetMeta" style="width: 100%; margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.82rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                <div>
+                    <span id="previewAssetSize" style="margin-right: 1rem; font-weight: 600; color: var(--primary-color);"></span>
+                    <span id="previewAssetDesc"></span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyPreviewUrl()" style="font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span>Copy Link</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPreviewUrl = '';
+
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    function previewMediaAsset(title, assetType, mediaUrl, description, fileSizeMb) {
+        currentPreviewUrl = mediaUrl || '';
+        
+        document.getElementById('previewModalTitle').textContent = title || 'Media Preview';
+        
+        const badge = document.getElementById('previewAssetBadge');
+        badge.textContent = (assetType || 'MEDIA').replace('_', ' ');
+        
+        const downloadBtn = document.getElementById('previewDownloadBtn');
+        if (currentPreviewUrl) {
+            downloadBtn.href = currentPreviewUrl;
+            downloadBtn.setAttribute('download', title || 'download');
+            downloadBtn.style.display = 'inline-flex';
+        } else {
+            downloadBtn.style.display = 'none';
+        }
+
+        const sizeSpan = document.getElementById('previewAssetSize');
+        if (fileSizeMb && parseFloat(fileSizeMb) > 0) {
+            sizeSpan.textContent = `File Size: ${fileSizeMb} MB`;
+            sizeSpan.style.display = 'inline-block';
+        } else {
+            sizeSpan.textContent = '';
+            sizeSpan.style.display = 'none';
+        }
+
+        const descSpan = document.getElementById('previewAssetDesc');
+        descSpan.textContent = description || '';
+
+        const container = document.getElementById('previewMediaContainer');
+        container.innerHTML = '';
+
+        if (!currentPreviewUrl) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem 1rem;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="2" style="margin-bottom: 1rem;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <p style="color: var(--text-secondary); font-size: 0.95rem;">No valid media file or link available to preview.</p>
+                </div>
+            `;
+            openModal('mediaPreviewModal');
+            return;
+        }
+
+        const cleanUrl = currentPreviewUrl.split('?')[0].toLowerCase();
+        const ext = cleanUrl.substring(cleanUrl.lastIndexOf('.') + 1);
+
+        if (assetType === 'IMAGE' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
+            container.innerHTML = `
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0.5rem;">
+                    <img src="${currentPreviewUrl}" alt="${title}" style="max-width: 100%; max-height: 60vh; object-fit: contain; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+                </div>
+            `;
+        } else if (assetType === 'PDF_BROCHURE' || assetType === 'TECH_SHEET' || ext === 'pdf') {
+            container.innerHTML = `
+                <iframe src="${currentPreviewUrl}#toolbar=1" style="width: 100%; height: 62vh; min-height: 480px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #ffffff;">
+                    <p style="padding: 1rem;">Your browser cannot render PDF inline. <a href="${currentPreviewUrl}" target="_blank">Open PDF file</a></p>
+                </iframe>
+            `;
+        } else if (assetType === 'VIDEO' || ['mp4', 'webm', 'ogg', 'mov', 'm4v'].includes(ext) || currentPreviewUrl.includes('youtube') || currentPreviewUrl.includes('youtu.be') || currentPreviewUrl.includes('vimeo')) {
+            if (currentPreviewUrl.includes('youtube.com') || currentPreviewUrl.includes('youtu.be')) {
+                let videoId = '';
+                const ytMatch = currentPreviewUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+                if (ytMatch && ytMatch[1]) videoId = ytMatch[1];
+                const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : currentPreviewUrl;
+                container.innerHTML = `
+                    <iframe src="${embedUrl}" style="width: 100%; height: 55vh; min-height: 400px; border: none; border-radius: var(--radius-md);" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                `;
+            } else if (currentPreviewUrl.includes('vimeo.com')) {
+                const vimeoMatch = currentPreviewUrl.match(/vimeo\.com\/(\d+)/);
+                const vimeoId = vimeoMatch ? vimeoMatch[1] : '';
+                const embedUrl = vimeoId ? `https://player.vimeo.com/video/${vimeoId}?autoplay=1` : currentPreviewUrl;
+                container.innerHTML = `
+                    <iframe src="${embedUrl}" style="width: 100%; height: 55vh; min-height: 400px; border: none; border-radius: var(--radius-md);" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                `;
+            } else {
+                container.innerHTML = `
+                    <video controls autoplay style="max-width: 100%; max-height: 60vh; width: 100%; border-radius: var(--radius-md); background: #000;">
+                        <source src="${currentPreviewUrl}">
+                        Your browser does not support video playback.
+                    </video>
+                `;
+            }
+        } else if (assetType === 'THREE_D' || ['gltf', 'glb'].includes(ext)) {
+            container.innerHTML = `
+                <model-viewer src="${currentPreviewUrl}" camera-controls auto-rotate shadow-intensity="1" ar style="width: 100%; height: 55vh; min-height: 420px; background: #0f172a; border-radius: var(--radius-md);">
+                    <div slot="poster" style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff;">Loading 3D Model...</div>
+                </model-viewer>
+            `;
+        } else if (['mp3', 'wav', 'm4a', 'flac', 'aac'].includes(ext)) {
+            container.innerHTML = `
+                <div style="text-align: center; width: 100%; padding: 3rem 1.5rem; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" style="margin-bottom: 1rem;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    <h4 style="font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">${title}</h4>
+                    <audio controls autoplay style="width: 100%; max-width: 550px;">
+                        <source src="${currentPreviewUrl}">
+                    </audio>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2.5rem 1.5rem; width: 100%; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="margin-bottom: 1rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <h4 style="font-size: 1.1rem; color: var(--primary-color); font-weight: 700; margin-bottom: 0.5rem;">${title}</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">File Format: .${ext.toUpperCase() || 'FILE'}</p>
+                    <a href="${currentPreviewUrl}" download target="_blank" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Download File</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        openModal('mediaPreviewModal');
+    }
+
+    function closeMediaPreviewModal() {
+        const container = document.getElementById('previewMediaContainer');
+        if (container) container.innerHTML = '';
+        closeModal('mediaPreviewModal');
+    }
+
+    function copyPreviewUrl() {
+        if (!currentPreviewUrl) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(currentPreviewUrl).then(() => {
+                alert('Media file URL copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy file link:', currentPreviewUrl);
+            });
+        } else {
+            prompt('Copy file link:', currentPreviewUrl);
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMediaPreviewModal();
+        }
+    });
+
+    function addSpecRow(key = '', val = '') {
+        const container = document.getElementById('specContainer');
+        const row = document.createElement('div');
+        row.className = 'spec-row';
+        row.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 40px; gap: 0.75rem; align-items: center;';
+        row.innerHTML = `
+            <input type="text" name="spec_key" value="${key}" placeholder="Specification Name" required style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <input type="text" name="spec_value" value="${val}" placeholder="Specification Value" required style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <button type="button" class="action-icon-btn" onclick="removeSpecRow(this)" style="color: var(--danger-color); border-color: rgba(239,68,68,0.3);" title="Remove">&times;</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function removeSpecRow(btn) {
+        const row = btn.closest('.spec-row');
+        row.remove();
+    }
+
+    function loadEarthingTemplate() {
+        const container = document.getElementById('specContainer');
+        container.innerHTML = '';
+        const defaultSpecs = [
+            ['Material', 'Pure Electrolytic Copper / High Tensile Steel'],
+            ['Copper Coating Thickness', '250 Microns (UL 467 Standard)'],
+            ['Rod Diameter', '16 mm / 17.2 mm / 19 mm'],
+            ['Rod Length', '2.0 Meters / 3.0 Meters'],
+            ['Current Carrying Capacity', 'Up to 25 KA for 1 sec'],
+            ['Applicable Standard', 'IEEE 80 / IS 3043 / IEC 62561-2'],
+            ['Expected Life Span', '30+ Years']
+        ];
+        defaultSpecs.forEach(pair => addSpecRow(pair[0], pair[1]));
+    }
+
+    function filterProductMedia(type, btnEl) {
+        document.querySelectorAll('.media-filter-pill').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
+
+        const cards = document.querySelectorAll('.product-media-card');
+        cards.forEach(c => {
+            if (type === 'all' || c.getAttribute('data-type') === type) {
+                c.style.display = 'flex';
+            } else {
+                c.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

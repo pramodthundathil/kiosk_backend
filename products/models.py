@@ -35,3 +35,23 @@ class Product(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.sku})"
+
+    @property
+    def images(self):
+        return self.media_assets.filter(asset_type='IMAGE', is_active=True)
+
+    @property
+    def videos(self):
+        return self.media_assets.filter(asset_type='VIDEO', is_active=True)
+
+    @property
+    def brochures(self):
+        return self.media_assets.filter(asset_type='PDF_BROCHURE', is_active=True)
+
+    @property
+    def tech_sheets(self):
+        return self.media_assets.filter(asset_type='TECH_SHEET', is_active=True)
+
+    @property
+    def three_d_assets(self):
+        return self.media_assets.filter(asset_type='THREE_D', is_active=True)

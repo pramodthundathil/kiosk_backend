@@ -108,6 +108,14 @@ class KioskDevice(models.Model):
     screen_on = models.BooleanField(default=True)
     app_running = models.BooleanField(default=True)
     last_error = models.TextField(blank=True, null=True)
+       # Assigned products for display on this kiosk
+    assigned_products = models.ManyToManyField(
+        'products.Product',
+        related_name='assigned_kiosks',
+        blank=True,
+        help_text="Products assigned to display on this kiosk"
+    )
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

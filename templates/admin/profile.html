@@ -1,0 +1,65 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}User Profile - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 900px; margin: 0 auto 2rem auto;">
+    <div class="panel-header">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>User Profile & Account Information</span>
+        </div>
+    </div>
+
+    <div style="padding: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));">
+            <div style="width: 72px; height: 72px; font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
+                {{ profile_user.username|slice:":1"|upper }}
+            </div>
+            <div>
+                <h2 style="margin: 0 0 0.25rem 0; font-size: 1.5rem; font-weight: 700; color: var(--text-primary, #ffffff);">{{ profile_user.username }}</h2>
+                <span class="role-badge" style="background: #e0e7ff; color: #3730a3; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.825rem; font-weight: 600;">
+                    {% if profile_user.get_role_display %}{{ profile_user.get_role_display }}{% else %}Administrator{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <form method="POST" action="{% url 'admin_profile' %}">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Username</label>
+                    <input type="text" class="form-input" value="{{ profile_user.username }}" disabled style="opacity: 0.7; cursor: not-allowed; width: 100%;">
+                    <small style="color: var(--text-secondary, #94a3b8); font-size: 0.8rem;">Username cannot be altered.</small>
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Email Address</label>
+                    <input type="email" name="email" class="form-input" value="{{ profile_user.email|default:'' }}" placeholder="Enter email address" style="width: 100%;">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">New Password (Optional)</label>
+                    <input type="password" name="password" class="form-input" placeholder="Leave blank to keep current password" style="width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Account Joined Date</label>
+                    <input type="text" class="form-input" value="{{ profile_user.date_joined|date:'Y-m-d H:i:s' }}" disabled style="opacity: 0.7; cursor: not-allowed; width: 100%;">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn btn-accent" style="padding: 0.6rem 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    <span>Save Profile Changes</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

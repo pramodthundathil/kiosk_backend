@@ -1,7 +1,11 @@
 from django.urls import path
-from .views import KioskAuthLoginView, KioskDeviceSelfView
+from .views import KioskAuthLoginView, KioskDeviceSelfView, ScreensaverListAPIView
+from products.views import ProductListAPIView
 
 urlpatterns = [
     path("auth/login/", KioskAuthLoginView.as_view(), name="kiosk_auth_login"),
     path("device/", KioskDeviceSelfView.as_view(), name="kiosk_device_self"),
+    path("products/", ProductListAPIView.as_view(), name="kiosk_products_api"),
+    path("screensavers/", ScreensaverListAPIView.as_view(), name="kiosk_screensavers_api"),
 ]
+

@@ -1,0 +1,187 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Add New Screensaver - Excel Earthings Kiosk CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 900px; margin: 0 auto 2rem auto;">
+    <div class="panel-header">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <div>
+                <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: var(--primary-color);">Add New Screensaver</h2>
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">Upload slide image and set kiosk monitor sliding parameters</span>
+            </div>
+        </div>
+        <div class="panel-actions">
+            <a href="{% url 'admin_screensavers' %}" class="btn btn-secondary btn-sm">◄ Back to Screensavers</a>
+        </div>
+    </div>
+
+    <form action="{% url 'admin_screensaver_add' %}" method="post" enctype="multipart/form-data" style="padding: 1.75rem;">
+        {% csrf_token %}
+
+        <!-- Image Upload Section with Dropzone -->
+        <div style="margin-bottom: 1.75rem;">
+            <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.5rem; color: var(--primary-color);">SCREENSAVER IMAGE FILE *</label>
+            
+            <div id="imageDropzone" onclick="document.getElementById('screensaverImageInput').click()" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem; text-align: center; background: var(--bg-hover); cursor: pointer; transition: all 0.2s ease;">
+                <input type="file" id="screensaverImageInput" name="image" accept="image/*" required onchange="handleImageSelect(event)" style="display: none;">
+                
+                <div id="dropzoneContent">
+                    <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem auto;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </div>
+                    <h4 style="font-size: 1rem; font-weight: 600; margin: 0 0 0.25rem 0; color: var(--primary-color);">Click or Drag & Drop Image Here</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Supports high-res PNG, JPG, WEBP formats (Landscape 1920x1080 or Portrait 1080x1920 recommended)</p>
+                </div>
+
+                <!-- Preview Container -->
+                <div id="imagePreviewContainer" style="display: none; position: relative;">
+                    <img id="imagePreview" src="" alt="Preview" style="max-height: 260px; max-width: 100%; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); object-fit: contain;">
+                    <div id="detectedRatioBadge" style="margin-top: 0.75rem; font-size: 0.825rem; font-weight: 600; color: #3b82f6; background: rgba(59, 130, 246, 0.1); padding: 6px 14px; border-radius: 20px; display: inline-block;">
+                        Detecting orientation...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            <!-- Title -->
+            <div style="grid-column: 1 / -1;">
+                <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: var(--primary-color);">SLIDE TITLE *</label>
+                <input type="text" name="title" placeholder="e.g. Copper Earthing Rods Feature Banner" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+            </div>
+
+            <!-- Orientation -->
+            <div>
+                <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: var(--primary-color);">MONITOR ORIENTATION *</label>
+                <select id="orientationSelect" name="orientation" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+                    <option value="LANDSCAPE">Landscape (Horizontal - 16:9)</option>
+                    <option value="PORTRAIT">Portrait (Vertical - 9:16)</option>
+                    <option value="BOTH">Universal (Fits Both)</option>
+                </select>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">Kiosk monitors will filter slides matching their screen setup</span>
+            </div>
+
+            <!-- Duration Seconds -->
+            <div>
+                <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: var(--primary-color);">DISPLAY DURATION (SECONDS) *</label>
+                <input type="number" name="duration_seconds" value="10" min="2" max="300" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+                <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">Time slide remains visible before sliding to next</span>
+            </div>
+
+            <!-- Display Order -->
+            <div>
+                <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: var(--primary-color);">SLIDE SEQUENCE ORDER</label>
+                <input type="number" name="display_order" value="0" min="0" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+                <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">Lower numbers slide first (0, 1, 2...)</span>
+            </div>
+
+            <!-- Target Profile -->
+            <div>
+                <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: var(--primary-color);">TARGET KIOSK PROFILE</label>
+                <select name="profile_id" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+                    <option value="">All Kiosk Profiles (Global)</option>
+                    {% for prof in profiles %}
+                    <option value="{{ prof.id }}">{{ prof.name }} ({{ prof.code }})</option>
+                    {% endfor %}
+                </select>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">Restrict to kiosks assigned to specific profile</span>
+            </div>
+
+            <!-- Caption / Overlay Text -->
+            <div style="grid-column: 1 / -1;">
+                <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: var(--primary-color);">SLIDE OVERLAY CAPTION (OPTIONAL)</label>
+                <input type="text" name="caption" placeholder="e.g. World-class Lightning Protection Systems" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+            </div>
+
+            <!-- Description / Notes -->
+            <div style="grid-column: 1 / -1;">
+                <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 0.35rem; color: var(--primary-color);">INTERNAL DESCRIPTION / NOTES</label>
+                <textarea name="description" rows="3" placeholder="Optional notes for admin staff..." style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem; resize: vertical;"></textarea>
+            </div>
+
+            <!-- Is Active Toggle -->
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 0.75rem; background: var(--bg-hover); padding: 0.85rem 1.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <input type="checkbox" id="isActiveCheck" name="is_active" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981;">
+                <label for="isActiveCheck" style="font-weight: 600; font-size: 0.9rem; color: var(--primary-color); cursor: pointer; margin: 0;">
+                    Enable and activate this screensaver immediately
+                </label>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+            <a href="{% url 'admin_screensavers' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-accent" style="padding: 0.65rem 1.5rem; font-weight: 700;">Save & Publish Screensaver</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function handleImageSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const width = img.naturalWidth;
+                const height = img.naturalHeight;
+                const ratio = width / height;
+
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('dropzoneContent').style.display = 'none';
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+
+                const badge = document.getElementById('detectedRatioBadge');
+                const orientationSelect = document.getElementById('orientationSelect');
+
+                if (ratio > 1.2) {
+                    badge.innerHTML = `Auto-Detected: <strong>Landscape Aspect Ratio</strong> (${width}x${height}px)`;
+                    badge.style.color = '#10b981';
+                    badge.style.background = 'rgba(16, 185, 129, 0.12)';
+                    orientationSelect.value = 'LANDSCAPE';
+                } else if (ratio < 0.85) {
+                    badge.innerHTML = `Auto-Detected: <strong>Portrait Aspect Ratio</strong> (${width}x${height}px)`;
+                    badge.style.color = '#a855f7';
+                    badge.style.background = 'rgba(168, 85, 247, 0.12)';
+                    orientationSelect.value = 'PORTRAIT';
+                } else {
+                    badge.innerHTML = `Auto-Detected: <strong>Square/Universal Aspect Ratio</strong> (${width}x${height}px)`;
+                    badge.style.color = '#3b82f6';
+                    badge.style.background = 'rgba(59, 130, 246, 0.12)';
+                    orientationSelect.value = 'BOTH';
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Drag and Drop support
+    const dropzone = document.getElementById('imageDropzone');
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = '#3b82f6';
+        dropzone.style.background = 'rgba(59, 130, 246, 0.05)';
+    });
+    dropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = 'var(--border-color)';
+        dropzone.style.background = 'var(--bg-hover)';
+    });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = 'var(--border-color)';
+        dropzone.style.background = 'var(--bg-hover)';
+        if (e.dataTransfer.files.length) {
+            const input = document.getElementById('screensaverImageInput');
+            input.files = e.dataTransfer.files;
+            handleImageSelect({ target: input });
+        }
+    });
+</script>
+{% endblock %}

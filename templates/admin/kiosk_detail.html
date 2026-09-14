@@ -285,6 +285,63 @@
 
         </div>
 
+        <!-- Assigned Products for Kiosk Display Section -->
+        <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="font-weight: 700; font-size: 0.95rem; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                <span style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    <span>Assigned Kiosk Display Products ({{ assigned_products|length }})</span>
+                </span>
+                <button type="button" class="btn btn-accent btn-sm" onclick="openModal('assignProductsModal')">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>+ Assign / Manage Products</span>
+                </button>
+            </div>
+
+            {% if assigned_products %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+                {% for prod in assigned_products %}
+                <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem; display: flex; gap: 0.85rem; align-items: center; justify-content: space-between; position: relative;">
+                    <div style="display: flex; gap: 0.75rem; align-items: center; overflow: hidden;">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            {% if prod.image %}
+                            <img src="{{ prod.image.url }}" alt="{{ prod.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                            {% endif %}
+                        </div>
+                        <div style="overflow: hidden;">
+                            <a href="{% url 'admin_product_detail' prod.id %}" style="font-weight: 700; font-size: 0.88rem; color: var(--primary-color); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ prod.name }}</a>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                <code>{{ prod.sku }}</code>
+                                <span>&bull;</span>
+                                <strong style="color: #10b981;">₹{{ prod.price }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <form action="{% url 'admin_kiosk_detail' kiosk.id %}" method="post" onsubmit="return confirm('Remove {{ prod.name }} from kiosk display?');" style="flex-shrink: 0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove_assigned_product">
+                        <input type="hidden" name="product_id" value="{{ prod.id }}">
+                        <button type="submit" class="action-icon-btn" style="color: var(--danger-color); border-color: rgba(239, 68, 68, 0.3);" title="Remove from Kiosk Display">
+                            &times;
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 2rem 1rem; background: var(--bg-body); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="1.8" style="margin-bottom: 0.75rem;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.25rem;">No Specific Products Assigned</h4>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">This kiosk currently falls back to displaying all active catalog products. Click below to assign custom products.</p>
+                <button type="button" class="btn btn-accent btn-sm" onclick="openModal('assignProductsModal')">
+                    <span>Select Products to Display</span>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
         <!-- Recent Activity & Diagnostic Event Logs -->
         <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.25rem; box-shadow: var(--shadow-sm);">
             <div style="font-weight: 700; font-size: 0.95rem; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -333,4 +390,91 @@
     </div>
 
 </div>
+
+<!-- ASSIGN PRODUCTS MODAL -->
+<div class="modal-overlay" id="assignProductsModal" style="z-index: 1050;" onclick="if(event.target === this) closeModal('assignProductsModal');">
+    <div class="modal-card" style="max-width: 720px; width: 90vw; max-height: 85vh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
+            <div>
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--primary-color);">Assign Products for Kiosk Display</h3>
+                <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-secondary);">Select which products should be visible on terminal <strong>{{ kiosk.name }}</strong></p>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeModal('assignProductsModal')" style="font-size: 1.4rem;">&times;</button>
+        </div>
+
+        <form action="{% url 'admin_kiosk_detail' kiosk.id %}" method="post" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="assign_products">
+
+            <!-- Search & Quick Action Header Controls -->
+            <div style="padding: 0.85rem 1.25rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="productSearchInput" placeholder="Search by Product Name or SKU..." onkeyup="filterModalProducts()" style="flex: 1; min-width: 220px; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem;">
+                <div style="display: flex; gap: 0.4rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllProducts(true)" style="font-size: 0.75rem;">Select All</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllProducts(false)" style="font-size: 0.75rem;">Deselect All</button>
+                </div>
+            </div>
+
+            <!-- Scrollable Products Selection List -->
+            <div class="modal-body" style="padding: 1rem 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.5rem;" id="modalProductList">
+                {% if all_products %}
+                    {% for prod in all_products %}
+                    <label class="modal-product-item" style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); cursor: pointer; transition: background 0.15s;" data-name="{{ prod.name|lower }}" data-sku="{{ prod.sku|lower }}">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <input type="checkbox" name="product_ids" value="{{ prod.id }}" {% if prod.id in assigned_product_ids %}checked{% endif %} class="product-checkbox" style="width: 17px; height: 17px; accent-color: var(--accent-color);">
+                            <div>
+                                <strong style="font-size: 0.88rem; color: var(--primary-color); display: block;">{{ prod.name }}</strong>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">SKU: <code>{{ prod.sku }}</code> {% if prod.category %}&bull; {{ prod.category.name }}{% endif %}</span>
+                            </div>
+                        </div>
+                        <span style="font-size: 0.85rem; font-weight: 700; color: #10b981;">₹{{ prod.price }}</span>
+                    </label>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No active products found in the catalog.</p>
+                {% endif %}
+            </div>
+
+            <div class="modal-footer" style="padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.6rem; background: var(--bg-card);">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('assignProductsModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Save Product Selection</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    function filterModalProducts() {
+        const query = document.getElementById('productSearchInput').value.toLowerCase().trim();
+        const items = document.querySelectorAll('.modal-product-item');
+        items.forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            const sku = item.getAttribute('data-sku') || '';
+            if (name.includes(query) || sku.includes(query)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectAllProducts(select) {
+        const checkboxes = document.querySelectorAll('.product-checkbox');
+        checkboxes.forEach(cb => {
+            const parent = cb.closest('.modal-product-item');
+            if (parent && parent.style.display !== 'none') {
+                cb.checked = select;
+            }
+        });
+    }
+</script>
 {% endblock %}

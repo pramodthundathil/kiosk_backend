@@ -29,30 +29,29 @@
         {% if media_items %}
             {% for item in media_items %}
             <div class="media-card media-item-card" data-search="{{ item.title }} {{ item.get_asset_type_display }}" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;">
-                <div style="height: 140px; background: var(--primary-dark); display: flex; align-items: center; justify-content: center; position: relative;">
-                    {% if item.asset_type == 'VIDEO' %}
+                <div style="height: 140px; background: var(--primary-dark); display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer;" onclick="previewMediaAsset('{{ item.title|escapejs }}', '{{ item.asset_type }}', '{% if item.file %}{{ item.file.url }}{% elif item.external_url %}{{ item.external_url }}{% endif %}', '{{ item.description|escapejs }}', '{{ item.file_size_mb }}')">
+                    {% if item.asset_type == 'IMAGE' and item.file %}
+                    <img src="{{ item.file.url }}" alt="{{ item.title }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    {% elif item.asset_type == 'VIDEO' %}
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     {% elif item.asset_type == 'PDF_BROCHURE' %}
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                     {% else %}
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                     {% endif %}
                     <span class="role-badge" style="position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); color: #fff;">{{ item.get_asset_type_display }}</span>
                 </div>
                 <div style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <strong style="color: var(--primary-color); font-size: 1rem; display: block; margin-bottom: 0.35rem;">{{ item.title }}</strong>
+                        <strong style="color: var(--primary-color); font-size: 1rem; display: block; margin-bottom: 0.35rem; cursor: pointer;" onclick="previewMediaAsset('{{ item.title|escapejs }}', '{{ item.asset_type }}', '{% if item.file %}{{ item.file.url }}{% elif item.external_url %}{{ item.external_url }}{% endif %}', '{{ item.description|escapejs }}', '{{ item.file_size_mb }}')">{{ item.title }}</strong>
                         <p style="font-size: 0.8rem; color: var(--text-secondary);">Target Profile: {% if item.kiosk_profile %}{{ item.kiosk_profile.name }}{% else %}All Kiosk Devices{% endif %}</p>
                         {% if item.file_size_mb %}<p style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.2rem;">Size: {{ item.file_size_mb }} MB</p>{% endif %}
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
-                        {% if item.file %}
-                        <a href="{{ item.file.url }}" target="_blank" class="btn btn-secondary btn-sm">View File</a>
-                        {% elif item.external_url %}
-                        <a href="{{ item.external_url }}" target="_blank" class="btn btn-secondary btn-sm">Open Link</a>
-                        {% else %}
-                        <span style="font-size: 0.8rem; color: var(--text-light);">No File attached</span>
-                        {% endif %}
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="previewMediaAsset('{{ item.title|escapejs }}', '{{ item.asset_type }}', '{% if item.file %}{{ item.file.url }}{% elif item.external_url %}{{ item.external_url }}{% endif %}', '{{ item.description|escapejs }}', '{{ item.file_size_mb }}')" style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <span>Preview Asset</span>
+                        </button>
                         <form action="{% url 'admin_media' %}" method="post" onsubmit="return confirm('Delete media asset {{ item.title }}?');">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="delete_media">
@@ -125,10 +124,52 @@
         </form>
     </div>
 </div>
+
+<!-- MEDIA IN-APP PREVIEW MODAL -->
+<div class="modal-overlay" id="mediaPreviewModal" style="z-index: 1050;" onclick="if(event.target === this) closeMediaPreviewModal();">
+    <div class="modal-card" style="max-width: 920px; width: 92vw; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
+            <div style="display: flex; align-items: center; gap: 0.75rem; overflow: hidden; padding-right: 1rem;">
+                <span id="previewAssetBadge" class="role-badge" style="background: var(--primary-dark); color: #fff; text-transform: uppercase; font-size: 0.7rem; font-weight: 700; flex-shrink: 0;">MEDIA</span>
+                <h3 id="previewModalTitle" style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Media Preview</h3>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
+                <a id="previewDownloadBtn" href="#" download target="_blank" class="btn btn-accent btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Download Item</span>
+                </a>
+                <button class="modal-close-btn" onclick="closeMediaPreviewModal()" aria-label="Close Modal" style="font-size: 1.4rem; width: 32px; height: 32px;">&times;</button>
+            </div>
+        </div>
+
+        <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; background: var(--bg-body); align-items: center; justify-content: center; min-height: 360px;">
+            <!-- Dynamic Content Container -->
+            <div id="previewMediaContainer" style="width: 100%; display: flex; justify-content: center; align-items: center; flex: 1;">
+                <!-- Filled dynamically by JavaScript -->
+            </div>
+
+            <!-- Asset Info Box -->
+            <div id="previewAssetMeta" style="width: 100%; margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.82rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                <div>
+                    <span id="previewAssetSize" style="margin-right: 1rem; font-weight: 600; color: var(--primary-color);"></span>
+                    <span id="previewAssetDesc"></span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyPreviewUrl()" style="font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span>Copy Link</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    let currentPreviewUrl = '';
+
     function openModal(id) {
         document.getElementById(id).classList.add('active');
     }
@@ -143,5 +184,145 @@
             c.style.display = text.includes(val) ? '' : 'none';
         });
     }
+
+    function previewMediaAsset(title, assetType, mediaUrl, description, fileSizeMb) {
+        currentPreviewUrl = mediaUrl || '';
+        
+        document.getElementById('previewModalTitle').textContent = title || 'Media Preview';
+        
+        const badge = document.getElementById('previewAssetBadge');
+        badge.textContent = (assetType || 'MEDIA').replace('_', ' ');
+        
+        const downloadBtn = document.getElementById('previewDownloadBtn');
+        if (currentPreviewUrl) {
+            downloadBtn.href = currentPreviewUrl;
+            downloadBtn.setAttribute('download', title || 'download');
+            downloadBtn.style.display = 'inline-flex';
+        } else {
+            downloadBtn.style.display = 'none';
+        }
+
+        const sizeSpan = document.getElementById('previewAssetSize');
+        if (fileSizeMb && parseFloat(fileSizeMb) > 0) {
+            sizeSpan.textContent = `File Size: ${fileSizeMb} MB`;
+            sizeSpan.style.display = 'inline-block';
+        } else {
+            sizeSpan.textContent = '';
+            sizeSpan.style.display = 'none';
+        }
+
+        const descSpan = document.getElementById('previewAssetDesc');
+        descSpan.textContent = description || '';
+
+        const container = document.getElementById('previewMediaContainer');
+        container.innerHTML = '';
+
+        if (!currentPreviewUrl) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem 1rem;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="2" style="margin-bottom: 1rem;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <p style="color: var(--text-secondary); font-size: 0.95rem;">No valid media file or link available to preview.</p>
+                </div>
+            `;
+            openModal('mediaPreviewModal');
+            return;
+        }
+
+        const cleanUrl = currentPreviewUrl.split('?')[0].toLowerCase();
+        const ext = cleanUrl.substring(cleanUrl.lastIndexOf('.') + 1);
+
+        if (assetType === 'IMAGE' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
+            container.innerHTML = `
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0.5rem;">
+                    <img src="${currentPreviewUrl}" alt="${title}" style="max-width: 100%; max-height: 60vh; object-fit: contain; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+                </div>
+            `;
+        } else if (assetType === 'PDF_BROCHURE' || assetType === 'TECH_SHEET' || ext === 'pdf') {
+            container.innerHTML = `
+                <iframe src="${currentPreviewUrl}#toolbar=1" style="width: 100%; height: 62vh; min-height: 480px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #ffffff;">
+                    <p style="padding: 1rem;">Your browser cannot render PDF inline. <a href="${currentPreviewUrl}" target="_blank">Open PDF file</a></p>
+                </iframe>
+            `;
+        } else if (assetType === 'VIDEO' || ['mp4', 'webm', 'ogg', 'mov', 'm4v'].includes(ext) || currentPreviewUrl.includes('youtube') || currentPreviewUrl.includes('youtu.be') || currentPreviewUrl.includes('vimeo')) {
+            if (currentPreviewUrl.includes('youtube.com') || currentPreviewUrl.includes('youtu.be')) {
+                let videoId = '';
+                const ytMatch = currentPreviewUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+                if (ytMatch && ytMatch[1]) videoId = ytMatch[1];
+                const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : currentPreviewUrl;
+                container.innerHTML = `
+                    <iframe src="${embedUrl}" style="width: 100%; height: 55vh; min-height: 400px; border: none; border-radius: var(--radius-md);" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                `;
+            } else if (currentPreviewUrl.includes('vimeo.com')) {
+                const vimeoMatch = currentPreviewUrl.match(/vimeo\.com\/(\d+)/);
+                const vimeoId = vimeoMatch ? vimeoMatch[1] : '';
+                const embedUrl = vimeoId ? `https://player.vimeo.com/video/${vimeoId}?autoplay=1` : currentPreviewUrl;
+                container.innerHTML = `
+                    <iframe src="${embedUrl}" style="width: 100%; height: 55vh; min-height: 400px; border: none; border-radius: var(--radius-md);" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                `;
+            } else {
+                container.innerHTML = `
+                    <video controls autoplay style="max-width: 100%; max-height: 60vh; width: 100%; border-radius: var(--radius-md); background: #000;">
+                        <source src="${currentPreviewUrl}">
+                        Your browser does not support video playback.
+                    </video>
+                `;
+            }
+        } else if (assetType === 'THREE_D' || ['gltf', 'glb'].includes(ext)) {
+            container.innerHTML = `
+                <model-viewer src="${currentPreviewUrl}" camera-controls auto-rotate shadow-intensity="1" ar style="width: 100%; height: 55vh; min-height: 420px; background: #0f172a; border-radius: var(--radius-md);">
+                    <div slot="poster" style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff;">Loading 3D Model...</div>
+                </model-viewer>
+            `;
+        } else if (['mp3', 'wav', 'm4a', 'flac', 'aac'].includes(ext)) {
+            container.innerHTML = `
+                <div style="text-align: center; width: 100%; padding: 3rem 1.5rem; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" style="margin-bottom: 1rem;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    <h4 style="font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">${title}</h4>
+                    <audio controls autoplay style="width: 100%; max-width: 550px;">
+                        <source src="${currentPreviewUrl}">
+                    </audio>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2.5rem 1.5rem; width: 100%; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="margin-bottom: 1rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <h4 style="font-size: 1.1rem; color: var(--primary-color); font-weight: 700; margin-bottom: 0.5rem;">${title}</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">File Format: .${ext.toUpperCase() || 'FILE'}</p>
+                    <a href="${currentPreviewUrl}" download target="_blank" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Download File</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        openModal('mediaPreviewModal');
+    }
+
+    function closeMediaPreviewModal() {
+        const container = document.getElementById('previewMediaContainer');
+        if (container) container.innerHTML = '';
+        closeModal('mediaPreviewModal');
+    }
+
+    function copyPreviewUrl() {
+        if (!currentPreviewUrl) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(currentPreviewUrl).then(() => {
+                alert('Media file URL copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy file link:', currentPreviewUrl);
+            });
+        } else {
+            prompt('Copy file link:', currentPreviewUrl);
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMediaPreviewModal();
+        }
+    });
 </script>
 {% endblock %}

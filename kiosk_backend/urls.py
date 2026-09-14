@@ -43,6 +43,7 @@ urlpatterns = [
     # Kiosk device & monitoring endpoints
     path("api/kiosk/", include("kiosks.urls")),
     path("api/kiosk/", include("monitoring.urls")),
+    path("api/products/", include("products.urls")),
 
 
     #authentication urls 
