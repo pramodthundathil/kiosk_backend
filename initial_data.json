@@ -1,0 +1,606 @@
+[
+{
+  "model": "authentication.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$dPalk4ofxWiTZYGJBs0BIH$Dt1mT0FvJkkG+NTmbnHrKbqiyUoyXyTmqXBycddHy8o=",
+    "last_login": "2026-09-14T07:14:25.232Z",
+    "is_superuser": true,
+    "first_name": "",
+    "last_name": "",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-09-07T05:32:28.699Z",
+    "username": "admin",
+    "email": null,
+    "role": "super_admin",
+    "location": null,
+    "device_id": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_stores": []
+  }
+},
+{
+  "model": "stores.store",
+  "pk": "c367d498-8920-4e7b-8090-d1b98bdc738a",
+  "fields": {
+    "name": "Test Byteboot Store",
+    "code": "STORE-1",
+    "address": "",
+    "city": "Kochi",
+    "state": "Kerala",
+    "country": "India",
+    "contact_person": "Anas",
+    "contact_phone": "+919141109785",
+    "is_active": true,
+    "created_at": "2026-09-07T07:37:03.684Z",
+    "updated_at": "2026-09-07T07:37:03.684Z"
+  }
+},
+{
+  "model": "stores.store",
+  "pk": "fc60c53b-83a3-4462-a45c-ae296c7a439b",
+  "fields": {
+    "name": "Byteboot Branch 2",
+    "code": "STORE-2",
+    "address": "",
+    "city": "Kochi",
+    "state": "Kerala",
+    "country": "India",
+    "contact_person": "Manager",
+    "contact_phone": "9207594314",
+    "is_active": true,
+    "created_at": "2026-09-07T08:09:45.604Z",
+    "updated_at": "2026-09-07T08:09:45.604Z"
+  }
+},
+{
+  "model": "kiosks.kioskprofile",
+  "pk": "a33bd5ee-8ac4-4236-8ffd-09abcc5d6514",
+  "fields": {
+    "name": "Deluxe",
+    "code": "SHOWROOM_DELUXE",
+    "description": null,
+    "show_products": true,
+    "show_brochures": true,
+    "show_technical_documents": true,
+    "show_pricing": true,
+    "show_videos": true,
+    "show_3d_assets": false,
+    "show_whiteboard": true,
+    "screensaver_enabled": true,
+    "screensaver_timeout_seconds": 300,
+    "latitude": null,
+    "longitude": null,
+    "is_active": true,
+    "created_at": "2026-09-07T06:58:56.691Z",
+    "updated_at": "2026-09-07T08:10:11.047Z"
+  }
+},
+{
+  "model": "kiosks.kioskdevice",
+  "pk": "7d6a291b-188f-4746-a252-393c0beba43b",
+  "fields": {
+    "device_id": "8F:D7:25:89:16:3D",
+    "name": "TEST KIOSK",
+    "store": "fc60c53b-83a3-4462-a45c-ae296c7a439b",
+    "profile": "a33bd5ee-8ac4-4236-8ffd-09abcc5d6514",
+    "status": "OFFLINE",
+    "is_active": true,
+    "is_deployed": true,
+    "deployed_at": "2026-09-14T07:16:22.292Z",
+    "latitude": null,
+    "longitude": null,
+    "android_version": null,
+    "app_version": null,
+    "device_model": null,
+    "manufacturer": "POGO",
+    "screen_width": null,
+    "screen_height": null,
+    "screen_density": null,
+    "serial_number": null,
+    "last_ip_address": null,
+    "network_type": null,
+    "last_seen_at": null,
+    "last_heartbeat_at": null,
+    "last_sync_at": null,
+    "current_content_version": "1",
+    "desired_content_version": "1",
+    "battery_percentage": null,
+    "screen_on": true,
+    "app_running": true,
+    "last_error": null,
+    "created_at": "2026-09-14T07:16:22.293Z",
+    "updated_at": "2026-09-14T07:16:22.293Z",
+    "assigned_products": [
+      "c6eacf30-b334-4320-8c8a-1e64129f8c41",
+      "db2e9cb7-2a2e-44dd-98c6-0b23c00f064c"
+    ]
+  }
+},
+{
+  "model": "kiosks.kioskdevice",
+  "pk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+  "fields": {
+    "device_id": "MAC-123-RT-65",
+    "name": "Main Test Display 1",
+    "store": "c367d498-8920-4e7b-8090-d1b98bdc738a",
+    "profile": "a33bd5ee-8ac4-4236-8ffd-09abcc5d6514",
+    "status": "OFFLINE",
+    "is_active": true,
+    "is_deployed": true,
+    "deployed_at": "2026-09-07T08:10:11.049Z",
+    "latitude": null,
+    "longitude": null,
+    "android_version": null,
+    "app_version": null,
+    "device_model": null,
+    "manufacturer": null,
+    "screen_width": null,
+    "screen_height": null,
+    "screen_density": null,
+    "serial_number": null,
+    "last_ip_address": null,
+    "network_type": null,
+    "last_seen_at": null,
+    "last_heartbeat_at": null,
+    "last_sync_at": null,
+    "current_content_version": "1",
+    "desired_content_version": "9",
+    "battery_percentage": null,
+    "screen_on": true,
+    "app_running": true,
+    "last_error": null,
+    "created_at": "2026-09-07T06:58:56.695Z",
+    "updated_at": "2026-09-07T08:10:11.049Z",
+    "assigned_products": [
+      "c6eacf30-b334-4320-8c8a-1e64129f8c41",
+      "db2e9cb7-2a2e-44dd-98c6-0b23c00f064c"
+    ]
+  }
+},
+{
+  "model": "kiosks.kioskcredential",
+  "pk": "1cfd49c5-951a-4e07-b71f-46c8d0931928",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "credential_hash": "pbkdf2_sha256$1500000$i6hkfKZBIKfnPaLCYqZPLJ$bPltYA4CZHghal9dgzZPEcFA4I4KayTNCTCCki9zF+w=",
+    "created_at": "2026-09-07T06:58:57.120Z",
+    "expires_at": null,
+    "revoked_at": null,
+    "last_used_at": null
+  }
+},
+{
+  "model": "kiosks.kioskcredential",
+  "pk": "62a47fcf-69b5-41d3-8f68-e418582a9a80",
+  "fields": {
+    "kiosk": "7d6a291b-188f-4746-a252-393c0beba43b",
+    "credential_hash": "pbkdf2_sha256$1200000$wKjbmbiuuZl0cIWckV0gPM$gBp4VluaiPcXg7pjRxseKA7ObeGLGg/tM9Hj+dMtCv8=",
+    "created_at": "2026-09-14T07:16:22.634Z",
+    "expires_at": null,
+    "revoked_at": null,
+    "last_used_at": "2026-09-14T07:58:02.863Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": "5ec674d1-26b5-41b5-b6cb-9aee748af52b",
+  "fields": {
+    "name": "Earth Pit Covers",
+    "code": "PIT_COVERS",
+    "description": "Heavy-Duty Polypropylene & Concrete Covers",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.071Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": "7aa226bd-e40e-42f5-b76b-01acd4f8d597",
+  "fields": {
+    "name": "Surge Protection Devices",
+    "code": "SPD",
+    "description": "Type 1+2 AC/DC DIN-Rail Surge Arresters",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.073Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": "93d924af-c9f2-4f52-a7e1-d827f6125c0d",
+  "fields": {
+    "name": "Backfill Compounds",
+    "code": "COMPOUNDS",
+    "description": "Moisture Retaining Enhancement Gel",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.066Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": "a1c34ddd-a652-4119-8d81-4018674a4db8",
+  "fields": {
+    "name": "Earthing Electrodes",
+    "code": "EARTHING_ELEC",
+    "description": null,
+    "is_active": true,
+    "created_at": "2026-09-08T04:21:45.336Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": "cf1c1bb8-fa19-4349-9a02-9fea57f69b23",
+  "fields": {
+    "name": "Lightning Protection",
+    "code": "LIGHTNING_PROT",
+    "description": "ESE Air Terminals & Conventional Arresters",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.070Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": "f28c2edd-aee2-45ff-8ab0-b98d1ee9e355",
+  "fields": {
+    "name": "Copper Busbars & Strips",
+    "code": "BUSBARS",
+    "description": "Tinned & Bare Electrolytic Copper Strips",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.072Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": "116c26d4-4873-4f6d-a8b7-f1ed53cf16c3",
+  "fields": {
+    "name": "Test Product",
+    "sku": "EXE-ABC-12",
+    "category": null,
+    "description": "Test",
+    "price": "2000.00",
+    "stock": 100,
+    "specifications": {
+      "New": "test",
+      "Material": "Braze",
+      "Rod Diameter / Size": "102"
+    },
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-09-08T04:24:09.952Z",
+    "updated_at": "2026-09-08T04:24:31.425Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": "94e12892-f86f-4b9f-b246-d5837b86426f",
+  "fields": {
+    "name": "Polypropylene Heavy-Duty Earth Pit Cover",
+    "sku": "EXE-EPC-5T",
+    "category": "5ec674d1-26b5-41b5-b6cb-9aee748af52b",
+    "description": "Heavy-duty lightweight inspection chamber engineered from high-density polypropylene composite material.",
+    "price": "18.00",
+    "stock": 100,
+    "specifications": {
+      "Material": "UV Stabilized Polymer Composite",
+      "Top Rim Diameter": "300 mm (12 inches)",
+      "Load Bearing Capacity": "5.0 Metric Tons (50 kN)"
+    },
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.084Z",
+    "updated_at": "2026-09-14T07:54:18.084Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": "be4b17eb-29f2-4249-bc6d-41c1e69bde51",
+  "fields": {
+    "name": "Advanced ESE Lightning Arrester Terminal",
+    "sku": "EXE-ESE-60",
+    "category": "cf1c1bb8-fa19-4349-9a02-9fea57f69b23",
+    "description": "State-of-the-art Early Streamer Emission (ESE) air terminal designed to initiate early upward leader ionization ahead of conventional lightning rods.",
+    "price": "380.00",
+    "stock": 100,
+    "specifications": {
+      "Protection Radius": "107 Meters (Level IV @ h=5m)",
+      "Terminal Material": "Grade 316L Stainless Steel",
+      "Advance Time (Δt)": "60 Microseconds (µs)",
+      "Compliance Standard": "NF C 17-102 (2011) / UNE 21186",
+      "Max Withstand Current": "100 kA (10/350 µs wave)"
+    },
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.082Z",
+    "updated_at": "2026-09-14T07:54:18.082Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": "c6eacf30-b334-4320-8c8a-1e64129f8c41",
+  "fields": {
+    "name": "Chemical Earthing Compound 25kg",
+    "sku": "EXE-CEC-25KG",
+    "category": null,
+    "description": "High conductivity moisture retaining bentonite based earthing compound.",
+    "price": "450.00",
+    "stock": 200,
+    "specifications": {
+      "Material": "",
+      "Rod Diameter / Size": ""
+    },
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-09-08T04:46:35.309Z",
+    "updated_at": "2026-09-08T08:06:39.381Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": "db2e9cb7-2a2e-44dd-98c6-0b23c00f064c",
+  "fields": {
+    "name": "Copper Bonded Earth Electrode 16mm x 2m",
+    "sku": "EX-CBR-16MM-2M",
+    "category": "a1c34ddd-a652-4119-8d81-4018674a4db8",
+    "description": "High conductivity copper bonded earthing electrode designed for heavy-duty commercial and industrial earthing installations.",
+    "price": "1850.00",
+    "stock": 50,
+    "specifications": {
+      "Material": "Pure Electrolytic Copper / High Tensile Steel Core",
+      "Standard": "IEEE 80 / IS 3043",
+      "Rod Length": "2.0 Meters",
+      "Rod Diameter": "16 mm",
+      "Copper Coating Thickness": "250 Microns"
+    },
+    "image": "products/copper-bonded-earthing-rod.jpg",
+    "is_active": true,
+    "created_at": "2026-09-08T04:21:45.340Z",
+    "updated_at": "2026-09-08T04:36:46.323Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": "e7d74c4d-a054-406a-b006-5b7a6db11e9c",
+  "fields": {
+    "name": "Copper Bonded Earth Electrode (250 Micron)",
+    "sku": "EX-CBR-16MM-3M",
+    "category": "a1c34ddd-a652-4119-8d81-4018674a4db8",
+    "description": "Manufactured with high-tensile low carbon steel molecularly bonded with 99.9% pure electrolytic copper to a minimum thickness of 250 microns.",
+    "price": "45.00",
+    "stock": 100,
+    "specifications": {
+      "Length": "3.0 Meters (10 ft)",
+      "Rod Diameter": "16mm (5/8\")",
+      "Copper Purity": "99.9% Electrolytic Copper",
+      "Expected Life": "30+ Years",
+      "Earth Resistance": "< 0.5 Ohms (in standard soil)",
+      "Tensile Strength": "> 600 N/mm²",
+      "Coating Thickness": "250 Microns (Molecular Bonded)",
+      "Compliance Standard": "IEC 62561-2 / UL 467 / IEEE 80"
+    },
+    "image": "",
+    "is_active": true,
+    "created_at": "2026-09-14T07:54:18.076Z",
+    "updated_at": "2026-09-14T07:54:18.076Z"
+  }
+},
+{
+  "model": "content.mediaasset",
+  "pk": "44c856c3-f12d-48d8-a358-16c89ab942bd",
+  "fields": {
+    "title": "Copper Bonded Earth Electrode 16mm x 2m - PDF_BROCHURE",
+    "asset_type": "PDF_BROCHURE",
+    "file": "media_assets/Please_share_the_following.pdf",
+    "external_url": "",
+    "file_size_mb": 0.13,
+    "kiosk_profile": null,
+    "product": "db2e9cb7-2a2e-44dd-98c6-0b23c00f064c",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-09-08T08:57:53.710Z",
+    "updated_at": "2026-09-08T08:57:53.710Z"
+  }
+},
+{
+  "model": "content.mediaasset",
+  "pk": "50bef0e5-1a76-43ed-912a-033164a4f9aa",
+  "fields": {
+    "title": "Copper Bonded Earth Electrode 16mm x 2m - IMAGE",
+    "asset_type": "IMAGE",
+    "file": "media_assets/copper-bonded-earthing-rod.jpg",
+    "external_url": "",
+    "file_size_mb": 0.09,
+    "kiosk_profile": null,
+    "product": "db2e9cb7-2a2e-44dd-98c6-0b23c00f064c",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-09-08T09:26:08.474Z",
+    "updated_at": "2026-09-08T09:26:08.474Z"
+  }
+},
+{
+  "model": "content.screensaver",
+  "pk": "1da21399-0e82-418a-8057-5b9fd51aabc9",
+  "fields": {
+    "title": "Safer",
+    "image": "screensavers/ChatGPT_Image_Sep_14_2026_10_54_14_AM.png",
+    "orientation": "PORTRAIT",
+    "display_order": 0,
+    "duration_seconds": 12,
+    "caption": "",
+    "description": "",
+    "is_active": true,
+    "kiosk_profile": null,
+    "created_at": "2026-09-14T05:24:55.341Z",
+    "updated_at": "2026-09-14T05:37:47.998Z",
+    "kiosks": []
+  }
+},
+{
+  "model": "content.screensaver",
+  "pk": "41b7616d-0b29-409c-b3b7-57719f674cf2",
+  "fields": {
+    "title": "Earth",
+    "image": "screensavers/ChatGPT_Image_Sep_14_2026_10_56_35_AM.png",
+    "orientation": "PORTRAIT",
+    "display_order": 0,
+    "duration_seconds": 15,
+    "caption": "",
+    "description": "",
+    "is_active": true,
+    "kiosk_profile": null,
+    "created_at": "2026-09-14T05:26:55.857Z",
+    "updated_at": "2026-09-14T05:37:37.084Z",
+    "kiosks": []
+  }
+},
+{
+  "model": "content.screensaver",
+  "pk": "5b17b14f-5eb3-4ac3-b955-83f1cdcd4259",
+  "fields": {
+    "title": "New Earth png",
+    "image": "screensavers/ChatGPT_Image_Sep_14_2026_10_57_56_AM.png",
+    "orientation": "PORTRAIT",
+    "display_order": 0,
+    "duration_seconds": 10,
+    "caption": "",
+    "description": "",
+    "is_active": true,
+    "kiosk_profile": null,
+    "created_at": "2026-09-14T05:28:21.176Z",
+    "updated_at": "2026-09-14T05:37:21.033Z",
+    "kiosks": []
+  }
+},
+{
+  "model": "content.screensaver",
+  "pk": "8c84bcbf-99e4-4440-aebb-5f117d626d58",
+  "fields": {
+    "title": "Erthing Lfife",
+    "image": "screensavers/ChatGPT_Image_Sep_14_2026_10_49_26_AM.png",
+    "orientation": "LANDSCAPE",
+    "display_order": 0,
+    "duration_seconds": 12,
+    "caption": "",
+    "description": "",
+    "is_active": true,
+    "kiosk_profile": null,
+    "created_at": "2026-09-14T05:20:04.858Z",
+    "updated_at": "2026-09-14T05:38:08.734Z",
+    "kiosks": []
+  }
+},
+{
+  "model": "content.screensaver",
+  "pk": "950f2e1b-d3bf-453e-bb07-45133b3a3138",
+  "fields": {
+    "title": "Erathing",
+    "image": "screensavers/ChatGPT_Image_Sep_14_2026_10_52_46_AM.png",
+    "orientation": "LANDSCAPE",
+    "display_order": 0,
+    "duration_seconds": 13,
+    "caption": "",
+    "description": "",
+    "is_active": true,
+    "kiosk_profile": null,
+    "created_at": "2026-09-14T05:23:09.164Z",
+    "updated_at": "2026-09-14T05:37:57.776Z",
+    "kiosks": []
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "1d0cb2c8-f34b-42ba-9128-a9fc7df874bf",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 3.",
+    "metadata": {},
+    "created_at": "2026-09-07T07:37:35.511Z"
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "25406c56-467d-4f10-8a86-4f4f9f792dfa",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 9.",
+    "metadata": {},
+    "created_at": "2026-09-08T10:30:11.304Z"
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "8519bf9f-c62b-4ba8-bcaf-78a4bb828fe8",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 8.",
+    "metadata": {},
+    "created_at": "2026-09-08T08:10:44.722Z"
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "a167fba4-0f7f-4c90-823b-c256257ad6f0",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 4.",
+    "metadata": {},
+    "created_at": "2026-09-07T08:08:56.746Z"
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "b19cbf40-dfbd-4037-8df3-3cd851cb6bc4",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 7.",
+    "metadata": {},
+    "created_at": "2026-09-08T04:08:10.597Z"
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "b7e29f1d-64b0-43fa-a8c8-77325e116cce",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 6.",
+    "metadata": {},
+    "created_at": "2026-09-08T03:53:24.665Z"
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "cc7267a9-0dd1-4e20-8315-9bcf697d4bf0",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 2.",
+    "metadata": {},
+    "created_at": "2026-09-07T06:59:06.578Z"
+  }
+},
+{
+  "model": "monitoring.kioskevent",
+  "pk": "e2fee1b7-fe38-4c3f-88eb-ce452179dc6a",
+  "fields": {
+    "kiosk": "bf909e26-c0a2-48f2-b668-236b621ccd59",
+    "event_type": "SYNC_STARTED",
+    "severity": "INFO",
+    "message": "Force sync triggered by admin (admin). Desired version set to 5.",
+    "metadata": {},
+    "created_at": "2026-09-07T08:10:14.228Z"
+  }
+}
+]
