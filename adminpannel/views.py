@@ -806,6 +806,107 @@ def admin_product_detail(request, product_id):
     return render(request, "admin/product_detail.html", context)
 
 
+def admin_categories(request):
+    """Dedicated Categories Management Page: Add, Edit, Delete Categories & Upload Category Images."""
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    if request.method == "POST":
+        action = request.POST.get('action')
+
+        if action == "add_category":
+            cat_name = request.POST.get('name', '').strip()
+            cat_code = request.POST.get('code', '').strip()
+            description = request.POST.get('description', '').strip()
+            image = request.FILES.get('image')
+
+            if not cat_name or not cat_code:
+                messages.error(request, "Category Name and Code are required.")
+            elif Category.objects.filter(code=cat_code.upper()).exists():
+                messages.error(request, f"Category code '{cat_code.upper()}' already exists.")
+            else:
+                cat = Category.objects.create(
+                    name=cat_name,
+                    code=cat_code.upper(),
+                    description=description,
+                )
+                if image:
+                    cat.image = image
+                    cat.save()
+                messages.success(request, f"Category '{cat_name}' created successfully.")
+            return redirect('admin_categories')
+
+        elif action == "update_category":
+            category_id = request.POST.get('category_id')
+            try:
+                cat = Category.objects.get(id=category_id)
+                cat.name = request.POST.get('name', cat.name).strip()
+                cat.description = request.POST.get('description', cat.description or '').strip()
+                if request.FILES.get('image'):
+                    cat.image = request.FILES.get('image')
+                cat.save()
+                messages.success(request, f"Category '{cat.name}' updated successfully.")
+            except Category.DoesNotExist:
+                messages.error(request, "Category not found.")
+            return redirect('admin_categories')
+
+        elif action == "upload_image":
+            category_id = request.POST.get('category_id')
+            try:
+                cat = Category.objects.get(id=category_id)
+                if request.FILES.get('image'):
+                    cat.image = request.FILES.get('image')
+                    cat.save()
+                    messages.success(request, f"Image uploaded for category '{cat.name}'.")
+                else:
+                    messages.error(request, "Please select an image file to upload.")
+            except Category.DoesNotExist:
+                messages.error(request, "Category not found.")
+            return redirect('admin_categories')
+
+        elif action == "delete_category":
+            category_id = request.POST.get('category_id')
+            try:
+                cat = Category.objects.get(id=category_id)
+                cat_name = cat.name
+                product_count = cat.products.count()
+                if product_count > 0:
+                    messages.error(request, f"Cannot delete '{cat_name}' — it has {product_count} product(s). Reassign or delete products first.")
+                else:
+                    cat.delete()
+                    messages.success(request, f"Category '{cat_name}' deleted successfully.")
+            except Category.DoesNotExist:
+                messages.error(request, "Category not found.")
+            return redirect('admin_categories')
+
+        elif action == "toggle_active":
+            category_id = request.POST.get('category_id')
+            try:
+                cat = Category.objects.get(id=category_id)
+                cat.is_active = not cat.is_active
+                cat.save()
+                status_label = "activated" if cat.is_active else "deactivated"
+                messages.success(request, f"Category '{cat.name}' {status_label}.")
+            except Category.DoesNotExist:
+                messages.error(request, "Category not found.")
+            return redirect('admin_categories')
+
+    categories = Category.objects.prefetch_related('products').all().order_by('name')
+    for cat in categories:
+        cat.product_count = cat.products.filter(is_active=True).count()
+
+    context = {
+        'categories': categories,
+        'total_categories': categories.count(),
+        'active_tab': 'categories',
+        'page_title': 'Product Categories Management',
+        'breadcrumbs': [
+            {'name': 'Categories', 'url': ''}
+        ]
+    }
+    return render(request, "admin/categories.html", context)
+
+
 def admin_stores(request):
     """Dedicated Stores Management Page: Add, List, Update, Delete Stores."""
     if not request.user.is_authenticated:

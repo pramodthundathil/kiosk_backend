@@ -6,6 +6,7 @@ class Category(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=50, unique=True, db_index=True)
     description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='categories/', blank=True, null=True, help_text="Category representative image (white background preferred)")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
