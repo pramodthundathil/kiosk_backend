@@ -32,12 +32,12 @@ class KioskJWTAuthentication(BaseAuthentication):
         raw_token = header.split(" ")[1]
         try:
             token = AccessToken(raw_token)
-        except (TokenError, InvalidToken) as e:
-            raise AuthenticationFailed(f"Invalid or expired kiosk token: {str(e)}")
+        except (TokenError, InvalidToken):
+            return None
 
         # Enforce that token is specifically a Kiosk device token
         if token.get("token_category") != "kiosk":
-            raise AuthenticationFailed("Provided token is not a valid Kiosk token.")
+            return None
 
 
         kiosk_id = token.get("kiosk_id")

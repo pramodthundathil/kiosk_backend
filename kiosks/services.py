@@ -91,7 +91,9 @@ def issue_kiosk_jwt_tokens(kiosk: KioskDevice) -> dict:
     return {
         "access": str(access),
         "refresh": str(refresh),
+        "kiosk_id": str(kiosk.id),
         "device_id": kiosk.device_id,
+        "name": kiosk.name,
         "kiosk_type": kiosk.profile.code if kiosk.profile else "DEFAULT",
         "store_id": str(kiosk.store.id) if kiosk.store else None,
         "content_version": kiosk.current_content_version,
