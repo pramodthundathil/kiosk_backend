@@ -11,3 +11,7 @@ class KioskHeartbeatSerializer(serializers.Serializer):
     app_running = serializers.BooleanField(required=False, default=True)
     current_content_version = serializers.CharField(required=False, allow_blank=True, max_length=50)
     last_error = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    mac_address = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    device_id = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    is_authenticated = serializers.BooleanField(required=False, default=False)
+

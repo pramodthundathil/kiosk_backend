@@ -1,8 +1,9 @@
 from rest_framework import status, views
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django.utils import timezone
+from django.db.models import Q
 from kiosks.authentication import KioskJWTAuthentication
-from kiosks.permissions import IsKioskAuthenticated
 from kiosks.models import KioskDevice
 from .serializers import KioskHeartbeatSerializer
 from .services import update_kiosk_status_and_alerts
@@ -11,7 +12,7 @@ from .models import KioskEvent
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(',')[0].strip()
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
@@ -20,10 +21,11 @@ class KioskHeartbeatView(views.APIView):
     """
     POST /api/kiosk/heartbeat/
     Receives periodic telemetry signal from active Android Kiosk applications.
-    Updates connection status, telemetry flags, checks content sync requirements, and returns commands.
+    Supports both JWT-authenticated sessions and direct physical MAC address identification.
+    Addresses dynamic IP environments by tracking kiosks strictly via unique hardware MAC ID.
     """
     authentication_classes = [KioskJWTAuthentication]
-    permission_classes = [IsKioskAuthenticated]
+    permission_classes = [AllowAny]
     serializer_class = KioskHeartbeatSerializer
 
     def post(self, request):
@@ -31,15 +33,42 @@ class KioskHeartbeatView(views.APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        kiosk = request.kiosk
         data = serializer.validated_data
+        kiosk = getattr(request, 'kiosk', None)
+
+        # In dynamic IP environments, resolve kiosk strictly by physical hardware MAC address
+        if not kiosk:
+            mac = (
+                data.get('mac_address') or 
+                data.get('device_id') or 
+                request.headers.get('X-Device-MAC') or 
+                request.headers.get('X-Device-Id')
+            )
+            if mac:
+                clean_mac = mac.strip()
+                kiosk = KioskDevice.objects.filter(
+                    Q(device_id__iexact=clean_mac) | Q(name__iexact=clean_mac)
+                ).first()
+
+        if not kiosk:
+            return Response(
+                {"error": "Kiosk not recognized. Please provide a registered device MAC address or valid Bearer token."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not kiosk.is_active:
+            return Response({"error": "This kiosk device is marked inactive."}, status=status.HTTP_403_FORBIDDEN)
+
+        if kiosk.status == KioskDevice.Status.DISABLED:
+            return Response({"error": "This kiosk device has been disabled by an administrator."}, status=status.HTTP_403_FORBIDDEN)
 
         now = timezone.now()
 
-        # Update telemetry fields
+        # Update telemetry fields (Dynamic IP is recorded for observation, MAC is identity)
         kiosk.last_heartbeat_at = now
         kiosk.last_seen_at = now
         kiosk.last_ip_address = get_client_ip(request)
+
 
         if 'app_version' in data and data['app_version']:
             kiosk.app_version = data['app_version']
@@ -78,13 +107,17 @@ class KioskHeartbeatView(views.APIView):
             kiosk=kiosk,
             event_type=KioskEvent.EventType.HEARTBEAT
         ).order_by('-created_at').first()
+        is_auth = data.get('is_authenticated', False) or hasattr(request, 'kiosk')
+        state_label = "Logged In (Operational)" if is_auth else "Terminal Active (Login Screen)"
         if not last_hb_event or (now - last_hb_event.created_at).total_seconds() > 60:
             KioskEvent.objects.create(
                 kiosk=kiosk,
                 event_type=KioskEvent.EventType.HEARTBEAT,
                 severity=KioskEvent.Severity.INFO,
-                message=f"Node heartbeat ping received. App: {kiosk.app_version or 'v1.0.0'}, Net: {kiosk.network_type or 'WIFI'}",
+                message=f"Node heartbeat ping received via MAC [{kiosk.device_id}]. State: {state_label}, Dynamic IP: {kiosk.last_ip_address}",
                 metadata={
+                    "mac_address": kiosk.device_id,
+                    "is_authenticated": is_auth,
                     "battery": kiosk.battery_percentage,
                     "ip": kiosk.last_ip_address,
                     "screen_on": kiosk.screen_on,
@@ -94,6 +127,8 @@ class KioskHeartbeatView(views.APIView):
 
         return Response({
             "success": True,
+            "device_id": kiosk.device_id,
+            "name": kiosk.name,
             "server_time": now.isoformat(),
             "heartbeat_interval": 10,
             "status": current_status,
@@ -101,4 +136,5 @@ class KioskHeartbeatView(views.APIView):
             "desired_content_version": kiosk.desired_content_version,
             "commands": commands
         }, status=status.HTTP_200_OK)
+
 

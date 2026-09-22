@@ -93,14 +93,15 @@
                     </div>
                 </div>
 
-                <!-- Last Known IP Address -->
+                <!-- Last Known IP Address (Dynamic) -->
                 <div style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">IP Address (Client Ping)</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Reported IP (Dynamic DHCP / NAT)</div>
                     <div style="font-size: 1.2rem; font-weight: 700; margin-top: 0.35rem; font-family: monospace; color: var(--primary-color);">
                         {{ kiosk.last_ip_address|default:"127.0.0.1" }}
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Network Type: <strong>{{ kiosk.network_type|default:"WIFI" }}</strong></div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Identified strictly by MAC: <strong style="color: var(--accent-color);">{{ kiosk.device_id }}</strong></div>
                 </div>
+
 
                 <!-- Battery & Power State -->
                 <div style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
