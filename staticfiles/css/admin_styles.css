@@ -534,7 +534,7 @@ input[type="number"]::-webkit-inner-spin-button {
 /* Responsive Nav More Dropdown System */
 .nav-more-wrapper {
     position: relative;
-    display: none; /* hidden by default, enabled on 769px to 1280px */
+    display: inline-block; /* visible on all screens: holds Categories & Analytics */
 }
 
 .nav-more-btn {
@@ -1457,7 +1457,23 @@ input[type="number"]::-webkit-inner-spin-button {
     }
 
     .nav-more-wrapper {
-        display: none !important;
+        display: block !important;
+        width: 100%;
+    }
+
+    .nav-more-btn {
+        width: 100%;
+        justify-content: space-between;
+        padding: 0.6rem 0.85rem;
+        border-radius: var(--radius-md);
+    }
+
+    .nav-more-dropdown {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+        background-color: rgba(0, 0, 0, 0.25);
+        margin-top: 0.5rem;
     }
 
     .nav-overflow-md,
@@ -1570,17 +1586,18 @@ input[type="number"]::-webkit-inner-spin-button {
    Responsive Navigation Engine for Top Header Bar (Desktop-Down)
    ========================================================================== */
 
-/* Base (> 1280px): All 7 links inline, More dropdown button hidden */
+/* Base (> 1280px): More dropdown button is always visible on all screens (holds Categories & Analytics) */
 header.top-nav .nav-more-wrapper {
-    display: none;
+    display: inline-block !important;
 }
 
-.nav-more-dropdown .dropdown-item-md {
+.nav-more-dropdown .dropdown-item-md,
+.nav-more-dropdown .dropdown-item-lg {
     display: none;
 }
 
 /* Breakpoint 1: <= 1280px (Laptops / Medium Screens) */
-/* Hide Users & Staff, Monitoring, Media Assets from top bar; show More dropdown */
+/* Move Monitoring to More dropdown */
 @media (max-width: 1280px) {
     header.top-nav {
         padding: 0 1.25rem;
@@ -1601,6 +1618,10 @@ header.top-nav .nav-more-wrapper {
 
     header.top-nav .nav-overflow-lg {
         display: none !important;
+    }
+
+    .nav-more-dropdown .dropdown-item-lg {
+        display: flex !important;
     }
 
     header.top-nav .nav-more-wrapper {
@@ -1648,7 +1669,23 @@ header.top-nav .nav-more-wrapper {
 /* Breakpoint 3: <= 768px (Mobile Drawer) */
 @media (max-width: 768px) {
     header.top-nav .nav-more-wrapper {
-        display: none !important;
+        display: block !important;
+        width: 100%;
+    }
+
+    header.top-nav .nav-more-btn {
+        width: 100%;
+        justify-content: space-between;
+        padding: 0.6rem 0.85rem;
+        border-radius: var(--radius-md);
+    }
+
+    header.top-nav .nav-more-dropdown {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+        background-color: rgba(0, 0, 0, 0.25);
+        margin-top: 0.5rem;
     }
 
     header.top-nav .nav-menu .nav-overflow-md,

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Excel Earthings - Kiosk Administration & CMS{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/admin_styles.css' %}?v=3.0">
+    <link rel="stylesheet" href="{% static 'css/admin_styles.css' %}?v=3.1">
     <!-- DataTables CSS CDN -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <!-- jQuery & DataTables JS CDN -->
@@ -77,10 +77,6 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                     <span>Products</span>
                 </a>
-                <a href="{% url 'admin_categories' %}" class="nav-item nav-overflow-md {% if active_tab == 'categories' %}active{% endif %}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    <span>Categories</span>
-                </a>
                 <a href="{% url 'admin_stores' %}" class="nav-item nav-overflow-md {% if active_tab == 'stores' %}active{% endif %}">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                     <span>Stores</span>
@@ -92,27 +88,34 @@
                     <span>Monitoring</span>
                 </a>
 
-                <!-- Responsive More Dropdown (Active for 769px to 1280px) -->
+                <!-- More Dropdown (Includes Categories and Analytics on all screens) -->
                 <div class="nav-more-wrapper">
-                    <button type="button" class="nav-more-btn {% if active_tab == 'products' or active_tab == 'categories' or active_tab == 'stores' or active_tab == 'monitoring' %}active{% endif %}" onclick="toggleNavMoreMenu(event)" aria-expanded="false" aria-label="More Navigation Options">
+                    <button type="button" class="nav-more-btn {% if active_tab == 'categories' or active_tab == 'analytics' or active_tab == 'products' or active_tab == 'stores' or active_tab == 'monitoring' %}active{% endif %}" onclick="toggleNavMoreMenu(event)" aria-expanded="false" aria-label="More Navigation Options">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                         <span>More</span>
                         <svg class="more-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
                     <div class="nav-more-dropdown" id="navMoreDropdown">
+                        <!-- Permanent items in More on all screens -->
+                        <a href="{% url 'admin_categories' %}" class="nav-dropdown-item {% if active_tab == 'categories' %}active{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            <span>Categories</span>
+                        </a>
+                        <a href="{% url 'admin_analytics' %}" class="nav-dropdown-item {% if active_tab == 'analytics' %}active{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            <span>Analytics</span>
+                        </a>
+
+                        <!-- Medium/Tablet Screen Overflow items -->
                         <a href="{% url 'admin_products' %}" class="nav-dropdown-item dropdown-item-md {% if active_tab == 'products' %}active{% endif %}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                             <span>Products</span>
-                        </a>
-                        <a href="{% url 'admin_categories' %}" class="nav-dropdown-item dropdown-item-md {% if active_tab == 'categories' %}active{% endif %}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                            <span>Categories</span>
                         </a>
                         <a href="{% url 'admin_stores' %}" class="nav-dropdown-item dropdown-item-md {% if active_tab == 'stores' %}active{% endif %}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             <span>Stores</span>
                         </a>
-                        <a href="{% url 'admin_monitoring' %}" class="nav-dropdown-item {% if active_tab == 'monitoring' %}active{% endif %}">
+                        <a href="{% url 'admin_monitoring' %}" class="nav-dropdown-item dropdown-item-lg {% if active_tab == 'monitoring' %}active{% endif %}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="12" rx="2" ry="2"></rect><path d="M6 14v4M10 12v6M14 16v2M18 10v8"></path></svg>
                             <span>Monitoring</span>
                         </a>

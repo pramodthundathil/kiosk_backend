@@ -1,0 +1,606 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Kiosk Click Analytics & Device Usage Frequency - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<!-- Chart.js CDN for Visual Telemetry -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<div id="analyticsDashboardPanel">
+    <!-- Header & Filter Toolbar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: var(--bg-card); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-md); flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="color: var(--primary-color); display: flex; align-items: center; gap: 0.6rem; font-size: 1.35rem; font-weight: 800; margin: 0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6;">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span>Kiosk Click Analytics & Device Usage Frequency</span>
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem; margin-bottom: 0;">
+                Real-time telemetry tracking customer interactions: product card clicks, detail explorations, usage sessions, and peak activity hours.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <!-- Period Filter Pills -->
+            <div style="display: flex; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;">
+                <a href="?period=today{% if selected_kiosk_id %}&kiosk_id={{ selected_kiosk_id }}{% endif %}{% if selected_store_id %}&store_id={{ selected_store_id }}{% endif %}" 
+                   class="btn btn-sm {% if period == 'today' %}btn-primary{% else %}btn-secondary{% endif %}" 
+                   style="border: none; padding: 0.4rem 0.85rem; font-size: 0.8rem;">Today</a>
+                <a href="?period=7d{% if selected_kiosk_id %}&kiosk_id={{ selected_kiosk_id }}{% endif %}{% if selected_store_id %}&store_id={{ selected_store_id }}{% endif %}" 
+                   class="btn btn-sm {% if period == '7d' %}btn-primary{% else %}btn-secondary{% endif %}" 
+                   style="border: none; padding: 0.4rem 0.85rem; font-size: 0.8rem;">Last 7 Days</a>
+                <a href="?period=30d{% if selected_kiosk_id %}&kiosk_id={{ selected_kiosk_id }}{% endif %}{% if selected_store_id %}&store_id={{ selected_store_id }}{% endif %}" 
+                   class="btn btn-sm {% if period == '30d' %}btn-primary{% else %}btn-secondary{% endif %}" 
+                   style="border: none; padding: 0.4rem 0.85rem; font-size: 0.8rem;">30 Days</a>
+                <a href="?period=all{% if selected_kiosk_id %}&kiosk_id={{ selected_kiosk_id }}{% endif %}{% if selected_store_id %}&store_id={{ selected_store_id }}{% endif %}" 
+                   class="btn btn-sm {% if period == 'all' %}btn-primary{% else %}btn-secondary{% endif %}" 
+                   style="border: none; padding: 0.4rem 0.85rem; font-size: 0.8rem;">All Time</a>
+            </div>
+
+            <!-- Kiosk Terminal Filter -->
+            <form method="GET" style="display: inline-flex; gap: 0.4rem; align-items: center; margin: 0;">
+                <input type="hidden" name="period" value="{{ period }}">
+                <select name="kiosk_id" onchange="this.form.submit()" style="padding: 0.4rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); font-size: 0.825rem;">
+                    <option value="">All Kiosk Terminals</option>
+                    {% for k in filter_kiosks %}
+                    <option value="{{ k.id }}" {% if selected_kiosk_id == k.id|stringformat:"s" %}selected{% endif %}>
+                        {{ k.name }} ({{ k.device_id }})
+                    </option>
+                    {% endfor %}
+                </select>
+
+                {% if selected_kiosk_id or selected_store_id %}
+                <a href="?period={{ period }}" class="btn btn-secondary btn-sm" title="Clear Filters" style="padding: 0.4rem 0.6rem;">✕</a>
+                {% endif %}
+            </form>
+
+            <!-- Export CSV Button -->
+            <a href="{% url 'admin_analytics_export' %}?period={{ period }}" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem; font-size: 0.825rem;" title="Download CSV Report">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Export CSV</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Telemetry KPI Stats Cards (5 Column Grid) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <!-- Total Product Clicks -->
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 46px; height: 46px; border-radius: var(--radius-sm); background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Total Product Clicks</div>
+                <div style="font-size: 1.45rem; font-weight: 800; color: #3b82f6;">{{ total_clicks }}</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">{{ total_interactions }} total events recorded</div>
+            </div>
+        </div>
+
+        <!-- Total Kiosk Usage Sessions -->
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 46px; height: 46px; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Usage Sessions</div>
+                <div style="font-size: 1.45rem; font-weight: 800; color: #10b981;">{{ total_sessions }}</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Active customer sessions</div>
+            </div>
+        </div>
+
+        <!-- Average Session Duration -->
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 46px; height: 46px; border-radius: var(--radius-sm); background: rgba(245, 158, 11, 0.12); color: #f59e0b; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Avg Session Duration</div>
+                <div style="font-size: 1.45rem; font-weight: 800; color: #f59e0b;">{{ avg_duration_display }}</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Customer dwell time</div>
+            </div>
+        </div>
+
+        <!-- Most Clicked Product -->
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 46px; height: 46px; border-radius: var(--radius-sm); background: rgba(168, 85, 247, 0.12); color: #a855f7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+            </div>
+            <div style="min-width: 0;">
+                <div style="font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Top Product</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ top_product_name }}">
+                    {{ top_product_name }}
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">{{ top_product_count }} interactions</div>
+            </div>
+        </div>
+
+        <!-- Most Active Kiosk Terminal -->
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 46px; height: 46px; border-radius: var(--radius-sm); background: rgba(14, 165, 233, 0.12); color: #0ea5e9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+            </div>
+            <div style="min-width: 0;">
+                <div style="font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Busiest Kiosk</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ top_kiosk_name }}">
+                    {{ top_kiosk_name }}
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">{{ top_kiosk_sessions }} sessions ({{ active_kiosks_count }} active devices)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visual Charts Row: Trends & Peak Hours -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <!-- Daily Trend: Clicks vs Sessions Chart -->
+        <div class="panel-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    <span>Customer Interaction & Usage Session Trends ({{ period_label }})</span>
+                </h3>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Daily Timeline</span>
+            </div>
+            <div style="height: 250px; position: relative;">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Peak Usage Hours Chart (00:00 - 23:00) -->
+        <div class="panel-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Peak Usage Hours</span>
+                </h3>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">24h Distribution</span>
+            </div>
+            <div style="height: 250px; position: relative;">
+                <canvas id="hourlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 1: Most Frequently Clicked Products Leaderboard -->
+    <div class="panel-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1.5rem;">
+        <div class="panel-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #f59e0b;">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>Frequently Clicked Products Ranking</span>
+                </h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 2px 0 0 0;">
+                    Products ranked by total customer interactions (card taps, full specifications opened, brochures downloaded)
+                </p>
+            </div>
+            <span style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 0.3rem 0.75rem; border-radius: var(--radius-sm); font-weight: 600;">
+                Showing Top {{ top_products|length }} Products
+            </span>
+        </div>
+
+        <div style="overflow-x: auto;">
+            {% if top_products %}
+            <table class="kiosk-table" id="topProductsTable" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--bg-surface); text-align: left; font-size: 0.8rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 0.85rem 1rem; width: 60px; text-align: center;">Rank</th>
+                        <th style="padding: 0.85rem 1rem;">Product</th>
+                        <th style="padding: 0.85rem 1rem;">SKU</th>
+                        <th style="padding: 0.85rem 1rem;">Category</th>
+                        <th style="padding: 0.85rem 1rem; text-align: right;">Card Clicks</th>
+                        <th style="padding: 0.85rem 1rem; text-align: right;">Detail Views</th>
+                        <th style="padding: 0.85rem 1rem; text-align: right; font-weight: 800; color: #3b82f6;">Total Events</th>
+                        <th style="padding: 0.85rem 1rem; text-align: center;">Unique Devices</th>
+                        <th style="padding: 0.85rem 1rem; width: 140px;">Popularity</th>
+                        <th style="padding: 0.85rem 1rem; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in top_products %}
+                    <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.875rem;">
+                        <!-- Rank Badge -->
+                        <td style="padding: 0.85rem 1rem; text-align: center;">
+                            {% if p.rank == 1 %}
+                            <span style="display: inline-block; width: 26px; height: 26px; line-height: 26px; border-radius: 50%; background: #fef3c7; color: #b45309; font-weight: 800; font-size: 0.8rem; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);">1</span>
+                            {% elif p.rank == 2 %}
+                            <span style="display: inline-block; width: 26px; height: 26px; line-height: 26px; border-radius: 50%; background: #f1f5f9; color: #475569; font-weight: 800; font-size: 0.8rem;">2</span>
+                            {% elif p.rank == 3 %}
+                            <span style="display: inline-block; width: 26px; height: 26px; line-height: 26px; border-radius: 50%; background: #fed7aa; color: #c2410c; font-weight: 800; font-size: 0.8rem;">3</span>
+                            {% else %}
+                            <span style="font-weight: 700; color: var(--text-secondary);">#{{ p.rank }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Product Name & Thumbnail -->
+                        <td style="padding: 0.85rem 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                {% if p.image %}
+                                <img src="{{ p.image.url }}" alt="{{ p.name }}" style="width: 38px; height: 38px; object-fit: contain; border-radius: var(--radius-sm); background: #ffffff; border: 1px solid var(--border-color); padding: 2px;">
+                                {% else %}
+                                <div style="width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--bg-surface); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <a href="{% url 'admin_product_detail' p.id %}" style="font-weight: 700; color: var(--primary-color); text-decoration: none;">
+                                        {{ p.name }}
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- SKU -->
+                        <td style="padding: 0.85rem 1rem; font-family: monospace; color: var(--text-secondary); font-size: 0.82rem;">
+                            {{ p.sku }}
+                        </td>
+
+                        <!-- Category -->
+                        <td style="padding: 0.85rem 1rem;">
+                            <span style="display: inline-block; padding: 0.2rem 0.5rem; background: rgba(59, 130, 246, 0.08); color: #3b82f6; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600;">
+                                {{ p.category_name }}
+                            </span>
+                        </td>
+
+                        <!-- Card Clicks -->
+                        <td style="padding: 0.85rem 1rem; text-align: right; font-weight: 600;">
+                            {{ p.card_clicks }}
+                        </td>
+
+                        <!-- Detail Views -->
+                        <td style="padding: 0.85rem 1rem; text-align: right; font-weight: 600;">
+                            {{ p.detail_views }}
+                        </td>
+
+                        <!-- Total Interactions -->
+                        <td style="padding: 0.85rem 1rem; text-align: right; font-weight: 800; color: #3b82f6; font-size: 1rem;">
+                            {{ p.total_interactions }}
+                        </td>
+
+                        <!-- Unique Kiosks -->
+                        <td style="padding: 0.85rem 1rem; text-align: center;">
+                            <span style="font-weight: 700; color: var(--primary-color);">{{ p.unique_kiosks }}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">device(s)</span>
+                        </td>
+
+                        <!-- Popularity Progress Bar -->
+                        <td style="padding: 0.85rem 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; border: 1px solid var(--border-color);">
+                                    <div style="width: {{ p.popularity_percent }}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 3px;"></div>
+                                </div>
+                                <span style="font-size: 0.72rem; color: var(--text-secondary); width: 32px; text-align: right;">{{ p.popularity_percent }}%</span>
+                            </div>
+                        </td>
+
+                        <!-- Action -->
+                        <td style="padding: 0.85rem 1rem; text-align: center;">
+                            <a href="{% url 'admin_product_detail' p.id %}" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;" title="View Catalog Record">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-secondary);">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 0.75rem; color: var(--text-secondary); opacity: 0.5;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--primary-color);">No Product Click Events Yet for {{ period_label }}</div>
+                <p style="font-size: 0.85rem; margin-top: 0.25rem;">Interact with products on the Kiosk display to see telemetry rankings populate here in real-time.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Section 2: Kiosk Device Usage Frequency & Engagement Breakdown -->
+    <div class="panel-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 2rem;">
+        <div class="panel-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #10b981;">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    <span>Kiosk Device Usage Frequency & Engagement Comparison</span>
+                </h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 2px 0 0 0;">
+                    Frequency of customers approaching and interacting with each physical kiosk terminal
+                </p>
+            </div>
+            <a href="{% url 'admin_monitoring' %}" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>Live Monitoring Console</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+        </div>
+
+        <div style="overflow-x: auto;">
+            {% if kiosk_usage_list %}
+            <table class="kiosk-table" id="kioskUsageTable" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--bg-surface); text-align: left; font-size: 0.8rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 0.85rem 1rem;">Status</th>
+                        <th style="padding: 0.85rem 1rem;">Terminal Name</th>
+                        <th style="padding: 0.85rem 1rem;">Location / Store</th>
+                        <th style="padding: 0.85rem 1rem;">MAC / Device ID</th>
+                        <th style="padding: 0.85rem 1rem; text-align: right; font-weight: 800; color: #10b981;">Usage Sessions</th>
+                        <th style="padding: 0.85rem 1rem; text-align: right;">Total Clicks</th>
+                        <th style="padding: 0.85rem 1rem; text-align: right;">Clicks / Session</th>
+                        <th style="padding: 0.85rem 1rem; text-align: right;">Avg Dwell Time</th>
+                        <th style="padding: 0.85rem 1rem;">Last Activity</th>
+                        <th style="padding: 0.85rem 1rem; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for k in kiosk_usage_list %}
+                    <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.875rem;">
+                        <!-- Node Live Status Badge -->
+                        <td style="padding: 0.85rem 1rem;">
+                            {% if k.status == 'ONLINE' %}
+                            <span style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.1); color: #10b981; font-weight: 700; font-size: 0.75rem;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>
+                                Online
+                            </span>
+                            {% elif k.status == 'WARNING' %}
+                            <span style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem; border-radius: 9999px; background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-weight: 700; font-size: 0.75rem;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></span>
+                                Warning
+                            </span>
+                            {% else %}
+                            <span style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem; border-radius: 9999px; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-weight: 700; font-size: 0.75rem;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444;"></span>
+                                Offline
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Terminal Name -->
+                        <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--primary-color);">
+                            <a href="{% url 'admin_monitoring_kiosk_detail' k.id %}" style="text-decoration: none; color: inherit;">
+                                {{ k.name }}
+                            </a>
+                        </td>
+
+                        <!-- Store -->
+                        <td style="padding: 0.85rem 1rem; color: var(--text-secondary);">
+                            {{ k.store_name }}
+                        </td>
+
+                        <!-- MAC / Device ID -->
+                        <td style="padding: 0.85rem 1rem; font-family: monospace; font-size: 0.82rem; color: var(--text-secondary);">
+                            {{ k.device_id }}
+                        </td>
+
+                        <!-- Usage Sessions (Frequency) -->
+                        <td style="padding: 0.85rem 1rem; text-align: right; font-weight: 800; color: #10b981; font-size: 1.05rem;">
+                            {{ k.session_count }}
+                        </td>
+
+                        <!-- Total Clicks -->
+                        <td style="padding: 0.85rem 1rem; text-align: right; font-weight: 700;">
+                            {{ k.click_count }}
+                        </td>
+
+                        <!-- Clicks / Session -->
+                        <td style="padding: 0.85rem 1rem; text-align: right; color: var(--text-secondary);">
+                            {{ k.avg_clicks_per_session }}
+                        </td>
+
+                        <!-- Avg Dwell Time -->
+                        <td style="padding: 0.85rem 1rem; text-align: right; font-weight: 600; color: #f59e0b;">
+                            {{ k.avg_duration_display }}
+                        </td>
+
+                        <!-- Last Active -->
+                        <td style="padding: 0.85rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
+                            {% if k.last_active %}
+                            {{ k.last_active|date:"M d, H:i" }}
+                            {% else %}
+                            Never Active
+                            {% endif %}
+                        </td>
+
+                        <!-- Action -->
+                        <td style="padding: 0.85rem 1rem; text-align: center;">
+                            <a href="{% url 'admin_monitoring_kiosk_detail' k.id %}" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">
+                                Monitor
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 2.5rem 1.5rem; text-align: center; color: var(--text-secondary);">
+                No kiosk terminals registered yet.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Render Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Daily Trend Chart (Clicks vs Sessions)
+    var trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        var labels = {{ chart_trend_labels|safe }};
+        var clicksData = {{ chart_trend_clicks|safe }};
+        var sessionsData = {{ chart_trend_sessions|safe }};
+
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Product Clicks & Interactions',
+                        data: clicksData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Kiosk Usage Sessions',
+                        data: sessionsData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 11, family: "'Inter', sans-serif" }
+                        }
+                    },
+                    tooltip: {
+                        padding: 10,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)'
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'Product Clicks', font: { size: 10 } },
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'Sessions', font: { size: 10 } },
+                        beginAtZero: true,
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Peak Hours 24h Bar Chart
+    var hourlyCtx = document.getElementById('hourlyChart');
+    if (hourlyCtx) {
+        var hourlyLabels = {{ chart_hourly_labels|safe }};
+        var hourlyData = {{ chart_hourly_data|safe }};
+
+        // Determine gradient/bar colors based on peak values
+        var maxVal = Math.max(...hourlyData, 1);
+
+        new Chart(hourlyCtx, {
+            type: 'bar',
+            data: {
+                labels: hourlyLabels,
+                datasets: [{
+                    label: 'Hourly Events',
+                    data: hourlyData,
+                    backgroundColor: hourlyData.map(function(v) {
+                        return (v / maxVal > 0.7) ? '#3b82f6' : 'rgba(59, 130, 246, 0.45)';
+                    }),
+                    borderRadius: 4,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(ctx) {
+                                return 'Hour: ' + ctx[0].label;
+                            },
+                            label: function(ctx) {
+                                return ctx.parsed.y + ' interactions recorded';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { size: 9 },
+                            maxRotation: 0,
+                            callback: function(val, index) {
+                                // Show every 3rd hour for clean layout
+                                return index % 3 === 0 ? this.getLabelForValue(val) : '';
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: { font: { size: 10 }, precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

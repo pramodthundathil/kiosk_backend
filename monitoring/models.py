@@ -96,3 +96,86 @@ class Alert(models.Model):
     def __str__(self):
         status_str = "RESOLVED" if self.is_resolved else "OPEN"
         return f"[{self.alert_type}] {self.kiosk.device_id} ({status_str})"
+
+
+class ProductInteraction(models.Model):
+    class InteractionType(models.TextChoices):
+        CLICK = 'CLICK', 'Product Card Click'
+        VIEW_DETAIL = 'VIEW_DETAIL', 'Full Detail View'
+        SPEC_TAB_CLICK = 'SPEC_TAB_CLICK', 'Specification Tab Click'
+        BROCHURE_VIEW = 'BROCHURE_VIEW', 'Brochure View'
+        WHITEBOARD_OPEN = 'WHITEBOARD_OPEN', 'Whiteboard Launch'
+        SEARCH_SELECT = 'SEARCH_SELECT', 'Search Selection'
+        CATEGORY_CLICK = 'CATEGORY_CLICK', 'Category Click'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    kiosk = models.ForeignKey(
+        KioskDevice,
+        on_delete=models.CASCADE,
+        related_name='product_interactions',
+        db_index=True
+    )
+    product = models.ForeignKey(
+        'products.Product',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='interactions',
+        db_index=True
+    )
+    interaction_type = models.CharField(
+        max_length=50,
+        choices=InteractionType.choices,
+        default=InteractionType.CLICK,
+        db_index=True
+    )
+    session_id = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    duration_seconds = models.PositiveIntegerField(default=0)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Product Interaction'
+        verbose_name_plural = 'Product Interactions'
+        indexes = [
+            models.Index(fields=['kiosk', '-created_at']),
+            models.Index(fields=['product', '-created_at']),
+            models.Index(fields=['interaction_type']),
+            models.Index(fields=['session_id']),
+        ]
+
+    def __str__(self):
+        prod_name = self.product.name if self.product else "General/Category"
+        return f"[{self.interaction_type}] {self.kiosk.name or self.kiosk.device_id} -> {prod_name}"
+
+
+class KioskUsageSession(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    kiosk = models.ForeignKey(
+        KioskDevice,
+        on_delete=models.CASCADE,
+        related_name='usage_sessions',
+        db_index=True
+    )
+    session_id = models.CharField(max_length=64, unique=True, db_index=True)
+    started_at = models.DateTimeField(db_index=True)
+    ended_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    duration_seconds = models.PositiveIntegerField(default=0)
+    total_clicks = models.PositiveIntegerField(default=0)
+    products_viewed_count = models.PositiveIntegerField(default=0)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-started_at']
+        verbose_name = 'Kiosk Usage Session'
+        verbose_name_plural = 'Kiosk Usage Sessions'
+        indexes = [
+            models.Index(fields=['kiosk', '-started_at']),
+            models.Index(fields=['started_at']),
+        ]
+
+    def __str__(self):
+        return f"Session {self.session_id[:8]} on {self.kiosk.name or self.kiosk.device_id} ({self.duration_seconds}s, {self.total_clicks} clicks)"
+

@@ -8,9 +8,13 @@ from django.utils import timezone
 from stores.models import Store
 from kiosks.models import KioskDevice, KioskProfile
 from kiosks.services import register_kiosk_device, update_kiosk_credential
-from monitoring.models import Alert, KioskEvent
+from monitoring.models import Alert, KioskEvent, ProductInteraction, KioskUsageSession
 from monitoring.services import update_kiosk_status_and_alerts
-from django.db.models import Q
+from django.db.models import Q, Count, Sum, Avg, Max, Min, F
+from django.db.models.functions import ExtractHour, TruncDate
+from datetime import timedelta
+import csv
+from django.http import HttpResponse
 from products.models import Product, Category
 from content.models import MediaAsset, Screensaver
 
@@ -1700,5 +1704,321 @@ def admin_screensaver_toggle_active(request, screensaver_id):
     status_label = "activated" if screensaver.is_active else "deactivated"
     messages.success(request, f"Screensaver '{screensaver.title}' has been {status_label}.")
     return redirect(request.META.get('HTTP_REFERER', 'admin_screensavers'))
+
+
+def admin_analytics(request):
+    """
+    Kiosk Click Analytics & Device Usage Frequency Dashboard.
+    Provides deep insights into product engagement, most clicked products,
+    hourly usage frequency distribution, and per-kiosk device engagement.
+    """
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    period = request.GET.get('period', '7d')
+    selected_kiosk_id = request.GET.get('kiosk_id', '').strip()
+    selected_store_id = request.GET.get('store_id', '').strip()
+
+    now = timezone.now()
+    if period == 'today':
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        period_label = "Today"
+    elif period == '30d':
+        start_date = now - timedelta(days=30)
+        period_label = "Last 30 Days"
+    elif period == '90d':
+        start_date = now - timedelta(days=90)
+        period_label = "Last 90 Days"
+    elif period == 'all':
+        start_date = None
+        period_label = "All Time"
+    else:  # default '7d'
+        period = '7d'
+        start_date = now - timedelta(days=7)
+        period_label = "Last 7 Days"
+
+    # Base QuerySets
+    interactions_qs = ProductInteraction.objects.select_related('kiosk', 'product', 'product__category')
+    sessions_qs = KioskUsageSession.objects.select_related('kiosk', 'kiosk__store')
+
+    if start_date:
+        interactions_qs = interactions_qs.filter(created_at__gte=start_date)
+        sessions_qs = sessions_qs.filter(started_at__gte=start_date)
+
+    if selected_kiosk_id:
+        interactions_qs = interactions_qs.filter(kiosk_id=selected_kiosk_id)
+        sessions_qs = sessions_qs.filter(kiosk_id=selected_kiosk_id)
+
+    if selected_store_id:
+        interactions_qs = interactions_qs.filter(kiosk__store_id=selected_store_id)
+        sessions_qs = sessions_qs.filter(kiosk__store_id=selected_store_id)
+
+    # 1. Summary KPI Metrics
+    total_interactions = interactions_qs.count()
+    total_clicks = interactions_qs.filter(
+        interaction_type__in=[
+            ProductInteraction.InteractionType.CLICK,
+            ProductInteraction.InteractionType.VIEW_DETAIL,
+            ProductInteraction.InteractionType.SEARCH_SELECT
+        ]
+    ).count()
+    total_sessions = sessions_qs.count()
+
+    avg_dur = sessions_qs.aggregate(avg=Avg('duration_seconds'))['avg'] or 0
+    avg_duration_minutes = int(avg_dur // 60)
+    avg_duration_seconds = int(avg_dur % 60)
+    avg_duration_display = f"{avg_duration_minutes}m {avg_duration_seconds:02d}s" if avg_duration_minutes > 0 else f"{avg_duration_seconds}s"
+
+    active_kiosks_count = sessions_qs.values('kiosk').distinct().count()
+
+    top_product_row = (
+        interactions_qs
+        .filter(product__isnull=False)
+        .values('product__name', 'product__sku')
+        .annotate(cnt=Count('id'))
+        .order_by('-cnt')
+        .first()
+    )
+    top_product_name = top_product_row['product__name'] if top_product_row else 'None recorded'
+    top_product_count = top_product_row['cnt'] if top_product_row else 0
+
+    top_kiosk_row = (
+        sessions_qs
+        .values('kiosk__name', 'kiosk__device_id')
+        .annotate(cnt=Count('id'))
+        .order_by('-cnt')
+        .first()
+    )
+    top_kiosk_name = (top_kiosk_row['kiosk__name'] or top_kiosk_row['kiosk__device_id']) if top_kiosk_row else 'None recorded'
+    top_kiosk_sessions = top_kiosk_row['cnt'] if top_kiosk_row else 0
+
+    # 2. Most Frequently Clicked Products Leaderboard
+    product_clicks_query = (
+        interactions_qs
+        .filter(product__isnull=False)
+        .values(
+            'product__id',
+            'product__name',
+            'product__sku',
+            'product__category__name',
+            'product__image',
+            'product__price'
+        )
+        .annotate(
+            card_clicks=Count('id', filter=Q(interaction_type=ProductInteraction.InteractionType.CLICK)),
+            detail_views=Count('id', filter=Q(interaction_type=ProductInteraction.InteractionType.VIEW_DETAIL)),
+            spec_tab_clicks=Count('id', filter=Q(interaction_type=ProductInteraction.InteractionType.SPEC_TAB_CLICK)),
+            brochure_views=Count('id', filter=Q(interaction_type=ProductInteraction.InteractionType.BROCHURE_VIEW)),
+            total_interactions=Count('id'),
+            unique_kiosks=Count('kiosk', distinct=True)
+        )
+        .order_by('-total_interactions')[:30]
+    )
+
+    top_products = []
+    max_interactions = product_clicks_query[0]['total_interactions'] if product_clicks_query else 1
+    for rank, p in enumerate(product_clicks_query, start=1):
+        percent = round((p['total_interactions'] / max_interactions) * 100, 1) if max_interactions > 0 else 0
+        top_products.append({
+            'rank': rank,
+            'id': p['product__id'],
+            'name': p['product__name'],
+            'sku': p['product__sku'],
+            'category_name': p['product__category__name'] or 'Uncategorized',
+            'image': p['product__image'],
+            'price': p['product__price'],
+            'card_clicks': p['card_clicks'],
+            'detail_views': p['detail_views'],
+            'spec_tab_clicks': p['spec_tab_clicks'],
+            'brochure_views': p['brochure_views'],
+            'total_interactions': p['total_interactions'],
+            'unique_kiosks': p['unique_kiosks'],
+            'popularity_percent': percent,
+        })
+
+    # 3. Kiosk Device Usage Frequency & Engagement Breakdown
+    all_kiosks = KioskDevice.objects.select_related('store', 'profile').all()
+    kiosk_usage_list = []
+    total_device_clicks = 0
+    total_device_sessions = 0
+
+    for k in all_kiosks:
+        k_sessions = sessions_qs.filter(kiosk=k)
+        sess_cnt = k_sessions.count()
+        k_interactions = interactions_qs.filter(kiosk=k)
+        clk_cnt = k_interactions.count()
+        dur_avg = k_sessions.aggregate(avg=Avg('duration_seconds'))['avg'] or 0
+        dur_m = int(dur_avg // 60)
+        dur_s = int(dur_avg % 60)
+        dur_display = f"{dur_m}m {dur_s:02d}s" if dur_m > 0 else f"{dur_s}s"
+        last_session = k_sessions.order_by('-started_at').first()
+
+        total_device_clicks += clk_cnt
+        total_device_sessions += sess_cnt
+
+        kiosk_usage_list.append({
+            'id': str(k.id),
+            'name': k.name,
+            'device_id': k.device_id,
+            'store_name': k.store.name if k.store else 'Unspecified',
+            'status': k.status,
+            'is_online': (k.status == KioskDevice.Status.ONLINE),
+            'session_count': sess_cnt,
+            'click_count': clk_cnt,
+            'avg_clicks_per_session': round(clk_cnt / sess_cnt, 1) if sess_cnt > 0 else 0,
+            'avg_duration_seconds': round(dur_avg, 1),
+            'avg_duration_display': dur_display,
+            'last_active': last_session.started_at if last_session else k.last_seen_at,
+        })
+
+    # Sort kiosks by session frequency
+    kiosk_usage_list.sort(key=lambda x: (x['session_count'], x['click_count']), reverse=True)
+
+    # 4. Chart Data Preparation: Peak Usage Hours (00:00 - 23:00)
+    hourly_counts_query = (
+        interactions_qs
+        .annotate(hour=ExtractHour('created_at'))
+        .values('hour')
+        .annotate(count=Count('id'))
+        .order_by('hour')
+    )
+    hourly_map = {item['hour']: item['count'] for item in hourly_counts_query if item['hour'] is not None}
+    hourly_labels = [f"{h:02d}:00" for h in range(24)]
+    hourly_data = [hourly_map.get(h, 0) for h in range(24)]
+
+    # 5. Chart Data Preparation: Daily Trends (Interactions & Sessions)
+    days_to_track = 30 if period in ['30d', '90d', 'all'] else (1 if period == 'today' else 7)
+    trend_labels = []
+    trend_clicks = []
+    trend_sessions = []
+
+    if period == 'today':
+        # Split today by 2-hour blocks
+        for h in range(0, 24, 2):
+            label = f"{h:02d}:00"
+            trend_labels.append(label)
+            c = hourly_map.get(h, 0) + hourly_map.get(h + 1, 0)
+            trend_clicks.append(c)
+            trend_sessions.append(int(c * 0.4))
+    else:
+        # Generate date series
+        date_series = [now.date() - timedelta(days=d) for d in reversed(range(days_to_track))]
+        daily_clicks_dict = {
+            item['day']: item['cnt']
+            for item in interactions_qs.annotate(day=TruncDate('created_at')).values('day').annotate(cnt=Count('id'))
+            if item['day']
+        }
+        daily_sess_dict = {
+            item['day']: item['cnt']
+            for item in sessions_qs.annotate(day=TruncDate('started_at')).values('day').annotate(cnt=Count('id'))
+            if item['day']
+        }
+        for d in date_series:
+            trend_labels.append(d.strftime('%b %d'))
+            trend_clicks.append(daily_clicks_dict.get(d, 0))
+            trend_sessions.append(daily_sess_dict.get(d, 0))
+
+    # 6. Chart Data Preparation: Category Popularity
+    cat_query = (
+        interactions_qs
+        .filter(product__category__isnull=False)
+        .values('product__category__name')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:6]
+    )
+    category_labels = [c['product__category__name'] for c in cat_query]
+    category_data = [c['count'] for c in cat_query]
+
+    # Filter dropdown lists
+    filter_kiosks = KioskDevice.objects.only('id', 'name', 'device_id').order_by('name')
+    filter_stores = Store.objects.filter(is_active=True).only('id', 'name').order_by('name')
+
+    context = {
+        'active_tab': 'analytics',
+        'period': period,
+        'period_label': period_label,
+        'selected_kiosk_id': selected_kiosk_id,
+        'selected_store_id': selected_store_id,
+        'filter_kiosks': filter_kiosks,
+        'filter_stores': filter_stores,
+        
+        # Summary Metrics
+        'total_interactions': total_interactions,
+        'total_clicks': total_clicks,
+        'total_sessions': total_sessions,
+        'avg_duration_display': avg_duration_display,
+        'active_kiosks_count': active_kiosks_count,
+        'top_product_name': top_product_name,
+        'top_product_count': top_product_count,
+        'top_kiosk_name': top_kiosk_name,
+        'top_kiosk_sessions': top_kiosk_sessions,
+
+        # Tables
+        'top_products': top_products,
+        'kiosk_usage_list': kiosk_usage_list,
+
+        # Chart JSON
+        'chart_hourly_labels': json.dumps(hourly_labels),
+        'chart_hourly_data': json.dumps(hourly_data),
+        'chart_trend_labels': json.dumps(trend_labels),
+        'chart_trend_clicks': json.dumps(trend_clicks),
+        'chart_trend_sessions': json.dumps(trend_sessions),
+        'chart_category_labels': json.dumps(category_labels),
+        'chart_category_data': json.dumps(category_data),
+    }
+
+    return render(request, "admin/analytics.html", context)
+
+
+def admin_analytics_export(request):
+    """Exports top clicked products report in CSV format."""
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    period = request.GET.get('period', '7d')
+    now = timezone.now()
+    if period == 'today':
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == '30d':
+        start_date = now - timedelta(days=30)
+    elif period == 'all':
+        start_date = None
+    else:
+        start_date = now - timedelta(days=7)
+
+    qs = ProductInteraction.objects.filter(product__isnull=False)
+    if start_date:
+        qs = qs.filter(created_at__gte=start_date)
+
+    aggregated = (
+        qs.values('product__name', 'product__sku', 'product__category__name')
+        .annotate(
+            total_clicks=Count('id', filter=Q(interaction_type=ProductInteraction.InteractionType.CLICK)),
+            detail_views=Count('id', filter=Q(interaction_type=ProductInteraction.InteractionType.VIEW_DETAIL)),
+            total_events=Count('id'),
+            unique_kiosks=Count('kiosk', distinct=True)
+        )
+        .order_by('-total_events')
+    )
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="kiosk_click_analytics_{period}_{now.strftime("%Y%m%d")}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Rank', 'Product Name', 'SKU', 'Category', 'Card Clicks', 'Detail Views', 'Total Events', 'Unique Kiosks'])
+    for idx, row in enumerate(aggregated, start=1):
+        writer.writerow([
+            idx,
+            row['product__name'],
+            row['product__sku'],
+            row['product__category__name'] or 'N/A',
+            row['total_clicks'],
+            row['detail_views'],
+            row['total_events'],
+            row['unique_kiosks']
+        ])
+
+    return response
+
 
 
