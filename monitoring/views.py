@@ -72,6 +72,10 @@ class KioskHeartbeatView(views.APIView):
 
         if 'app_version' in data and data['app_version']:
             kiosk.app_version = data['app_version']
+        if 'app_version_code' in data and data['app_version_code'] is not None:
+            kiosk.current_app_version_code = int(data['app_version_code'])
+        if 'update_status' in data and data['update_status']:
+            kiosk.update_status = data['update_status']
         if 'android_version' in data and data['android_version']:
             kiosk.android_version = data['android_version']
         if 'device_model' in data and data['device_model']:
@@ -137,6 +141,17 @@ class KioskHeartbeatView(views.APIView):
                 "command": "SYNC_CONTENT",
                 "target_version": kiosk.desired_content_version
             })
+
+        # Check remote app update commands
+        if kiosk.force_update_requested:
+            commands.append({
+                "command": "FORCE_APP_UPDATE"
+            })
+        elif kiosk.check_update_requested:
+            commands.append({
+                "command": "CHECK_APP_UPDATE"
+            })
+
 
         # Log occasional heartbeat event for telemetry stream (every 60s max per device)
         last_hb_event = KioskEvent.objects.filter(

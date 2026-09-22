@@ -17,7 +17,9 @@ class KioskEvent(models.Model):
         LOW_BATTERY = 'LOW_BATTERY', 'Low Battery'
         SCREEN_OFF = 'SCREEN_OFF', 'Screen Off'
         SCREEN_ON = 'SCREEN_ON', 'Screen On'
+        APP_UPDATE = 'APP_UPDATE', 'App Update'
         ERROR = 'ERROR', 'Error'
+
 
     class Severity(models.TextChoices):
         INFO = 'INFO', 'Info'

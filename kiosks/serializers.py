@@ -87,3 +87,53 @@ class KioskRegistrationSerializer(serializers.Serializer):
     store_id = serializers.UUIDField(required=False, allow_null=True)
     profile_id = serializers.UUIDField(required=False, allow_null=True)
 
+
+from .models import AppRelease, KioskUpdateLog
+
+class AppReleaseSerializer(serializers.ModelSerializer):
+    apk_download_url = serializers.SerializerMethodField()
+    release_notes_list = serializers.SerializerMethodField()
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = AppRelease
+        fields = [
+            'id', 'version_name', 'version_code', 'release_title', 'release_notes',
+            'release_notes_list', 'apk_file', 'apk_url', 'apk_download_url',
+            'apk_file_size', 'checksum_sha256', 'is_mandatory', 'is_active',
+            'is_published', 'minimum_supported_version', 'target_device_type',
+            'staged_rollout_percentage', 'created_at', 'published_at',
+            'created_by', 'created_by_username'
+        ]
+        read_only_fields = ['id', 'apk_file_size', 'checksum_sha256', 'created_at', 'published_at']
+
+    def get_apk_download_url(self, obj):
+        request = self.context.get('request')
+        return obj.get_effective_apk_url(request)
+
+    def get_release_notes_list(self, obj):
+        return obj.get_release_notes_list()
+
+
+class AppUpdateCheckResponseSerializer(serializers.Serializer):
+    update_available = serializers.BooleanField()
+    latest_version_name = serializers.CharField(required=False, allow_null=True)
+    latest_version_code = serializers.IntegerField()
+    current_version_code = serializers.IntegerField()
+    mandatory = serializers.BooleanField(required=False)
+    release_title = serializers.CharField(required=False, allow_null=True)
+    release_notes = serializers.ListField(child=serializers.CharField(), required=False)
+    apk_url = serializers.CharField(required=False, allow_null=True)
+    apk_size = serializers.IntegerField(required=False, allow_null=True)
+    sha256 = serializers.CharField(required=False, allow_null=True)
+
+
+class AppUpdateStatusReportSerializer(serializers.Serializer):
+    device_id = serializers.CharField(required=False, allow_blank=True)
+    mac_address = serializers.CharField(required=False, allow_blank=True)
+    version_name = serializers.CharField(required=True, max_length=50)
+    version_code = serializers.IntegerField(required=True)
+    status = serializers.ChoiceField(choices=KioskDevice.UpdateStatus.choices)
+    message = serializers.CharField(required=False, allow_blank=True, default="")
+
+

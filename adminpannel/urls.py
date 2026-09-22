@@ -29,4 +29,7 @@ urlpatterns = [
     path("screensavers/<uuid:screensaver_id>/edit/", views.admin_screensaver_edit, name="admin_screensaver_edit"),
     path("screensavers/<uuid:screensaver_id>/delete/", views.admin_screensaver_delete, name="admin_screensaver_delete"),
     path("screensavers/<uuid:screensaver_id>/toggle/", views.admin_screensaver_toggle_active, name="admin_screensaver_toggle_active"),
+    path("releases/", views.admin_releases, name="admin_releases"),
+    path("releases/add/", views.admin_release_add, name="admin_release_add"),
+    path("releases/<uuid:release_id>/", views.admin_release_detail, name="admin_release_detail"),
 ]

@@ -16,5 +16,8 @@ class KioskHeartbeatSerializer(serializers.Serializer):
     is_authenticated = serializers.BooleanField(required=False, default=False)
     latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
+    app_version_code = serializers.IntegerField(required=False, allow_null=True)
+    update_status = serializers.CharField(required=False, allow_blank=True, max_length=50)
+
 
 

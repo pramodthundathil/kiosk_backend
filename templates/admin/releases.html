@@ -1,0 +1,419 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}App Releases & OTA Updates - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+    <!-- TOP KPI METRICS BAR -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total Terminals</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: var(--primary-color); margin-top: 0.25rem;">{{ total_kiosks }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Registered kiosk fleet</div>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 1.1rem; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 0.78rem; font-weight: 600; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Up to Date</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #10b981; margin-top: 0.25rem;">{{ updated_count }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Running latest target release</div>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-md); padding: 1.1rem; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 0.78rem; font-weight: 600; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px;">Update Pending</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #f59e0b; margin-top: 0.25rem;">{{ pending_count }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Older version installed</div>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-md); padding: 1.1rem; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 0.78rem; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">Updating Now</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #3b82f6; margin-top: 0.25rem;">{{ downloading_count|add:installing_count }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">{{ downloading_count }} downloading, {{ installing_count }} installing</div>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 1.1rem; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 0.78rem; font-weight: 600; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px;">Failed / Errors</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #ef4444; margin-top: 0.25rem;">{{ failed_count }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Verification or install error</div>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Offline</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: var(--text-secondary); margin-top: 0.25rem;">{{ offline_count }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Inactive or unpowered</div>
+        </div>
+    </div>
+
+    <!-- ACTIVE PUBLISHED RELEASE CARD -->
+    <div class="panel-card" style="border-left: 4px solid var(--accent-color);">
+        <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+            <div class="panel-title" style="display: flex; align-items: center; gap: 0.6rem;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Current Published Release (Target for Kiosks)</span>
+            </div>
+            <div class="panel-actions" style="gap: 0.6rem;">
+                <a href="{% url 'admin_release_add' %}" class="btn btn-accent" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>Upload New APK</span>
+                </a>
+            </div>
+        </div>
+
+        <div style="padding: 1.25rem 1.5rem;">
+            {% if latest_release %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start;">
+                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.4rem; font-weight: 800; color: var(--primary-color);">v{{ latest_release.version_name }}</span>
+                        <code style="font-size: 0.88rem; background: rgba(59, 130, 246, 0.1); color: #2563eb; padding: 2px 8px; border-radius: 4px; font-weight: 700;">code {{ latest_release.version_code }}</code>
+                        <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700;">
+                            PUBLISHED
+                        </span>
+                        {% if latest_release.is_mandatory %}
+                        <span class="role-badge" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 700;">
+                            MANDATORY
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">{{ latest_release.release_title }}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; white-space: pre-line; background: var(--bg-body); padding: 0.75rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                        {{ latest_release.release_notes|default:"No release notes provided." }}
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                        <span style="color: var(--text-secondary);">Target Fleet:</span>
+                        <strong style="color: var(--primary-color);">{{ latest_release.get_target_device_type_display }} ({{ latest_release.staged_rollout_percentage }}% Staged)</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                        <span style="color: var(--text-secondary);">Selective Targets:</span>
+                        <span>{% if latest_release.target_kiosks.count %}{{ latest_release.target_kiosks.count }} selected kiosks{% else %}All matching terminals{% endif %}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                        <span style="color: var(--text-secondary);">APK File Size:</span>
+                        <code style="font-weight: 700;">
+                            {% if latest_release.apk_file_size %}
+                                {{ latest_release.apk_file_size|filesizeformat }} ({{ latest_release.apk_file_size }} bytes)
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </code>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                        <span style="color: var(--text-secondary);">SHA-256 Checksum:</span>
+                        <code style="font-size: 0.75rem; word-break: break-all; background: var(--bg-body); padding: 4px 6px; border-radius: 4px; color: var(--primary-color);">
+                            {{ latest_release.checksum_sha256|default:"Not calculated" }}
+                        </code>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                        <span style="color: var(--text-secondary);">Published At:</span>
+                        <span>{{ latest_release.published_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+
+                    <!-- Action Buttons for Current Release -->
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                        {% if latest_release.get_effective_apk_url %}
+                        <a href="{{ latest_release.get_effective_apk_url }}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Download APK</span>
+                        </a>
+                        {% endif %}
+
+                        <form method="post" style="display: inline;" onsubmit="return confirm('Unpublishing this release will stop kiosks from discovering it. Proceed?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="unpublish_release">
+                            <input type="hidden" name="release_id" value="{{ latest_release.id }}">
+                            <button type="submit" class="btn btn-secondary btn-sm" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">
+                                Unpublish Release
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 2rem 1rem;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.75rem;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">No Published Release Available</div>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 460px; margin: 0.4rem auto 1.25rem;">Upload a signed Android APK package to establish the initial target release for your kiosk terminal fleet.</p>
+                <a href="{% url 'admin_release_add' %}" class="btn btn-accent" style="text-decoration: none;">Upload First APK Release</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KIOSK FLEET OTA STATUS TABLE -->
+    <div class="panel-card">
+        <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+            <div class="panel-title" style="display: flex; align-items: center; gap: 0.6rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                <span>Kiosk Terminal OTA Update Status</span>
+            </div>
+
+            <div class="panel-actions" style="gap: 0.6rem; flex-wrap: wrap;">
+                <div class="toolbar-search">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="terminalSearchInput" onkeyup="filterTerminals()" placeholder="Search ID, Name, Version, Status...">
+                </div>
+
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="check_update_all">
+                    <button type="submit" class="btn btn-secondary btn-sm" title="Queues Check Update signal on all active terminals">
+                        Check All
+                    </button>
+                </form>
+
+                <form method="post" style="display: inline;" onsubmit="return confirm('Trigger Force Update on all active pending kiosks?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="force_update_all">
+                    <button type="submit" class="btn btn-accent btn-sm" title="Forces all pending terminals to download and install latest release">
+                        Force Update All
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="kiosk-table-wrapper">
+            {% if kiosk_rows %}
+            <table class="kiosk-table" id="terminalTable">
+                <thead>
+                    <tr>
+                        <th>Device Name & ID</th>
+                        <th>Store / Location</th>
+                        <th>Installed Version</th>
+                        <th>Target Version</th>
+                        <th>OTA Update Status</th>
+                        <th>Last Check</th>
+                        <th>Last Seen</th>
+                        <th style="text-align: center;">Remote Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in kiosk_rows %}
+                    <tr class="terminal-row" data-search="{{ row.kiosk.name }} {{ row.kiosk.device_id }} {{ row.current_version }} {{ row.update_status }}">
+                        <td>
+                            <div style="font-weight: 700; color: var(--primary-color);">
+                                <a href="{% url 'admin_kiosk_detail' row.kiosk.id %}" style="text-decoration: none; color: inherit;">{{ row.kiosk.name }}</a>
+                            </div>
+                            <code style="font-size: 0.78rem; color: var(--text-secondary);">{{ row.kiosk.device_id }}</code>
+                        </td>
+                        <td>
+                            {% if row.kiosk.store %}
+                                <span>{{ row.kiosk.store.name }}</span>
+                            {% else %}
+                                <span style="color: var(--text-secondary); font-style: italic;">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong style="color: var(--primary-color);">{{ row.current_version }}</strong>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">(code {{ row.current_code }})</span>
+                        </td>
+                        <td>
+                            {% if latest_release %}
+                                <span>v{{ latest_release.version_name }} ({{ latest_release.version_code }})</span>
+                            {% else %}
+                                <span style="color: var(--text-secondary);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.update_status == 'UP_TO_DATE' or row.is_up_to_date %}
+                            <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                &#10003; UP TO DATE
+                            </span>
+                            {% elif row.update_status == 'DOWNLOADING' %}
+                            <span class="role-badge" style="background: rgba(59, 130, 246, 0.15); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                &#8681; DOWNLOADING
+                            </span>
+                            {% elif row.update_status == 'INSTALLING' %}
+                            <span class="role-badge" style="background: rgba(147, 51, 234, 0.15); color: #7c3aed; border: 1px solid rgba(147, 51, 234, 0.3);">
+                                &#9881; INSTALLING
+                            </span>
+                            {% elif row.update_status == 'FAILED' %}
+                            <span class="role-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);" title="{{ row.kiosk.update_error|default:'Update error' }}">
+                                &#9888; FAILED
+                            </span>
+                            {% elif not row.is_online %}
+                            <span class="role-badge" style="background: rgba(156, 163, 175, 0.15); color: #6b7280; border: 1px solid rgba(156, 163, 175, 0.3);">
+                                OFFLINE
+                            </span>
+                            {% else %}
+                            <span class="role-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">
+                                UPDATE AVAILABLE
+                            </span>
+                            {% endif %}
+
+                            {% if row.kiosk.force_update_requested %}
+                            <div style="font-size: 0.72rem; color: #f59e0b; margin-top: 2px; font-weight: 600;">[Force Queued]</div>
+                            {% elif row.kiosk.check_update_requested %}
+                            <div style="font-size: 0.72rem; color: #3b82f6; margin-top: 2px; font-weight: 600;">[Check Queued]</div>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-secondary);">
+                            {{ row.last_check }}
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-secondary);">
+                            {{ row.last_seen }}
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="display: inline-flex; gap: 0.4rem;">
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="check_update_single">
+                                    <input type="hidden" name="kiosk_id" value="{{ row.kiosk.id }}">
+                                    <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 3px 8px;" title="Send remote Check Update command">
+                                        Check
+                                    </button>
+                                </form>
+
+                                <form method="post" style="display: inline;" onsubmit="return confirm('Force immediate download & installation for {{ row.kiosk.name }}?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="force_update_single">
+                                    <input type="hidden" name="kiosk_id" value="{{ row.kiosk.id }}">
+                                    <button type="submit" class="btn btn-accent btn-sm" style="font-size: 0.75rem; padding: 3px 8px;" title="Send remote Force Update command">
+                                        Force Update
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                No registered kiosk terminals found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- RELEASE HISTORY ARCHIVE -->
+    <div class="panel-card">
+        <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+            <div class="panel-title" style="display: flex; align-items: center; gap: 0.6rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>Release History Archive</span>
+            </div>
+        </div>
+
+        <div class="kiosk-table-wrapper">
+            {% if releases %}
+            <table class="kiosk-table">
+                <thead>
+                    <tr>
+                        <th>Version & Code</th>
+                        <th>Release Title</th>
+                        <th>Mandatory</th>
+                        <th>Target Fleet</th>
+                        <th>Staged %</th>
+                        <th>Status</th>
+                        <th>Published At</th>
+                        <th>Created By</th>
+                        <th style="text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rel in releases %}
+                    <tr>
+                        <td>
+                            <strong style="color: var(--primary-color);">v{{ rel.version_name }}</strong>
+                            <code style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.1); color: #2563eb; padding: 2px 6px; border-radius: 4px;">{{ rel.version_code }}</code>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600;">{{ rel.release_title }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ rel.release_notes }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if rel.is_mandatory %}
+                                <span style="color: #ef4444; font-weight: 700;">YES</span>
+                            {% else %}
+                                <span style="color: var(--text-secondary);">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ rel.get_target_device_type_display }}
+                            {% if rel.target_kiosks.count %}
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">({{ rel.target_kiosks.count }} selected)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ rel.staged_rollout_percentage }}%</strong>
+                        </td>
+                        <td>
+                            {% if rel.is_published %}
+                                <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    Published
+                                </span>
+                            {% else %}
+                                <span class="role-badge" style="background: rgba(156, 163, 175, 0.12); color: #6b7280; border: 1px solid rgba(156, 163, 175, 0.3);">
+                                    Draft
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-secondary);">
+                            {{ rel.published_at|date:"Y-m-d H:i"|default:"-" }}
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-secondary);">
+                            {{ rel.created_by.username|default:"System" }}
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="display: inline-flex; gap: 0.4rem;">
+                                {% if rel.is_published %}
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="unpublish_release">
+                                    <input type="hidden" name="release_id" value="{{ rel.id }}">
+                                    <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 2px 6px;">Unpublish</button>
+                                </form>
+                                {% else %}
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="publish_release">
+                                    <input type="hidden" name="release_id" value="{{ rel.id }}">
+                                    <button type="submit" class="btn btn-accent btn-sm" style="font-size: 0.72rem; padding: 2px 6px;">Publish</button>
+                                </form>
+                                {% endif %}
+
+                                <form method="post" style="display: inline;" onsubmit="return confirm('Permanently delete release v{{ rel.version_name }}?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_release">
+                                    <input type="hidden" name="release_id" value="{{ rel.id }}">
+                                    <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 2px 6px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                No release history recorded.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filterTerminals() {
+        const query = document.getElementById('terminalSearchInput').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('.terminal-row');
+        rows.forEach(r => {
+            const data = r.getAttribute('data-search') || '';
+            if (data.toLowerCase().includes(query)) {
+                r.style.display = '';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

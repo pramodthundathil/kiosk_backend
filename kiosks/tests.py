@@ -160,3 +160,173 @@ class KioskAuthenticationTests(TestCase):
         self.assertIn(self.kiosk, p1.assigned_kiosks.all())
         self.assertIn(self.kiosk, p2.assigned_kiosks.all())
 
+
+from kiosks.models import AppRelease, KioskUpdateLog
+from django.core.files.uploadedfile import SimpleUploadedFile
+import zipfile
+import io
+
+def create_dummy_apk_bytes():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w') as zf:
+        zf.writestr('AndroidManifest.xml', b'<manifest package="com.kiosk.app"/>')
+        zf.writestr('classes.dex', b'dex\n035\x00')
+    return buf.getvalue()
+
+class AppUpdateSystemTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.store = Store.objects.create(name="Pune Store", code="PUN01", city="Pune")
+        self.profile = KioskProfile.objects.create(name="Standard", code="STD")
+        self.kiosk, self.secret = register_kiosk_device(
+            name="Pune Kiosk 1",
+            device_id="KIOSK-PUN-001",
+            store=self.store,
+            profile=self.profile
+        )
+        self.kiosk.current_app_version_code = 101
+        self.kiosk.app_version = "1.0.1"
+        self.kiosk.save()
+
+        # Login to get JWT
+        login_res = self.client.post("/api/kiosk/auth/login/", {
+            "device_id": "KIOSK-PUN-001",
+            "device_secret": self.secret
+        }, format="json")
+        self.token = login_res.data["access"]
+        self.auth_headers = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+
+    def test_app_update_check_when_no_releases(self):
+        res = self.client.get(
+            "/api/kiosk/app-update/",
+            {"device_id": "KIOSK-PUN-001", "version_code": 101},
+            **self.auth_headers
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(res.data["update_available"])
+        self.assertEqual(res.data["current_version_code"], 101)
+
+    def test_app_update_check_detects_published_release(self):
+        apk_content = create_dummy_apk_bytes()
+        dummy_file = SimpleUploadedFile("kiosk-1.0.5.apk", apk_content, content_type="application/vnd.android.package-archive")
+
+        release = AppRelease.objects.create(
+            version_name="1.0.5",
+            version_code=105,
+            release_title="Major Performance Boost",
+            release_notes="• Faster loading\n• Bug fixes",
+            apk_file=dummy_file,
+            is_mandatory=True,
+            is_published=True
+        )
+
+        res = self.client.get(
+            "/api/kiosk/app-update/",
+            {"device_id": "KIOSK-PUN-001", "version_code": 101},
+            **self.auth_headers
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["update_available"])
+        self.assertEqual(res.data["latest_version_name"], "1.0.5")
+        self.assertEqual(res.data["latest_version_code"], 105)
+        self.assertEqual(res.data["current_version_code"], 101)
+        self.assertTrue(res.data["mandatory"])
+        self.assertEqual(res.data["release_title"], "Major Performance Boost")
+        self.assertEqual(res.data["release_notes"], ["Faster loading", "Bug fixes"])
+        self.assertTrue(len(res.data["sha256"]) == 64)
+        self.assertTrue(".apk" in res.data["apk_url"])
+        self.assertTrue(res.data["apk_url"].startswith("http"))
+
+
+    def test_selective_release_targets_only_chosen_kiosk(self):
+        other_kiosk, _ = register_kiosk_device(name="Other Kiosk", device_id="KIOSK-OTHER-999")
+        
+        release = AppRelease.objects.create(
+            version_name="1.0.6",
+            version_code=106,
+            release_title="Beta Test",
+            apk_url="https://example.com/kiosk-1.0.6.apk",
+            is_published=True
+        )
+        release.target_kiosks.add(other_kiosk)
+
+        # KIOSK-PUN-001 is NOT targeted
+        res = self.client.get(
+            "/api/kiosk/app-update/",
+            {"device_id": "KIOSK-PUN-001", "version_code": 101},
+            **self.auth_headers
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(res.data["update_available"])
+
+    def test_app_update_status_reporting_flow(self):
+        # 1. Report DOWNLOADING
+        res = self.client.post("/api/kiosk/app-update/status/", {
+            "device_id": "KIOSK-PUN-001",
+            "version_name": "1.0.5",
+            "version_code": 105,
+            "status": "DOWNLOADING",
+            "message": "Downloading 50MB APK"
+        }, format="json", **self.auth_headers)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.kiosk.refresh_from_db()
+        self.assertEqual(self.kiosk.update_status, "DOWNLOADING")
+        self.assertIsNotNone(self.kiosk.update_started_at)
+
+        # 2. Report FAILED
+        res = self.client.post("/api/kiosk/app-update/status/", {
+            "device_id": "KIOSK-PUN-001",
+            "version_name": "1.0.5",
+            "version_code": 105,
+            "status": "FAILED",
+            "message": "APK checksum verification failed"
+        }, format="json", **self.auth_headers)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.kiosk.refresh_from_db()
+        self.assertEqual(self.kiosk.update_status, "FAILED")
+        self.assertEqual(self.kiosk.update_error, "APK checksum verification failed")
+
+        # 3. Report UPDATED
+        res = self.client.post("/api/kiosk/app-update/status/", {
+            "device_id": "KIOSK-PUN-001",
+            "version_name": "1.0.5",
+            "version_code": 105,
+            "status": "UPDATED",
+            "message": "App upgraded and restarted successfully"
+        }, format="json", **self.auth_headers)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.kiosk.refresh_from_db()
+        self.assertEqual(self.kiosk.update_status, "UP_TO_DATE")
+        self.assertEqual(self.kiosk.app_version, "1.0.5")
+        self.assertEqual(self.kiosk.current_app_version_code, 105)
+        self.assertIsNone(self.kiosk.update_error)
+
+        # Verify audit logs created
+        logs = KioskUpdateLog.objects.filter(kiosk=self.kiosk)
+        self.assertEqual(logs.count(), 3)
+
+    def test_heartbeat_dispatches_app_update_commands(self):
+        # Request check_update
+        self.kiosk.check_update_requested = True
+        self.kiosk.save()
+
+        hb_res = self.client.post("/api/kiosk/heartbeat/", {
+            "device_id": "KIOSK-PUN-001",
+            "app_version": "1.0.1",
+            "app_version_code": 101
+        }, format="json", **self.auth_headers)
+        self.assertEqual(hb_res.status_code, status.HTTP_200_OK)
+        commands = hb_res.data.get("commands", [])
+        self.assertTrue(any(c.get("command") == "CHECK_APP_UPDATE" for c in commands))
+
+        # Request force_update
+        self.kiosk.force_update_requested = True
+        self.kiosk.save()
+
+        hb_res = self.client.post("/api/kiosk/heartbeat/", {
+            "device_id": "KIOSK-PUN-001"
+        }, format="json", **self.auth_headers)
+        commands = hb_res.data.get("commands", [])
+        self.assertTrue(any(c.get("command") == "FORCE_APP_UPDATE" for c in commands))
+
+

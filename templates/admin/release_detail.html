@@ -1,0 +1,154 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}App Release v{{ release.version_name }} - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem;">
+
+    <div class="panel-card">
+        <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800; color: var(--primary-color);">
+                        App Release v{{ release.version_name }}
+                    </h2>
+                    <code style="font-size: 0.88rem; background: rgba(59, 130, 246, 0.1); color: #2563eb; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+                        versionCode {{ release.version_code }}
+                    </code>
+                    {% if release.is_published %}
+                    <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700;">
+                        PUBLISHED
+                    </span>
+                    {% else %}
+                    <span class="role-badge" style="background: rgba(156, 163, 175, 0.12); color: #6b7280; border: 1px solid rgba(156, 163, 175, 0.3); font-weight: 700;">
+                        DRAFT
+                    </span>
+                    {% endif %}
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem;">
+                    {{ release.release_title }}
+                </div>
+            </div>
+
+            <div class="panel-actions" style="gap: 0.6rem;">
+                <a href="{% url 'admin_releases' %}" class="btn btn-secondary" style="text-decoration: none;">
+                    &larr; Back to Releases
+                </a>
+
+                {% if release.get_effective_apk_url %}
+                <a href="{{ release.get_effective_apk_url }}" target="_blank" class="btn btn-accent" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Download APK</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="padding: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+            <!-- Left Info -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem;">
+                <div style="font-weight: 700; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem;">Release Specifications</div>
+                
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">Target Device Type:</span>
+                    <strong>{{ release.get_target_device_type_display }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">Mandatory Upgrade:</span>
+                    <span>{% if release.is_mandatory %}<strong style="color: #ef4444;">YES</strong>{% else %}No{% endif %}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">Staged Rollout:</span>
+                    <strong>{{ release.staged_rollout_percentage }}%</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">APK File Size:</span>
+                    <code>{{ release.apk_file_size|filesizeformat|default:"N/A" }} ({{ release.apk_file_size }} bytes)</code>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">Created At:</span>
+                    <span>{{ release.created_at|date:"Y-m-d H:i" }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">Published At:</span>
+                    <span>{{ release.published_at|date:"Y-m-d H:i"|default:"Unpublished" }}</span>
+                </div>
+            </div>
+
+            <!-- Right Info -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem;">
+                <div style="font-weight: 700; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem;">Integrity & Checksum</div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">SHA-256 Checksum:</span>
+                    <code style="font-size: 0.75rem; word-break: break-all; background: var(--bg-body); padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); color: var(--primary-color);">
+                        {{ release.checksum_sha256|default:"None" }}
+                    </code>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">Release Notes / Changelog:</span>
+                    <div style="font-size: 0.82rem; color: var(--text-primary); background: var(--bg-body); padding: 0.6rem 0.8rem; border-radius: 4px; border: 1px solid var(--border-color); white-space: pre-line;">
+                        {{ release.release_notes|default:"No notes entered." }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATE AUDIT LOGS FOR THIS RELEASE -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title" style="display: flex; align-items: center; gap: 0.6rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                <span>Terminal Update Attempts &amp; Transitions</span>
+            </div>
+        </div>
+
+        <div class="kiosk-table-wrapper">
+            {% if logs %}
+            <table class="kiosk-table" style="font-size: 0.85rem;">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Terminal</th>
+                        <th>From Code &rarr; Target</th>
+                        <th>Transition State</th>
+                        <th>Telemetry Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td style="font-family: monospace; color: var(--text-secondary);">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                        <td>
+                            <strong>{{ log.kiosk.name }}</strong>
+                            <code style="font-size: 0.75rem; color: var(--text-secondary);">{{ log.kiosk.device_id }}</code>
+                        </td>
+                        <td>{{ log.from_version_code|default:"-" }} &rarr; <strong>{{ log.to_version_code }}</strong></td>
+                        <td>
+                            <span class="role-badge" style="
+                                {% if log.status == 'UPDATED' %}background: #d1fae5; color: #065f46;
+                                {% elif log.status == 'FAILED' %}background: #fee2e2; color: #991b1b;
+                                {% elif log.status == 'DOWNLOADING' %}background: #dbeafe; color: #1e40af;
+                                {% else %}background: #f3f4f6; color: #374151;{% endif %}
+                            ">
+                                {{ log.status }}
+                            </span>
+                        </td>
+                        <td>{{ log.message|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 1.5rem; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
+                No device update logs recorded yet for this release.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

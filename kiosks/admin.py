@@ -55,3 +55,49 @@ class KioskCredentialAdmin(admin.ModelAdmin):
     list_display = ('kiosk', 'created_at', 'expires_at', 'revoked_at', 'last_used_at')
     readonly_fields = ('id', 'credential_hash', 'created_at', 'last_used_at')
     search_fields = ('kiosk__device_id', 'kiosk__name')
+
+
+from .models import AppRelease, KioskUpdateLog
+
+@admin.register(AppRelease)
+class AppReleaseAdmin(admin.ModelAdmin):
+    list_display = (
+        'version_name', 'version_code', 'release_title', 'is_published',
+        'is_mandatory', 'is_active', 'target_device_type',
+        'staged_rollout_percentage', 'apk_file_size', 'published_at', 'created_at'
+    )
+    list_filter = ('is_published', 'is_mandatory', 'is_active', 'target_device_type')
+    search_fields = ('version_name', 'version_code', 'release_title', 'release_notes', 'checksum_sha256')
+    readonly_fields = ('id', 'apk_file_size', 'checksum_sha256', 'created_at', 'published_at')
+    filter_horizontal = ('target_kiosks',)
+    actions = ['publish_release', 'unpublish_release']
+
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    @admin.action(description="Publish selected release(s)")
+    def publish_release(self, request, queryset):
+        count = 0
+        for rel in queryset:
+            rel.is_published = True
+            if not rel.published_at:
+                rel.published_at = timezone.now()
+            rel.save()
+            count += 1
+        self.message_user(request, f"{count} release(s) published successfully.", messages.SUCCESS)
+
+    @admin.action(description="Unpublish selected release(s)")
+    def unpublish_release(self, request, queryset):
+        count = queryset.update(is_published=False)
+        self.message_user(request, f"{count} release(s) unpublished.", messages.WARNING)
+
+
+@admin.register(KioskUpdateLog)
+class KioskUpdateLogAdmin(admin.ModelAdmin):
+    list_display = ('kiosk', 'release', 'from_version_code', 'to_version_code', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('kiosk__device_id', 'kiosk__name', 'message')
+    readonly_fields = ('id', 'kiosk', 'release', 'from_version_code', 'to_version_code', 'status', 'message', 'created_at')
+

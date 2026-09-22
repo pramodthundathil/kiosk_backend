@@ -125,7 +125,7 @@
             
             <!-- User / Admin Dropdown -->
             <div class="nav-user-wrapper">
-                <button type="button" class="user-dropdown-btn {% if active_tab == 'users' or active_tab == 'media' or active_tab == 'profile' or active_tab == 'settings' %}active{% endif %}" id="userDropdownBtn" onclick="toggleUserDropdown(event)" aria-expanded="false" aria-label="User Account Menu">
+                <button type="button" class="user-dropdown-btn {% if active_tab == 'users' or active_tab == 'media' or active_tab == 'profile' or active_tab == 'settings' or active_tab == 'releases' %}active{% endif %}" id="userDropdownBtn" onclick="toggleUserDropdown(event)" aria-expanded="false" aria-label="User Account Menu">
                     <div class="user-badge">
                         <div class="user-avatar">
                             {{ user.username|slice:":1"|upper }}
@@ -154,6 +154,10 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <span>Profile</span>
                     </a>
+                    <a href="{% url 'admin_releases' %}" class="user-dropdown-item {% if active_tab == 'releases' %}active{% endif %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>App Releases (OTA)</span>
+                    </a>
                     <a href="{% url 'admin_users' %}" class="user-dropdown-item {% if active_tab == 'users' %}active{% endif %}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         <span>Staff & Users</span>
@@ -173,6 +177,7 @@
                     </a>
                 </div>
             </div>
+
         </div>
     </header>
 

@@ -6,9 +6,11 @@ from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.utils import timezone
 from stores.models import Store
-from kiosks.models import KioskDevice, KioskProfile
+from kiosks.models import KioskDevice, KioskProfile, AppRelease, KioskUpdateLog
+from kiosks.apk_validator import validate_apk_file, compute_file_sha256_and_size
 from kiosks.services import register_kiosk_device, update_kiosk_credential
 from monitoring.models import Alert, KioskEvent, ProductInteraction, KioskUsageSession
+
 from monitoring.services import update_kiosk_status_and_alerts
 from django.db.models import Q, Count, Sum, Avg, Max, Min, F
 from django.db.models.functions import ExtractHour, TruncDate
@@ -515,6 +517,30 @@ def admin_kiosk_detail(request, kiosk_id):
             messages.success(request, f"Force Sync requested for Kiosk '{kiosk.name}' [{kiosk.device_id}]. Target content version set to v{kiosk.desired_content_version}. The kiosk terminal will collect latest data (screensavers, products, categories) on its next heartbeat.")
             return redirect('admin_kiosk_detail', kiosk_id=kiosk.id)
 
+        elif action == "check_update":
+            kiosk.check_update_requested = True
+            kiosk.save(update_fields=['check_update_requested'])
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.APP_UPDATE,
+                severity=KioskEvent.Severity.INFO,
+                message=f"Remote check-update dispatched by admin ({request.user.username})."
+            )
+            messages.success(request, f"Check Update signal queued for Kiosk '{kiosk.name}' [{kiosk.device_id}]. The device will check for new releases on its next ping.")
+            return redirect('admin_kiosk_detail', kiosk_id=kiosk.id)
+
+        elif action == "force_update":
+            kiosk.force_update_requested = True
+            kiosk.save(update_fields=['force_update_requested'])
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.APP_UPDATE,
+                severity=KioskEvent.Severity.WARNING,
+                message=f"Remote force-update dispatched by admin ({request.user.username})."
+            )
+            messages.success(request, f"Force Update signal queued for Kiosk '{kiosk.name}' [{kiosk.device_id}]. The device will download and install the latest published release on its next ping.")
+            return redirect('admin_kiosk_detail', kiosk_id=kiosk.id)
+
     status = update_kiosk_status_and_alerts(kiosk)
     recent_events = KioskEvent.objects.filter(kiosk=kiosk).order_by('-created_at')[:15]
     open_alerts = Alert.objects.filter(kiosk=kiosk, resolved_at__isnull=True).order_by('-opened_at')
@@ -523,6 +549,7 @@ def admin_kiosk_detail(request, kiosk_id):
     assigned_product_ids = set(kiosk.assigned_products.values_list('id', flat=True))
     all_products = Product.objects.select_related('category').filter(is_active=True).order_by('name')
     categories = Category.objects.filter(is_active=True).order_by('name')
+    latest_release = AppRelease.objects.filter(is_published=True, is_active=True).order_by('-version_code').first()
 
     context = {
         'kiosk': kiosk,
@@ -534,6 +561,7 @@ def admin_kiosk_detail(request, kiosk_id):
         'assigned_product_ids': assigned_product_ids,
         'all_products': all_products,
         'categories': categories,
+        'latest_release': latest_release,
         'active_tab': 'kiosks',
         'page_title': f'Kiosk Terminal Details: {kiosk.name}',
         'breadcrumbs': [
@@ -541,6 +569,7 @@ def admin_kiosk_detail(request, kiosk_id):
             {'name': f'Terminal Details ({kiosk.device_id})', 'url': ''}
         ]
     }
+
     return render(request, "admin/kiosk_detail.html", context)
 
 
@@ -2053,6 +2082,291 @@ def admin_analytics_export(request):
         ])
 
     return response
+
+
+# ==============================================================================
+# APP RELEASES & REMOTE UPDATE MANAGEMENT
+# ==============================================================================
+
+def admin_releases(request):
+    """
+    App Release and Remote Kiosk Update Management Dashboard.
+    Shows latest release overview, kiosk update progress telemetry,
+    release history, and individual terminal controls (Check/Force Update).
+    """
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    if request.method == "POST":
+        action = request.POST.get('action')
+        kiosk_id = request.POST.get('kiosk_id')
+        release_id = request.POST.get('release_id')
+
+        if action == "check_update_single" and kiosk_id:
+            kiosk = get_object_or_404(KioskDevice, id=kiosk_id)
+            kiosk.check_update_requested = True
+            kiosk.save(update_fields=['check_update_requested'])
+            messages.success(request, f"Check Update requested for '{kiosk.name}'. Command queued for next heartbeat.")
+            return redirect('admin_releases')
+
+        elif action == "force_update_single" and kiosk_id:
+            kiosk = get_object_or_404(KioskDevice, id=kiosk_id)
+            kiosk.force_update_requested = True
+            kiosk.save(update_fields=['force_update_requested'])
+            messages.success(request, f"Force Update requested for '{kiosk.name}'. Installation will begin on next heartbeat.")
+            return redirect('admin_releases')
+
+        elif action == "check_update_all":
+            updated_count = KioskDevice.objects.filter(is_active=True).update(check_update_requested=True)
+            messages.success(request, f"Triggered update checks across {updated_count} active kiosks.")
+            return redirect('admin_releases')
+
+        elif action == "force_update_all":
+            updated_count = KioskDevice.objects.filter(is_active=True).update(force_update_requested=True)
+            messages.warning(request, f"Triggered force update across {updated_count} active kiosks.")
+            return redirect('admin_releases')
+
+        elif action == "publish_release" and release_id:
+            rel = get_object_or_404(AppRelease, id=release_id)
+            rel.is_published = True
+            if not rel.published_at:
+                rel.published_at = timezone.now()
+            rel.save(update_fields=['is_published', 'published_at'])
+            messages.success(request, f"Release v{rel.version_name} ({rel.version_code}) published successfully.")
+            return redirect('admin_releases')
+
+        elif action == "unpublish_release" and release_id:
+            rel = get_object_or_404(AppRelease, id=release_id)
+            rel.is_published = False
+            rel.save(update_fields=['is_published'])
+            messages.warning(request, f"Release v{rel.version_name} has been unpublished.")
+            return redirect('admin_releases')
+
+        elif action == "delete_release" and release_id:
+            rel = get_object_or_404(AppRelease, id=release_id)
+            rel_ver = f"v{rel.version_name} ({rel.version_code})"
+            rel.delete()
+            messages.success(request, f"Release {rel_ver} deleted successfully.")
+            return redirect('admin_releases')
+
+    releases = AppRelease.objects.all().order_by('-version_code')
+    latest_release = releases.filter(is_published=True, is_active=True).first()
+
+    kiosks = KioskDevice.objects.select_related('store').all().order_by('name')
+    total_kiosks = kiosks.count()
+
+    updated_count = 0
+    pending_count = 0
+    downloading_count = 0
+    installing_count = 0
+    failed_count = 0
+    offline_count = 0
+
+    latest_code = latest_release.version_code if latest_release else 0
+
+    kiosk_rows = []
+    for k in kiosks:
+        k_code = k.current_app_version_code or 1
+        k_status = update_kiosk_status_and_alerts(k)
+        is_online = (k_status == KioskDevice.Status.ONLINE)
+
+        if not is_online:
+            offline_count += 1
+
+        if k.update_status == KioskDevice.UpdateStatus.DOWNLOADING:
+            downloading_count += 1
+        elif k.update_status == KioskDevice.UpdateStatus.INSTALLING:
+            installing_count += 1
+        elif k.update_status == KioskDevice.UpdateStatus.FAILED:
+            failed_count += 1
+        elif latest_release and k_code >= latest_code:
+            updated_count += 1
+        else:
+            pending_count += 1
+
+        kiosk_rows.append({
+            'kiosk': k,
+            'is_online': is_online,
+            'current_version': k.app_version or f"v1.0.{k_code}",
+            'current_code': k_code,
+            'latest_code': latest_code,
+            'is_up_to_date': (k_code >= latest_code) if latest_release else True,
+            'update_status': k.update_status,
+            'last_seen': k.last_seen_at.strftime('%Y-%m-%d %H:%M') if k.last_seen_at else 'Never',
+            'last_check': k.last_update_check.strftime('%Y-%m-%d %H:%M') if k.last_update_check else 'Never'
+        })
+
+    context = {
+        'releases': releases,
+        'latest_release': latest_release,
+        'total_kiosks': total_kiosks,
+        'updated_count': updated_count,
+        'pending_count': pending_count,
+        'downloading_count': downloading_count,
+        'installing_count': installing_count,
+        'failed_count': failed_count,
+        'offline_count': offline_count,
+        'kiosk_rows': kiosk_rows,
+        'active_tab': 'releases',
+        'page_title': 'App Releases & OTA Updates',
+        'breadcrumbs': [
+            {'name': 'Dashboard', 'url': '/admin_pannel/'},
+            {'name': 'App Releases', 'url': ''}
+        ]
+    }
+    return render(request, "admin/releases.html", context)
+
+
+def admin_release_add(request):
+    """
+    Upload and configure a new Android APK application release.
+    Validates APK structure, computes SHA-256 and byte size, and provisions rollout.
+    """
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    if request.method == "POST":
+        version_name = request.POST.get('version_name', '').strip()
+        version_code_str = request.POST.get('version_code', '').strip()
+        release_title = request.POST.get('release_title', '').strip()
+        release_notes = request.POST.get('release_notes', '').strip()
+        is_mandatory = request.POST.get('is_mandatory') == 'on'
+        is_published = request.POST.get('is_published') == 'on'
+        allow_rollback = request.POST.get('allow_rollback') == 'on'
+        target_device_type = request.POST.get('target_device_type', AppRelease.DeviceType.ALL)
+        staged_percentage_str = request.POST.get('staged_rollout_percentage', '100').strip()
+        target_kiosk_ids = request.POST.getlist('target_kiosks')
+        apk_url = request.POST.get('apk_url', '').strip()
+        apk_file = request.FILES.get('apk_file')
+
+        errors = []
+
+        if not version_name:
+            errors.append("Version Name is required (e.g. 1.0.5).")
+        
+        try:
+            version_code = int(version_code_str)
+            if version_code <= 0:
+                errors.append("Version Code must be a positive integer.")
+        except (ValueError, TypeError):
+            errors.append("Valid integer Version Code is required (e.g. 105).")
+            version_code = 0
+
+        if not release_title:
+            errors.append("Release Title is required.")
+
+        try:
+            staged_percentage = int(staged_percentage_str)
+            if not (1 <= staged_percentage <= 100):
+                errors.append("Staged rollout percentage must be between 1 and 100.")
+        except ValueError:
+            staged_percentage = 100
+
+        # Validate unique version_code
+        if AppRelease.objects.filter(version_code=version_code).exists():
+            errors.append(f"A release with Version Code {version_code} already exists.")
+
+        # Check monotonic increase
+        highest_published = AppRelease.objects.filter(is_published=True).order_by('-version_code').first()
+        if highest_published and is_published and version_code <= highest_published.version_code and not allow_rollback:
+            errors.append(
+                f"Version Code ({version_code}) must be higher than currently published release "
+                f"v{highest_published.version_name} ({highest_published.version_code}). "
+                f"To override for a rollback build, enable the 'Rollback / Emergency Downgrade' checkbox."
+            )
+
+        if not apk_file and not apk_url:
+            errors.append("Please upload an APK file or provide a direct download APK URL.")
+
+        sha256 = ""
+        file_size = 0
+        if apk_file:
+            try:
+                validate_apk_file(apk_file)
+                sha256, file_size = compute_file_sha256_and_size(apk_file)
+            except Exception as e:
+                errors.append(f"APK validation failed: {str(e)}")
+
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+            kiosks = KioskDevice.objects.all().order_by('name')
+            return render(request, "admin/release_add.html", {
+                'kiosks': kiosks,
+                'target_device_types': AppRelease.DeviceType.choices,
+                'form_data': request.POST,
+                'active_tab': 'releases',
+                'page_title': 'Upload New App Release',
+                'breadcrumbs': [
+                    {'name': 'App Releases', 'url': '/admin_pannel/releases/'},
+                    {'name': 'Upload Release', 'url': ''}
+                ]
+            })
+
+        release = AppRelease(
+            version_name=version_name,
+            version_code=version_code,
+            release_title=release_title,
+            release_notes=release_notes,
+            apk_file=apk_file,
+            apk_url=apk_url,
+            apk_file_size=file_size if apk_file else None,
+            checksum_sha256=sha256,
+            is_mandatory=is_mandatory,
+            is_published=is_published,
+            published_at=timezone.now() if is_published else None,
+            target_device_type=target_device_type,
+            staged_rollout_percentage=staged_percentage,
+            created_by=request.user
+        )
+        release.save()
+
+        if target_kiosk_ids:
+            release.target_kiosks.set(target_kiosk_ids)
+
+        messages.success(
+            request, 
+            f"Release v{release.version_name} ({release.version_code}) successfully created!"
+            + (" Published to kiosk fleet." if is_published else " Saved as draft.")
+        )
+        return redirect('admin_releases')
+
+    kiosks = KioskDevice.objects.all().order_by('name')
+    latest_rel = AppRelease.objects.order_by('-version_code').first()
+    suggested_code = (latest_rel.version_code + 1) if latest_rel else 1
+
+    return render(request, "admin/release_add.html", {
+        'kiosks': kiosks,
+        'suggested_code': suggested_code,
+        'target_device_types': AppRelease.DeviceType.choices,
+        'active_tab': 'releases',
+        'page_title': 'Upload New App Release',
+        'breadcrumbs': [
+            {'name': 'App Releases', 'url': '/admin_pannel/releases/'},
+            {'name': 'Upload Release', 'url': ''}
+        ]
+    })
+
+
+def admin_release_detail(request, release_id):
+    """View details, checksums, targeting rules, and update history for a specific release."""
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    release = get_object_or_404(AppRelease.objects.prefetch_related('target_kiosks'), id=release_id)
+    logs = KioskUpdateLog.objects.filter(release=release).select_related('kiosk').order_by('-created_at')[:50]
+
+    return render(request, "admin/release_detail.html", {
+        'release': release,
+        'logs': logs,
+        'active_tab': 'releases',
+        'page_title': f"App Release: v{release.version_name} ({release.version_code})",
+        'breadcrumbs': [
+            {'name': 'App Releases', 'url': '/admin_pannel/releases/'},
+            {'name': f"v{release.version_name}", 'url': ''}
+        ]
+    })
+
 
 
 
