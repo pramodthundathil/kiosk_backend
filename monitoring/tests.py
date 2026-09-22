@@ -26,16 +26,16 @@ class HeartbeatAndMonitoringTests(TestCase):
     def test_status_calculation_rules(self):
         now = timezone.now()
 
-        # Online (<= 60s)
-        self.kiosk.last_heartbeat_at = now - timedelta(seconds=20)
+        # Online (<= 15s)
+        self.kiosk.last_heartbeat_at = now - timedelta(seconds=5)
         self.assertEqual(calculate_kiosk_status(self.kiosk), KioskDevice.Status.ONLINE)
 
-        # Warning (61s to 90s)
-        self.kiosk.last_heartbeat_at = now - timedelta(seconds=75)
+        # Warning (16s to 25s)
+        self.kiosk.last_heartbeat_at = now - timedelta(seconds=20)
         self.assertEqual(calculate_kiosk_status(self.kiosk), KioskDevice.Status.WARNING)
 
-        # Offline (> 90s)
-        self.kiosk.last_heartbeat_at = now - timedelta(seconds=105)
+        # Offline (> 25s)
+        self.kiosk.last_heartbeat_at = now - timedelta(seconds=35)
         self.assertEqual(calculate_kiosk_status(self.kiosk), KioskDevice.Status.OFFLINE)
 
     def test_heartbeat_api_endpoint(self):
@@ -57,7 +57,7 @@ class HeartbeatAndMonitoringTests(TestCase):
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["status"], "ONLINE")
         self.assertIn("server_time", response.data)
-        self.assertEqual(response.data["heartbeat_interval"], 30)
+        self.assertEqual(response.data["heartbeat_interval"], 10)
 
         # Verify DB model update
         self.kiosk.refresh_from_db()
@@ -71,10 +71,9 @@ class HeartbeatAndMonitoringTests(TestCase):
         self.kiosk.status = KioskDevice.Status.ONLINE
         self.kiosk.save()
 
-        # Set heartbeat > 90s (OFFLINE transition)
-        self.kiosk.last_heartbeat_at = now - timedelta(seconds=100)
+        # Set heartbeat > 25s (OFFLINE transition)
+        self.kiosk.last_heartbeat_at = now - timedelta(seconds=35)
         update_kiosk_status_and_alerts(self.kiosk)
-
 
         self.assertEqual(self.kiosk.status, KioskDevice.Status.OFFLINE)
         offline_alerts = Alert.objects.filter(kiosk=self.kiosk, alert_type=Alert.AlertType.KIOSK_OFFLINE, resolved_at__isnull=True)
@@ -92,3 +91,40 @@ class HeartbeatAndMonitoringTests(TestCase):
         # Verify offline alert was auto-resolved
         open_alerts = Alert.objects.filter(kiosk=self.kiosk, alert_type=Alert.AlertType.KIOSK_OFFLINE, resolved_at__isnull=True)
         self.assertEqual(open_alerts.count(), 0)
+
+    def test_sync_trigger_and_sync_complete_api(self):
+        # 1. Admin bumps desired_content_version
+        self.kiosk.desired_content_version = "2"
+        self.kiosk.current_content_version = "1"
+        self.kiosk.save()
+
+        # 2. Kiosk sends heartbeat with current_content_version "1"
+        hb_url = "/api/kiosk/heartbeat/"
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        response = self.client.post(hb_url, {"current_content_version": "1"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["sync_required"])
+        self.assertEqual(response.data["desired_content_version"], "2")
+        self.assertTrue(any(c.get("command") == "SYNC_CONTENT" for c in response.data.get("commands", [])))
+
+        # 3. Kiosk finishes download and calls /api/kiosk/sync-complete/
+        complete_url = "/api/kiosk/sync-complete/"
+        complete_payload = {
+            "device_id": self.kiosk.device_id,
+            "content_version": "2",
+            "status": "SUCCESS",
+            "synced_items": {"products": 3, "screensavers": 4, "categories": 2}
+        }
+        res_complete = self.client.post(complete_url, complete_payload, format="json")
+        self.assertEqual(res_complete.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_complete.data["success"])
+
+        # 4. Verify kiosk DB state
+        self.kiosk.refresh_from_db()
+        self.assertEqual(self.kiosk.current_content_version, "2")
+        self.assertIsNotNone(self.kiosk.last_sync_at)
+
+        # 5. Verify KioskEvent SYNC_COMPLETED logged
+        sync_events = KioskEvent.objects.filter(kiosk=self.kiosk, event_type=KioskEvent.EventType.SYNC_COMPLETED)
+        self.assertTrue(sync_events.exists())

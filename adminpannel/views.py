@@ -186,20 +186,23 @@ def admin_kiosks(request):
 
         elif action == "force_sync":
             kiosk_id = request.POST.get('kiosk_id')
+            redirect_to = request.POST.get('next') or request.META.get('HTTP_REFERER')
             try:
                 kiosk = KioskDevice.objects.get(id=kiosk_id)
-                current_ver = int(kiosk.desired_content_version) if kiosk.desired_content_version.isdigit() else 1
+                current_ver = int(kiosk.desired_content_version) if (kiosk.desired_content_version and kiosk.desired_content_version.isdigit()) else 1
                 kiosk.desired_content_version = str(current_ver + 1)
                 kiosk.save(update_fields=['desired_content_version'])
                 KioskEvent.objects.create(
                     kiosk=kiosk,
                     event_type=KioskEvent.EventType.SYNC_STARTED,
                     severity=KioskEvent.Severity.INFO,
-                    message=f"Force sync triggered by admin ({request.user.username}). Desired version set to {kiosk.desired_content_version}."
+                    message=f"Force sync triggered by admin ({request.user.username}). Desired version set to v{kiosk.desired_content_version}."
                 )
-                messages.success(request, f"Force Sync requested for Kiosk [{kiosk.device_id}].")
+                messages.success(request, f"Force Sync requested for Kiosk [{kiosk.device_id}]. Target content version set to v{kiosk.desired_content_version}.")
             except KioskDevice.DoesNotExist:
                 messages.error(request, "Kiosk device not found.")
+            if redirect_to and ('/admin_pannel/' in redirect_to):
+                return redirect(redirect_to)
             return redirect('admin_kiosks')
 
     kiosks = KioskDevice.objects.select_related('store', 'profile').prefetch_related('assigned_products').all().order_by('-created_at')
@@ -471,14 +474,45 @@ def admin_kiosk_detail(request, kiosk_id):
         if action == "assign_products":
             product_ids = request.POST.getlist('product_ids')
             kiosk.assigned_products.set(product_ids)
-            messages.success(request, f"Updated assigned products display for kiosk '{kiosk.name}' ({len(product_ids)} items).")
+            current_ver = int(kiosk.desired_content_version) if (kiosk.desired_content_version and kiosk.desired_content_version.isdigit()) else 1
+            kiosk.desired_content_version = str(current_ver + 1)
+            kiosk.save(update_fields=['desired_content_version'])
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.SYNC_STARTED,
+                severity=KioskEvent.Severity.INFO,
+                message=f"Assigned products updated by admin ({request.user.username}). Target content version bumped to v{kiosk.desired_content_version}."
+            )
+            messages.success(request, f"Updated assigned products display for kiosk '{kiosk.name}' ({len(product_ids)} items). Content sync version bumped to v{kiosk.desired_content_version}.")
             return redirect('admin_kiosk_detail', kiosk_id=kiosk.id)
 
         elif action == "remove_assigned_product":
             product_id = request.POST.get('product_id')
             if product_id:
                 kiosk.assigned_products.remove(product_id)
-                messages.success(request, f"Removed product from kiosk '{kiosk.name}' display.")
+                current_ver = int(kiosk.desired_content_version) if (kiosk.desired_content_version and kiosk.desired_content_version.isdigit()) else 1
+                kiosk.desired_content_version = str(current_ver + 1)
+                kiosk.save(update_fields=['desired_content_version'])
+                KioskEvent.objects.create(
+                    kiosk=kiosk,
+                    event_type=KioskEvent.EventType.SYNC_STARTED,
+                    severity=KioskEvent.Severity.INFO,
+                    message=f"Product removed from display by admin ({request.user.username}). Target content version bumped to v{kiosk.desired_content_version}."
+                )
+                messages.success(request, f"Removed product from kiosk '{kiosk.name}' display. Content sync version bumped to v{kiosk.desired_content_version}.")
+            return redirect('admin_kiosk_detail', kiosk_id=kiosk.id)
+
+        elif action == "force_sync":
+            current_ver = int(kiosk.desired_content_version) if (kiosk.desired_content_version and kiosk.desired_content_version.isdigit()) else 1
+            kiosk.desired_content_version = str(current_ver + 1)
+            kiosk.save(update_fields=['desired_content_version'])
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.SYNC_STARTED,
+                severity=KioskEvent.Severity.INFO,
+                message=f"Force sync triggered by admin ({request.user.username}). Target version set to v{kiosk.desired_content_version}."
+            )
+            messages.success(request, f"Force Sync requested for Kiosk '{kiosk.name}' [{kiosk.device_id}]. Target content version set to v{kiosk.desired_content_version}. The kiosk terminal will collect latest data (screensavers, products, categories) on its next heartbeat.")
             return redirect('admin_kiosk_detail', kiosk_id=kiosk.id)
 
     status = update_kiosk_status_and_alerts(kiosk)

@@ -59,7 +59,7 @@
             </a>
 
             <!-- Force Sync -->
-            <form action="{% url 'admin_kiosks' %}" method="post" style="display: inline;">
+            <form action="{% url 'admin_kiosk_detail' kiosk.id %}" method="post" style="display: inline;" onsubmit="const b = this.querySelector('button'); const icon = this.querySelector('.sync-icon'); if (icon) icon.style.animation = 'spin 1s linear infinite';">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="force_sync">
                 <input type="hidden" name="kiosk_id" value="{{ kiosk.id }}">

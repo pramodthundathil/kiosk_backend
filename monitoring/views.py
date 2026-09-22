@@ -86,8 +86,21 @@ class KioskHeartbeatView(views.APIView):
             kiosk.screen_on = data['screen_on']
         if 'app_running' in data:
             kiosk.app_running = data['app_running']
+        prev_content_ver = kiosk.current_content_version
         if 'current_content_version' in data and data['current_content_version']:
-            kiosk.current_content_version = data['current_content_version']
+            kiosk.current_content_version = str(data['current_content_version']).strip()
+            # If kiosk has synchronized to desired_content_version, mark last_sync_at
+            if kiosk.current_content_version == kiosk.desired_content_version:
+                if prev_content_ver != kiosk.desired_content_version or not kiosk.last_sync_at:
+                    kiosk.last_sync_at = now
+                    KioskEvent.objects.create(
+                        kiosk=kiosk,
+                        event_type=KioskEvent.EventType.SYNC_COMPLETED,
+                        severity=KioskEvent.Severity.INFO,
+                        message=f"Terminal synchronized successfully to content version v{kiosk.current_content_version}.",
+                        metadata={"content_version": kiosk.current_content_version}
+                    )
+
         if 'last_error' in data:
             kiosk.last_error = data['last_error']
 
@@ -117,8 +130,13 @@ class KioskHeartbeatView(views.APIView):
         # Check content sync requirement
         sync_required = (kiosk.current_content_version != kiosk.desired_content_version)
 
-        # Pending commands placeholder (expandable in Phase 7)
+        # Commands for device execution
         commands = []
+        if sync_required:
+            commands.append({
+                "command": "SYNC_CONTENT",
+                "target_version": kiosk.desired_content_version
+            })
 
         # Log occasional heartbeat event for telemetry stream (every 60s max per device)
         last_hb_event = KioskEvent.objects.filter(
@@ -155,8 +173,92 @@ class KioskHeartbeatView(views.APIView):
             "status": current_status,
             "sync_required": sync_required,
             "desired_content_version": kiosk.desired_content_version,
+            "current_content_version": kiosk.current_content_version,
             "commands": commands
         }, status=status.HTTP_200_OK)
+
+
+class KioskSyncCompleteView(views.APIView):
+    """
+    POST /api/kiosk/sync-complete/
+    Receives notification when a kiosk finishes downloading and updating its local catalog,
+    screensavers, and categories.
+    Payload:
+      - device_id or mac_address
+      - content_version (string)
+      - status (e.g. 'SUCCESS' or 'FAILED')
+      - synced_items (dict: e.g. {"products": 5, "screensavers": 4, "categories": 3})
+      - error (optional error message if failed)
+    """
+    authentication_classes = [KioskJWTAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        data = request.data or {}
+        kiosk = getattr(request, 'kiosk', None)
+
+        if not kiosk:
+            mac = (
+                data.get('device_id') or
+                data.get('mac_address') or
+                request.headers.get('X-Device-MAC') or
+                request.headers.get('X-Device-Id')
+            )
+            if mac:
+                clean_mac = mac.strip()
+                kiosk = KioskDevice.objects.filter(
+                    Q(device_id__iexact=clean_mac) | Q(name__iexact=clean_mac)
+                ).first()
+
+        if not kiosk:
+            return Response(
+                {"error": "Kiosk not recognized."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        sync_status = data.get('status', 'SUCCESS').upper()
+        content_version = str(data.get('content_version', kiosk.desired_content_version)).strip()
+        synced_items = data.get('synced_items', {})
+        now = timezone.now()
+
+        if sync_status == 'SUCCESS':
+            kiosk.current_content_version = content_version
+            kiosk.last_sync_at = now
+            kiosk.save(update_fields=['current_content_version', 'last_sync_at', 'updated_at'])
+
+            prod_count = synced_items.get('products', kiosk.assigned_products.count())
+            ss_count = synced_items.get('screensavers', 0)
+            msg = f"Kiosk content synchronization completed (v{content_version}). Synced {prod_count} assigned products and {ss_count} screensavers."
+
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.SYNC_COMPLETED,
+                severity=KioskEvent.Severity.INFO,
+                message=msg,
+                metadata={
+                    "content_version": content_version,
+                    "synced_items": synced_items
+                }
+            )
+            return Response({
+                "success": True,
+                "message": msg,
+                "current_content_version": kiosk.current_content_version,
+                "last_sync_at": kiosk.last_sync_at.isoformat()
+            }, status=status.HTTP_200_OK)
+        else:
+            err_msg = data.get('error', 'Unknown synchronization error')
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.SYNC_FAILED,
+                severity=KioskEvent.Severity.WARNING,
+                message=f"Kiosk content sync failed for v{content_version}: {err_msg}",
+                metadata={"error": err_msg, "content_version": content_version}
+            )
+            return Response({
+                "success": False,
+                "error": err_msg
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 
