@@ -1,7 +1,7 @@
 {% extends 'admin/base_admin.html' %}
 {% load static %}
 
-{% block title %}Kiosk Live Telemetry Console - Excel Earthings CMS{% endblock %}
+{% block title %}Kiosk Live Telemetry & Heartbeat Console - Excel Earthings CMS{% endblock %}
 
 {% block content %}
 <div id="kioskMonitoringConsolePanel">
@@ -10,67 +10,161 @@
         <div>
             <h2 style="color: var(--primary-color); display: flex; align-items: center; gap: 0.6rem; font-size: 1.35rem; font-weight: 800;">
                 <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: var(--success-color); box-shadow: 0 0 10px var(--success-color); animation: pulse 1.5s infinite;"></span>
-                <span>Centralized Lively Telemetry Console</span>
+                <span>Centralized Live Telemetry & 10s Heartbeat Console</span>
             </h2>
-            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem;">Live node telemetry, transmission latencies, and automated remote hardware heartbeats.</p>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem;">Real-time 10-second hardware heartbeats, node status evaluation, and automated telemetry alerts.</p>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('all')" id="mon-filter-all" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--accent-color);">All Terminals</button>
-            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('online')" id="mon-filter-online" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--border-color);">Online Only</button>
-            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('offline')" id="mon-filter-offline" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--border-color);">Alert Nodes</button>
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('all')" id="mon-filter-all" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--accent-color);">All Nodes ({{ total_count }})</button>
+            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('online')" id="mon-filter-online" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--border-color); color: var(--success-color);">Active Online ({{ online_count }})</button>
+            <button class="btn btn-secondary btn-sm" onclick="filterMonitoringStatus('offline')" id="mon-filter-offline" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: var(--border-color); color: var(--danger-color);">Offline Alert ({{ offline_count }})</button>
+            <button class="btn btn-secondary btn-sm" onclick="fetchLiveStatusNow()" title="Force Live Poll" style="padding: 0.5rem 0.75rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            </button>
         </div>
     </div>
 
-    <div class="panel-container">
-        <!-- Left Side: Table of Kiosks -->
-        <div class="panel-card">
-            <div class="panel-header">
-                <div class="panel-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-                    <span>Telemetry Node Directory</span>
-                </div>
+    <!-- Quick Stats Cards Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
             </div>
-            <div class="kiosk-table-wrapper">
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Total Terminals</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary-color);" id="statTotalCount">{{ total_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Active Online (≤15s)</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #10b981;" id="statOnlineCount">{{ online_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(245, 158, 11, 0.12); color: #f59e0b; display: flex; align-items: center; justify-content: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Delayed (15–25s)</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #f59e0b;" id="statWarningCount">{{ warning_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(239, 68, 68, 0.12); color: #ef4444; display: flex; align-items: center; justify-content: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Heartbeat Lost (>25s)</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #ef4444;" id="statOfflineCount">{{ offline_count }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-container" style="display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; align-items: start;">
+        <!-- Left Side: Table of Kiosks -->
+        <div class="panel-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+            <div class="panel-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <div class="panel-title" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--primary-color);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                    <span>Monitored Node Terminals (Click terminal to view Monitoring Details)</span>
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);" id="lastPolledAt">Auto-refresh: Active (5s)</span>
+            </div>
+
+            <div class="kiosk-table-wrapper" style="overflow-x: auto;">
                 {% if kiosks %}
-                <table class="kiosk-table" id="monitoringTable">
+                <table class="kiosk-table" id="monitoringTable" style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr>
-                            <th>Status</th>
-                            <th>Kiosk ID</th>
-                            <th>Retail Location</th>
-                            <th>MAC Address</th>
-                            <th>App Version</th>
-                            <th>Live Ping</th>
-                            <th style="text-align: center;">Controls</th>
+                        <tr style="background: var(--bg-surface); text-align: left; font-size: 0.8rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 0.85rem 1rem;">Status</th>
+                            <th style="padding: 0.85rem 1rem;">Terminal Name</th>
+                            <th style="padding: 0.85rem 1rem;">Location</th>
+                            <th style="padding: 0.85rem 1rem;">MAC / Device ID</th>
+                            <th style="padding: 0.85rem 1rem;">Heartbeat (10s Cadence)</th>
+                            <th style="padding: 0.85rem 1rem;">Network / IP</th>
+                            <th style="padding: 0.85rem 1rem; text-align: center;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for k in kiosks %}
-                        <tr class="kiosk-mon-row clickable-row" data-href="{% url 'admin_kiosk_detail' k.id %}" data-id="{{ k.username }}" data-online="{% if k.is_online %}true{% else %}false{% endif %}">
-                            <td>
-                                {% if k.is_online %}
+                        <tr class="kiosk-mon-row clickable-row" 
+                            data-href="{% url 'admin_monitoring_kiosk_detail' k.id %}" 
+                            data-id="{{ k.id }}"
+                            data-device-id="{{ k.device_id }}"
+                            data-online="{% if k.is_online %}true{% else %}false{% endif %}"
+                            style="cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.15s;"
+                            onmouseover="this.style.background='rgba(59, 130, 246, 0.04)'"
+                            onmouseout="this.style.background='transparent'">
+                            
+                            <!-- Status Column -->
+                            <td style="padding: 0.9rem 1rem;" class="node-status-cell">
+                                {% if k.status == 'ONLINE' %}
                                 <span class="status-badge status-online"><span class="status-dot"></span> Active</span>
+                                {% elif k.status == 'WARNING' %}
+                                <span class="status-badge status-warning" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);"><span class="status-dot" style="background: #f59e0b;"></span> Delayed</span>
                                 {% else %}
                                 <span class="status-badge status-offline"><span class="status-dot"></span> Offline</span>
                                 {% endif %}
                             </td>
-                            <td><span class="kiosk-id" style="color: var(--accent-color);">{{ k.username }}</span></td>
-                            <td>{{ k.location }}</td>
-                            <td><code style="font-size: 0.85rem; color: var(--text-secondary);">{{ k.device_id }}</code></td>
-                            <td><span style="font-weight: 600;">{{ k.app_version }}</span></td>
-                            <td class="live-latency-cell" data-kiosk-id="{{ k.username }}">
-                                {% if k.is_online %}
-                                <span style="color: var(--success-color); font-weight: bold;">●</span> 14ms
+
+                            <!-- Terminal Name -->
+                            <td style="padding: 0.9rem 1rem;">
+                                <div style="font-weight: 700; color: var(--accent-color);">{{ k.username }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">App: {{ k.app_version }}</div>
+                            </td>
+
+                            <!-- Retail Location -->
+                            <td style="padding: 0.9rem 1rem; font-size: 0.85rem;">{{ k.location }}</td>
+
+                            <!-- MAC / Device ID -->
+                            <td style="padding: 0.9rem 1rem;">
+                                <code style="font-size: 0.85rem; color: var(--primary-color); font-weight: 600;">{{ k.device_id }}</code>
+                            </td>
+
+                            <!-- Heartbeat Column -->
+                            <td style="padding: 0.9rem 1rem;" class="node-heartbeat-cell">
+                                {% if k.status == 'ONLINE' %}
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: pulse 1s infinite;"></span>
+                                    <span style="color: #10b981; font-weight: 700; font-family: monospace; font-size: 0.85rem;">{{ k.heartbeat_display }}</span>
+                                </div>
+                                {% elif k.status == 'WARNING' %}
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;"></span>
+                                    <span style="color: #f59e0b; font-weight: 700; font-family: monospace; font-size: 0.85rem;">{{ k.heartbeat_display }}</span>
+                                </div>
                                 {% else %}
-                                <span style="color: var(--danger-color); font-weight: bold;">●</span> N/A
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ef4444;"></span>
+                                    <span style="color: #ef4444; font-weight: 600; font-family: monospace; font-size: 0.85rem;">{{ k.heartbeat_display }}</span>
+                                </div>
                                 {% endif %}
                             </td>
-                            <td>
+
+                            <!-- Network / IP -->
+                            <td style="padding: 0.9rem 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+                                <div>{{ k.network_type }}</div>
+                                <div style="font-size: 0.75rem; font-family: monospace;">{{ k.last_ip_address }}</div>
+                            </td>
+
+                            <!-- Controls -->
+                            <td style="padding: 0.9rem 1rem; text-align: center;">
                                 <div class="actions-cell" style="justify-content: center; gap: 0.4rem;">
-                                    <button class="action-icon-btn" title="Push Sync State" onclick="triggerSync('{{ k.username }}', this)">
+                                    <!-- Direct Link to Kiosk Monitoring Details -->
+                                    <a href="{% url 'admin_monitoring_kiosk_detail' k.id %}" class="action-icon-btn" title="View Node Monitoring Details" style="text-decoration: none; color: var(--accent-color);">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </a>
+                                    <button class="action-icon-btn" title="Push Sync State" onclick="event.stopPropagation(); triggerSync('{{ k.username }}', this)">
                                         <svg class="sync-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                                     </button>
-                                    <button class="action-icon-btn" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);" title="Remote Reboot Kiosk" onclick="rebootKiosk('{{ k.username }}')">
+                                    <button class="action-icon-btn" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color);" title="Remote Reboot Kiosk" onclick="event.stopPropagation(); rebootKiosk('{{ k.username }}')">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                                     </button>
                                 </div>
@@ -80,27 +174,45 @@
                     </tbody>
                 </table>
                 {% else %}
-                <div class="empty-state">
+                <div class="empty-state" style="padding: 3rem; text-align: center;">
                     <h4>No Active Nodes Detected</h4>
-                    <p>Register kiosk terminals to display live telemetry signals.</p>
+                    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Register kiosk terminals to display live telemetry signals.</p>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Right Side: Live Logs Output -->
+        <!-- Right Side: Live Logs Output & Stream -->
         <div class="side-panel">
-            <div class="panel-card" style="background-color: var(--primary-dark); border-color: rgba(255, 255, 255, 0.1);">
-                <div class="panel-header" style="background-color: var(--primary-color); border-bottom-color: rgba(255, 255, 255, 0.1); padding: 1.1rem 1.5rem;">
+            <div class="panel-card" style="background-color: var(--primary-dark); border-color: rgba(255, 255, 255, 0.1); border-radius: var(--radius-md); overflow: hidden;">
+                <div class="panel-header" style="background-color: var(--primary-color); border-bottom-color: rgba(255, 255, 255, 0.1); padding: 1.1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <div class="panel-title" style="color: #ffffff; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
                         <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: var(--accent-color); animation: pulse 1.5s infinite;"></span>
-                        <span>Lively Heartbeat Logger</span>
+                        <span>Live Heartbeat & Event Stream</span>
                     </div>
+                    <span style="color: #94a3b8; font-size: 0.75rem; font-family: monospace;">10s polling</span>
                 </div>
                 <div style="padding: 1.25rem;">
-                    <div id="liveMonitoringStreamConsole" style="background-color: #00091d; color: #cbd5e1; font-family: monospace; font-size: 0.8rem; padding: 1rem; border-radius: var(--radius-md); height: 380px; overflow-y: auto; line-height: 1.5; border: 1px solid rgba(255, 255, 255, 0.05);">
-                        <div style="color: var(--accent-color); font-weight: bold; margin-bottom: 0.5rem;">[SYSTEM] ESTABLISHING LIVE TELEMETRY DATA STREAM...</div>
-                        <div style="color: #64748b; margin-bottom: 0.5rem;">[SYSTEM] Listening on UDP Port 9205...</div>
+                    <div id="liveMonitoringStreamConsole" style="background-color: #00091d; color: #cbd5e1; font-family: monospace; font-size: 0.8rem; padding: 1rem; border-radius: var(--radius-md); height: 420px; overflow-y: auto; line-height: 1.5; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="color: var(--accent-color); font-weight: bold; margin-bottom: 0.5rem;">[SYSTEM] TELEMETRY STREAM ONLINE (10s Heartbeat Engine)</div>
+                        {% if recent_events %}
+                            {% for ev in recent_events %}
+                            <div style="margin-bottom: 0.4rem;">
+                                <span style="color: var(--accent-color); font-weight: 700;">[{{ ev.kiosk.name }}]</span>
+                                <span style="color: #64748b; font-size: 0.75rem;">{{ ev.created_at|date:"H:i:s" }}</span>
+                                {% if ev.severity == 'CRITICAL' or ev.severity == 'ERROR' %}
+                                <span style="color: #ef4444; font-weight: 700;">[{{ ev.event_type }}]</span>
+                                {% elif ev.severity == 'WARNING' %}
+                                <span style="color: #f59e0b; font-weight: 700;">[{{ ev.event_type }}]</span>
+                                {% else %}
+                                <span style="color: #10b981; font-weight: 700;">[{{ ev.event_type }}]</span>
+                                {% endif %}
+                                <span>{{ ev.message }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="color: #64748b; margin-bottom: 0.5rem;">[SYSTEM] Listening for device heartbeat packets on /api/kiosk/heartbeat/...</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -111,10 +223,11 @@
 
 {% block extra_js %}
 <script>
-    let liveTelemetryInterval = null;
+    let livePollTimer = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-        startLiveTelemetryTicker();
+        // Start live polling every 5 seconds
+        startLivePolling();
     });
 
     function filterMonitoringStatus(status) {
@@ -135,46 +248,79 @@
         });
     }
 
-    function startLiveTelemetryTicker() {
-        if (liveTelemetryInterval) return;
-        const logBox = document.getElementById('liveMonitoringStreamConsole');
-        if (!logBox) return;
+    function startLivePolling() {
+        if (livePollTimer) clearInterval(livePollTimer);
+        livePollTimer = setInterval(fetchLiveStatusNow, 5000);
+    }
 
-        const monRows = document.querySelectorAll('.kiosk-mon-row');
-        const kioskIds = [];
-        monRows.forEach(r => kioskIds.push(r.getAttribute('data-id')));
-        if (kioskIds.length === 0) kioskIds.push('EXE0001', 'EXE0002');
+    async function fetchLiveStatusNow() {
+        try {
+            const res = await fetch("{% url 'admin_monitoring_live_status' %}");
+            if (!res.ok) return;
+            const data = await res.json();
 
-        const events = [
-            "HEARTBEAT - Node healthy. CPU: {cpu}%, RAM: {ram}%, Temp: {temp}°C",
-            "SYNC - Catalog cache re-indexed",
-            "HEARTBEAT - Latency: {ping}ms",
-            "INFO - Screensaver active"
-        ];
+            if (data && data.kiosks) {
+                let onlineCount = 0;
+                let warningCount = 0;
+                let offlineCount = 0;
 
-        liveTelemetryInterval = setInterval(() => {
-            const randomKiosk = kioskIds[Math.floor(Math.random() * kioskIds.length)];
-            const row = document.querySelector(`.kiosk-mon-row[data-id="${randomKiosk}"]`);
-            const isOnline = row ? row.getAttribute('data-online') === 'true' : true;
+                data.kiosks.forEach(k => {
+                    if (k.status === 'ONLINE') onlineCount++;
+                    else if (k.status === 'WARNING') warningCount++;
+                    else offlineCount++;
 
-            let eventTemplate = events[Math.floor(Math.random() * events.length)];
-            const cpu = Math.floor(Math.random() * 15) + 5;
-            const ram = Math.floor(Math.random() * 25) + 40;
-            const temp = Math.floor(Math.random() * 8) + 36;
-            const ping = Math.floor(Math.random() * 32) + 12;
+                    const row = document.querySelector(`.kiosk-mon-row[data-id="${k.id}"]`);
+                    if (row) {
+                        row.setAttribute('data-online', k.is_online ? 'true' : 'false');
+                        
+                        // Update status cell
+                        const statusCell = row.querySelector('.node-status-cell');
+                        if (statusCell) {
+                            if (k.status === 'ONLINE') {
+                                statusCell.innerHTML = '<span class="status-badge status-online"><span class="status-dot"></span> Active</span>';
+                            } else if (k.status === 'WARNING') {
+                                statusCell.innerHTML = '<span class="status-badge status-warning" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);"><span class="status-dot" style="background: #f59e0b;"></span> Delayed</span>';
+                            } else {
+                                statusCell.innerHTML = '<span class="status-badge status-offline"><span class="status-dot"></span> Offline</span>';
+                            }
+                        }
 
-            let detail = eventTemplate.replace('{cpu}', cpu).replace('{ram}', ram).replace('{temp}', temp).replace('{ping}', ping);
-            if (!isOnline) detail = "CRITICAL - Heartbeat lost (device unreachable)";
+                        // Update heartbeat cell
+                        const hbCell = row.querySelector('.node-heartbeat-cell');
+                        if (hbCell) {
+                            if (k.status === 'ONLINE') {
+                                hbCell.innerHTML = `<div style="display: flex; align-items: center; gap: 0.4rem;"><span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: pulse 1s infinite;"></span><span style="color: #10b981; font-weight: 700; font-family: monospace; font-size: 0.85rem;">${k.heartbeat_display}</span></div>`;
+                            } else if (k.status === 'WARNING') {
+                                hbCell.innerHTML = `<div style="display: flex; align-items: center; gap: 0.4rem;"><span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;"></span><span style="color: #f59e0b; font-weight: 700; font-family: monospace; font-size: 0.85rem;">${k.heartbeat_display}</span></div>`;
+                            } else {
+                                hbCell.innerHTML = `<div style="display: flex; align-items: center; gap: 0.4rem;"><span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ef4444;"></span><span style="color: #ef4444; font-weight: 600; font-family: monospace; font-size: 0.85rem;">${k.heartbeat_display}</span></div>`;
+                            }
+                        }
+                    }
+                });
 
-            const timestamp = new Date().toLocaleTimeString();
-            const logLine = document.createElement('div');
-            logLine.style.marginBottom = '0.4rem';
-            logLine.innerHTML = `<span style="color: var(--accent-color); font-weight: 700;">[${randomKiosk}]</span> <span style="color: #64748b; font-size: 0.75rem;">${timestamp}</span> ${detail}`;
-            
-            logBox.appendChild(logLine);
-            logBox.scrollTop = logBox.scrollHeight;
-            if (logBox.children.length > 40) logBox.removeChild(logBox.firstChild);
-        }, 3000);
+                // Update summary counters
+                const onlineEl = document.getElementById('statOnlineCount');
+                const warningEl = document.getElementById('statWarningCount');
+                const offlineEl = document.getElementById('statOfflineCount');
+                if (onlineEl) onlineEl.textContent = onlineCount;
+                if (warningEl) warningEl.textContent = warningCount;
+                if (offlineEl) offlineEl.textContent = offlineCount;
+
+                const lastPoll = document.getElementById('lastPolledAt');
+                if (lastPoll) lastPoll.textContent = `Live: ${data.server_time}`;
+            }
+
+            // Append new real events to logger if any
+            if (data && data.recent_events && data.recent_events.length > 0) {
+                const logBox = document.getElementById('liveMonitoringStreamConsole');
+                if (logBox && logBox.children.length < 50) {
+                    // Update stream if needed
+                }
+            }
+        } catch (e) {
+            console.warn('Live poll error:', e);
+        }
     }
 
     function triggerSync(kioskId, btnElement) {
@@ -198,6 +344,7 @@
             });
         }
 
+        // When clicking each kiosk row -> navigate to dedicated Kiosk Monitoring Details
         $('#monitoringTable').on('click', 'tbody tr.clickable-row', function(e) {
             if ($(e.target).closest('a, button, form, .actions-cell').length) return;
             var href = $(this).data('href');

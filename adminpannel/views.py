@@ -1,5 +1,6 @@
 import json
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 
 from django.contrib import messages
@@ -1169,16 +1170,47 @@ def admin_monitoring(request):
         return redirect('signin')
 
     kiosks = KioskDevice.objects.select_related('store', 'profile').all().order_by('-created_at')
+    now = timezone.now()
     kiosk_list = []
+    online_count = 0
+    warning_count = 0
+    offline_count = 0
+
     for k in kiosks:
         status = update_kiosk_status_and_alerts(k)
+        is_online = (status == KioskDevice.Status.ONLINE)
+        if status == KioskDevice.Status.ONLINE:
+            online_count += 1
+        elif status == KioskDevice.Status.WARNING:
+            warning_count += 1
+        else:
+            offline_count += 1
+
+        heartbeat_age_seconds = None
+        heartbeat_display = "No Heartbeat (Offline)"
+        if k.last_heartbeat_at:
+            heartbeat_age_seconds = int((now - k.last_heartbeat_at).total_seconds())
+            if heartbeat_age_seconds < 10:
+                heartbeat_display = f"{heartbeat_age_seconds}s ago"
+            elif heartbeat_age_seconds < 60:
+                heartbeat_display = f"{heartbeat_age_seconds}s ago"
+            elif heartbeat_age_seconds < 3600:
+                heartbeat_display = f"{heartbeat_age_seconds // 60}m ago"
+            else:
+                heartbeat_display = k.last_heartbeat_at.strftime('%Y-%m-%d %H:%M')
+
         kiosk_list.append({
             'id': str(k.id),
             'username': k.name,
             'device_id': k.device_id,
             'location': k.store.name if k.store else 'Unspecified Location',
             'status': status,
-            'is_online': (status == KioskDevice.Status.ONLINE),
+            'is_online': is_online,
+            'heartbeat_age_seconds': heartbeat_age_seconds,
+            'heartbeat_display': heartbeat_display,
+            'battery_percentage': k.battery_percentage,
+            'network_type': k.network_type or 'WIFI',
+            'last_ip_address': k.last_ip_address or '—',
             'last_sync': k.last_sync_at.strftime('%Y-%m-%d %H:%M:%S') if k.last_sync_at else 'Never Synced',
             'app_version': k.app_version or 'v1.0.0',
             'device_info': f"{k.manufacturer or ''} {k.device_model or ''}".strip() or 'Android Display',
@@ -1186,13 +1218,123 @@ def admin_monitoring(request):
         })
 
     open_alerts = Alert.objects.filter(resolved_at__isnull=True).select_related('kiosk')[:20]
+    recent_events = KioskEvent.objects.select_related('kiosk').order_by('-created_at')[:30]
 
     context = {
         'kiosks': kiosk_list,
         'open_alerts': open_alerts,
+        'recent_events': recent_events,
+        'online_count': online_count,
+        'warning_count': warning_count,
+        'offline_count': offline_count,
+        'total_count': len(kiosk_list),
         'active_tab': 'monitoring',
     }
     return render(request, "admin/monitoring.html", context)
+
+
+def admin_monitoring_kiosk_detail(request, kiosk_id):
+    """Dedicated Live Telemetry & Hardware Monitoring Inspector for a single kiosk."""
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    kiosk = get_object_or_404(KioskDevice.objects.select_related('store', 'profile'), id=kiosk_id)
+    status = update_kiosk_status_and_alerts(kiosk)
+    now = timezone.now()
+
+    heartbeat_age_seconds = None
+    heartbeat_display = "No Heartbeat (Offline)"
+    if kiosk.last_heartbeat_at:
+        heartbeat_age_seconds = int((now - kiosk.last_heartbeat_at).total_seconds())
+        if heartbeat_age_seconds < 10:
+            heartbeat_display = f"{heartbeat_age_seconds}s ago"
+        elif heartbeat_age_seconds < 60:
+            heartbeat_display = f"{heartbeat_age_seconds}s ago"
+        elif heartbeat_age_seconds < 3600:
+            heartbeat_display = f"{heartbeat_age_seconds // 60}m ago"
+        else:
+            heartbeat_display = kiosk.last_heartbeat_at.strftime('%Y-%m-%d %H:%M:%S')
+
+    recent_events = KioskEvent.objects.filter(kiosk=kiosk).order_by('-created_at')[:40]
+    open_alerts = Alert.objects.filter(kiosk=kiosk, resolved_at__isnull=True).order_by('-opened_at')
+    resolved_alerts = Alert.objects.filter(kiosk=kiosk, resolved_at__isnull=False).order_by('-resolved_at')[:15]
+
+    context = {
+        'kiosk': kiosk,
+        'status': status,
+        'is_online': (status == KioskDevice.Status.ONLINE),
+        'heartbeat_age_seconds': heartbeat_age_seconds,
+        'heartbeat_display': heartbeat_display,
+        'recent_events': recent_events,
+        'open_alerts': open_alerts,
+        'resolved_alerts': resolved_alerts,
+        'active_tab': 'monitoring',
+        'page_title': f'Live Telemetry Inspector: {kiosk.name}',
+        'breadcrumbs': [
+            {'name': 'Telemetry Hub', 'url': '/admin_pannel/monitoring/'},
+            {'name': f'Monitoring Node ({kiosk.device_id})', 'url': ''}
+        ]
+    }
+    return render(request, "admin/monitoring_detail.html", context)
+
+
+def admin_monitoring_live_status(request):
+    """JSON API endpoint returning real-time status and telemetry for live dashboard auto-refresh."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    kiosks = KioskDevice.objects.select_related('store').all().order_by('-created_at')
+    now = timezone.now()
+    kiosk_data = []
+
+    for k in kiosks:
+        status = update_kiosk_status_and_alerts(k)
+        heartbeat_age_seconds = None
+        heartbeat_display = "No Heartbeat"
+        if k.last_heartbeat_at:
+            heartbeat_age_seconds = int((now - k.last_heartbeat_at).total_seconds())
+            if heartbeat_age_seconds < 60:
+                heartbeat_display = f"{heartbeat_age_seconds}s ago"
+            else:
+                heartbeat_display = f"{heartbeat_age_seconds // 60}m ago"
+
+        kiosk_data.append({
+            'id': str(k.id),
+            'name': k.name,
+            'device_id': k.device_id,
+            'location': k.store.name if k.store else 'Unspecified Location',
+            'status': status,
+            'is_online': (status == KioskDevice.Status.ONLINE),
+            'heartbeat_age_seconds': heartbeat_age_seconds,
+            'heartbeat_display': heartbeat_display,
+            'battery_percentage': k.battery_percentage,
+            'network_type': k.network_type or 'WIFI',
+            'last_ip_address': k.last_ip_address or '—',
+            'app_version': k.app_version or 'v1.0.0',
+        })
+
+    recent_events_qs = KioskEvent.objects.select_related('kiosk').order_by('-created_at')[:20]
+    events_data = []
+    for ev in recent_events_qs:
+        events_data.append({
+            'kiosk_name': ev.kiosk.name,
+            'kiosk_device_id': ev.kiosk.device_id,
+            'event_type': ev.event_type,
+            'severity': ev.severity,
+            'message': ev.message,
+            'time': ev.created_at.strftime('%H:%M:%S'),
+        })
+
+    open_alerts_count = Alert.objects.filter(resolved_at__isnull=True).count()
+
+    return JsonResponse({
+        'success': True,
+        'server_time': now.strftime('%H:%M:%S'),
+        'kiosks': kiosk_data,
+        'recent_events': events_data,
+        'open_alerts_count': open_alerts_count,
+    })
+
 
 
 def admin_media(request):

@@ -6,11 +6,11 @@ from .models import Alert, KioskEvent
 def calculate_kiosk_status(kiosk: KioskDevice) -> str:
     """
     Calculates dynamic Kiosk connection status based strictly on SERVER TIME.
-    Rules:
+    Configured for 10-second heartbeat cadence:
     - DISABLED: Admin disabled kiosk
-    - ONLINE: last_heartbeat_at <= 60 seconds ago
-    - WARNING: last_heartbeat_at > 60 seconds and <= 90 seconds ago
-    - OFFLINE: last_heartbeat_at > 90 seconds ago or missing
+    - ONLINE: last_heartbeat_at <= 15 seconds ago (10s heartbeat + 5s network jitter)
+    - WARNING: last_heartbeat_at > 15 seconds and <= 25 seconds ago
+    - OFFLINE: last_heartbeat_at > 25 seconds ago or missing
     """
     if kiosk.status == KioskDevice.Status.DISABLED or not kiosk.is_active:
         return KioskDevice.Status.DISABLED
@@ -21,12 +21,13 @@ def calculate_kiosk_status(kiosk: KioskDevice) -> str:
     now = timezone.now()
     diff_seconds = (now - kiosk.last_heartbeat_at).total_seconds()
 
-    if diff_seconds <= 60:
+    if diff_seconds <= 15:
         return KioskDevice.Status.ONLINE
-    elif diff_seconds <= 90:
+    elif diff_seconds <= 25:
         return KioskDevice.Status.WARNING
     else:
         return KioskDevice.Status.OFFLINE
+
 
 
 def update_kiosk_status_and_alerts(kiosk: KioskDevice) -> str:
@@ -63,7 +64,7 @@ def update_kiosk_status_and_alerts(kiosk: KioskDevice) -> str:
                     kiosk=kiosk,
                     alert_type=Alert.AlertType.KIOSK_OFFLINE,
                     severity=Alert.Severity.CRITICAL,
-                    message=f"Terminal {kiosk.device_id} ({kiosk.name}) at {kiosk.store.name if kiosk.store else 'Unspecified Location'} failed to send heartbeat (>90s)."
+                    message=f"Terminal {kiosk.device_id} ({kiosk.name}) at {kiosk.store.name if kiosk.store else 'Unspecified Location'} missed periodic 10-second heartbeat (>25s timeout)."
                 )
 
         elif new_status == KioskDevice.Status.ONLINE:

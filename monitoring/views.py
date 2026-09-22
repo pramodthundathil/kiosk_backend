@@ -6,6 +6,7 @@ from kiosks.permissions import IsKioskAuthenticated
 from kiosks.models import KioskDevice
 from .serializers import KioskHeartbeatSerializer
 from .services import update_kiosk_status_and_alerts
+from .models import KioskEvent
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -72,12 +73,32 @@ class KioskHeartbeatView(views.APIView):
         # Pending commands placeholder (expandable in Phase 7)
         commands = []
 
+        # Log occasional heartbeat event for telemetry stream (every 60s max per device)
+        last_hb_event = KioskEvent.objects.filter(
+            kiosk=kiosk,
+            event_type=KioskEvent.EventType.HEARTBEAT
+        ).order_by('-created_at').first()
+        if not last_hb_event or (now - last_hb_event.created_at).total_seconds() > 60:
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.HEARTBEAT,
+                severity=KioskEvent.Severity.INFO,
+                message=f"Node heartbeat ping received. App: {kiosk.app_version or 'v1.0.0'}, Net: {kiosk.network_type or 'WIFI'}",
+                metadata={
+                    "battery": kiosk.battery_percentage,
+                    "ip": kiosk.last_ip_address,
+                    "screen_on": kiosk.screen_on,
+                    "content_ver": kiosk.current_content_version
+                }
+            )
+
         return Response({
             "success": True,
             "server_time": now.isoformat(),
-            "heartbeat_interval": 30,
+            "heartbeat_interval": 10,
             "status": current_status,
             "sync_required": sync_required,
             "desired_content_version": kiosk.desired_content_version,
             "commands": commands
         }, status=status.HTTP_200_OK)
+

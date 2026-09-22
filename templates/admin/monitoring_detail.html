@@ -1,0 +1,321 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Telemetry Inspector: {{ kiosk.name }} - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 1250px; margin: 0 auto 2.5rem auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+    
+    <!-- Top Action Header Banner -->
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="width: 50px; height: 50px; background: rgba(59, 130, 246, 0.12); color: var(--accent-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px solid rgba(59, 130, 246, 0.25);">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--primary-color); margin: 0;">{{ kiosk.name }}</h2>
+                    
+                    {% if status == 'ONLINE' %}
+                    <span class="status-badge status-online" style="padding: 0.35rem 0.85rem; font-size: 0.85rem;">
+                        <span class="status-dot" style="animation: pulse 1s infinite;"></span> 
+                        <span>Active Online (10s Cadence)</span>
+                    </span>
+                    {% elif status == 'WARNING' %}
+                    <span class="status-badge status-warning" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.35rem 0.85rem; font-size: 0.85rem;">
+                        <span class="status-dot" style="background: #f59e0b;"></span> 
+                        <span>Delayed Heartbeat (15-25s)</span>
+                    </span>
+                    {% else %}
+                    <span class="status-badge status-offline" style="padding: 0.35rem 0.85rem; font-size: 0.85rem;">
+                        <span class="status-dot"></span> 
+                        <span>Heartbeat Lost / Offline (>25s)</span>
+                    </span>
+                    {% endif %}
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <span>MAC / Device ID: <code style="font-weight: 700; color: var(--accent-color); font-size: 0.9rem;">{{ kiosk.device_id }}</code></span>
+                    <span>&bull;</span>
+                    <span>Store: <strong>{% if kiosk.store %}{{ kiosk.store.name }}{% else %}Unspecified Location{% endif %}</strong></span>
+                    <span>&bull;</span>
+                    <span>Profile: <strong>{% if kiosk.profile %}{{ kiosk.profile.name }}{% else %}Standard{% endif %}</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-actions" style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <!-- Back to Telemetry Console -->
+            <a href="{% url 'admin_monitoring' %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Telemetry Console</span>
+            </a>
+
+            <!-- CMS General Kiosk Details -->
+            <a href="{% url 'admin_kiosk_detail' kiosk.id %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span>CMS Product Settings</span>
+            </a>
+
+            <!-- Refresh Button -->
+            <button onclick="window.location.reload();" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; font-weight: 700;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                <span>Refresh Live Telemetry</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Body -->
+    <div style="padding: 1.5rem;">
+        
+        <!-- Live Heartbeat & Telemetry Status Hero Card -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="font-weight: 800; font-size: 1.1rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    <span>10-Second Telemetry Signal Status</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Configured Heartbeat Frequency: <strong style="color: var(--accent-color);">10 Seconds</strong></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+                <!-- Last Heartbeat Timer -->
+                <div style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Heartbeat Recency</div>
+                    <div style="font-size: 1.35rem; font-weight: 800; margin-top: 0.35rem; font-family: monospace; {% if status == 'ONLINE' %}color: #10b981;{% elif status == 'WARNING' %}color: #f59e0b;{% else %}color: #ef4444;{% endif %}" id="liveHeartbeatTimer">
+                        {{ heartbeat_display }}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        {% if kiosk.last_heartbeat_at %}
+                        Received: {{ kiosk.last_heartbeat_at|date:"Y-m-d H:i:s" }}
+                        {% else %}
+                        No heartbeat recorded yet
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Last Known IP Address -->
+                <div style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">IP Address (Client Ping)</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; margin-top: 0.35rem; font-family: monospace; color: var(--primary-color);">
+                        {{ kiosk.last_ip_address|default:"127.0.0.1" }}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Network Type: <strong>{{ kiosk.network_type|default:"WIFI" }}</strong></div>
+                </div>
+
+                <!-- Battery & Power State -->
+                <div style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Power & Battery</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; margin-top: 0.35rem; color: var(--primary-color);">
+                        {% if kiosk.battery_percentage is not None %}
+                            {{ kiosk.battery_percentage }}%
+                        {% else %}
+                            AC Mains Powered (100%)
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        Screen Status: <strong>{% if kiosk.screen_on %}ON (Active){% else %}OFF / Sleep{% endif %}</strong>
+                    </div>
+                </div>
+
+                <!-- Content Version Sync -->
+                <div style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Content Synchronization</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; margin-top: 0.35rem; color: var(--primary-color);">
+                        v{{ kiosk.current_content_version|default:"1" }}
+                        {% if kiosk.current_content_version == kiosk.desired_content_version %}
+                        <span style="font-size: 0.75rem; color: #10b981; font-weight: 600;">(In-Sync)</span>
+                        {% else %}
+                        <span style="font-size: 0.75rem; color: #f59e0b; font-weight: 600;">(Target: v{{ kiosk.desired_content_version }})</span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        Last Synced: {{ kiosk.last_sync_at|date:"Y-m-d H:i"|default:"Never Synced" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hardware & Application Specifications Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+            
+            <!-- Hardware Specifications Card -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <span>Terminal Hardware Profile</span>
+                </h3>
+                <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.6rem 0; color: var(--text-secondary);">Hardware MAC ID:</td>
+                        <td style="padding: 0.6rem 0; font-family: monospace; font-weight: 700; color: var(--accent-color);">{{ kiosk.device_id }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.6rem 0; color: var(--text-secondary);">Manufacturer:</td>
+                        <td style="padding: 0.6rem 0; font-weight: 600;">{{ kiosk.manufacturer|default:"Excel Electronics Display" }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.6rem 0; color: var(--text-secondary);">Device Model:</td>
+                        <td style="padding: 0.6rem 0; font-weight: 600;">{{ kiosk.device_model|default:"Android Kiosk Panel" }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.6rem 0; color: var(--text-secondary);">Operating System:</td>
+                        <td style="padding: 0.6rem 0; font-weight: 600;">{{ kiosk.android_version|default:"Android 11 / TV OS" }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.6rem 0; color: var(--text-secondary);">Kiosk App Version:</td>
+                        <td style="padding: 0.6rem 0; font-weight: 700; color: var(--primary-color);">{{ kiosk.app_version|default:"v1.0.0" }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Diagnostics & Errors Card -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span>Diagnostics & Error Status</span>
+                </h3>
+                
+                {% if kiosk.last_error %}
+                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); padding: 1rem; color: #ef4444; font-family: monospace; font-size: 0.85rem; line-height: 1.4;">
+                    <div style="font-weight: 700; margin-bottom: 0.25rem;">[REPORTED TELEMETRY ERROR]</div>
+                    {{ kiosk.last_error }}
+                </div>
+                {% else %}
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-sm); padding: 1rem; color: #10b981; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>No errors detected. Hardware node operating nominally.</span>
+                </div>
+                {% endif %}
+
+                <div style="margin-top: 1.25rem;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 0.4rem;">Deployment Coordinates</div>
+                    <div style="font-size: 0.85rem; color: var(--primary-color);">
+                        Latitude: <strong>{{ kiosk.latitude|default:"—" }}</strong> &nbsp;|&nbsp; Longitude: <strong>{{ kiosk.longitude|default:"—" }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Heartbeat Event Log Table -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1.5rem;">
+            <div style="padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span>Recent Heartbeat & Telemetry Event Log</span>
+                </h3>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Showing last {{ recent_events|length }} records</span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                {% if recent_events %}
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background: var(--bg-surface); text-align: left; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 0.75rem 1rem;">Timestamp</th>
+                            <th style="padding: 0.75rem 1rem;">Event Type</th>
+                            <th style="padding: 0.75rem 1rem;">Severity</th>
+                            <th style="padding: 0.75rem 1rem;">Message / Payload</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ev in recent_events %}
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.75rem 1rem; font-family: monospace; color: var(--text-secondary);">
+                                {{ ev.created_at|date:"Y-m-d H:i:s" }}
+                            </td>
+                            <td style="padding: 0.75rem 1rem; font-weight: 700; color: var(--accent-color);">
+                                {{ ev.event_type }}
+                            </td>
+                            <td style="padding: 0.75rem 1rem;">
+                                {% if ev.severity == 'CRITICAL' %}
+                                <span style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">CRITICAL</span>
+                                {% elif ev.severity == 'WARNING' %}
+                                <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">WARNING</span>
+                                {% else %}
+                                <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">INFO</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 0.75rem 1rem; color: var(--text-primary);">
+                                {{ ev.message }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="padding: 2.5rem; text-align: center; color: var(--text-secondary);">
+                    No telemetry events logged yet for this kiosk terminal.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        {% if open_alerts or resolved_alerts %}
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+            <div style="padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <span>Node Alerts History</span>
+                </h3>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background: var(--bg-surface); text-align: left; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 0.75rem 1rem;">Alert Type</th>
+                            <th style="padding: 0.75rem 1rem;">Status</th>
+                            <th style="padding: 0.75rem 1rem;">Opened At</th>
+                            <th style="padding: 0.75rem 1rem;">Resolved At</th>
+                            <th style="padding: 0.75rem 1rem;">Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in open_alerts %}
+                        <tr style="border-bottom: 1px solid var(--border-color); background: rgba(239, 68, 68, 0.03);">
+                            <td style="padding: 0.75rem 1rem; font-weight: 700; color: #ef4444;">{{ a.alert_type }}</td>
+                            <td style="padding: 0.75rem 1rem;"><span style="background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">ACTIVE</span></td>
+                            <td style="padding: 0.75rem 1rem; font-family: monospace;">{{ a.opened_at|date:"Y-m-d H:i:s" }}</td>
+                            <td style="padding: 0.75rem 1rem; color: var(--text-secondary);">Unresolved</td>
+                            <td style="padding: 0.75rem 1rem;">{{ a.message }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% for a in resolved_alerts %}
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-secondary);">{{ a.alert_type }}</td>
+                            <td style="padding: 0.75rem 1rem;"><span style="background: #10b981; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">RESOLVED</span></td>
+                            <td style="padding: 0.75rem 1rem; font-family: monospace; color: var(--text-secondary);">{{ a.opened_at|date:"Y-m-d H:i:s" }}</td>
+                            <td style="padding: 0.75rem 1rem; font-family: monospace; color: var(--text-secondary);">{{ a.resolved_at|date:"Y-m-d H:i:s" }}</td>
+                            <td style="padding: 0.75rem 1rem; color: var(--text-secondary);">{{ a.message }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-reload the detail page every 10 seconds to keep telemetry strictly up to date
+    setInterval(() => {
+        // Soft refresh without losing focus
+        fetch(window.location.href)
+            .then(res => res.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newPanel = doc.querySelector('.panel-card');
+                const currentPanel = document.querySelector('.panel-card');
+                if (newPanel && currentPanel) {
+                    currentPanel.innerHTML = newPanel.innerHTML;
+                }
+            })
+            .catch(() => {});
+    }, 8000);
+</script>
+{% endblock %}
