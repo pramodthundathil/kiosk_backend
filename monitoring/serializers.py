@@ -14,4 +14,7 @@ class KioskHeartbeatSerializer(serializers.Serializer):
     mac_address = serializers.CharField(required=False, allow_blank=True, max_length=100)
     device_id = serializers.CharField(required=False, allow_blank=True, max_length=100)
     is_authenticated = serializers.BooleanField(required=False, default=False)
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
+
 

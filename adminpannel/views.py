@@ -1215,6 +1215,9 @@ def admin_monitoring(request):
             'app_version': k.app_version or 'v1.0.0',
             'device_info': f"{k.manufacturer or ''} {k.device_model or ''}".strip() or 'Android Display',
             'last_boot': k.last_seen_at.strftime('%Y-%m-%d %H:%M:%S') if k.last_seen_at else 'N/A',
+            'latitude': str(k.latitude) if k.latitude is not None else None,
+            'longitude': str(k.longitude) if k.longitude is not None else None,
+            'has_location': (k.latitude is not None and k.longitude is not None),
         })
 
     open_alerts = Alert.objects.filter(resolved_at__isnull=True).select_related('kiosk')[:20]
@@ -1311,7 +1314,11 @@ def admin_monitoring_live_status(request):
             'network_type': k.network_type or 'WIFI',
             'last_ip_address': k.last_ip_address or '—',
             'app_version': k.app_version or 'v1.0.0',
+            'latitude': str(k.latitude) if k.latitude is not None else None,
+            'longitude': str(k.longitude) if k.longitude is not None else None,
+            'has_location': (k.latitude is not None and k.longitude is not None),
         })
+
 
     recent_events_qs = KioskEvent.objects.select_related('kiosk').order_by('-created_at')[:20]
     events_data = []

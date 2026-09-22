@@ -91,10 +91,28 @@ class KioskHeartbeatView(views.APIView):
         if 'last_error' in data:
             kiosk.last_error = data['last_error']
 
+        location_recorded = False
+        if 'latitude' in data and data['latitude'] is not None:
+            kiosk.latitude = data['latitude']
+            location_recorded = True
+        if 'longitude' in data and data['longitude'] is not None:
+            kiosk.longitude = data['longitude']
+            location_recorded = True
+
         kiosk.save()
 
         # Update status and process alerts
         current_status = update_kiosk_status_and_alerts(kiosk)
+
+        # Log location event if coordinates updated
+        if location_recorded:
+            KioskEvent.objects.create(
+                kiosk=kiosk,
+                event_type=KioskEvent.EventType.HEARTBEAT,
+                severity=KioskEvent.Severity.INFO,
+                message=f"Terminal location recorded: Lat {kiosk.latitude}, Lon {kiosk.longitude}",
+                metadata={"latitude": str(kiosk.latitude), "longitude": str(kiosk.longitude)}
+            )
 
         # Check content sync requirement
         sync_required = (kiosk.current_content_version != kiosk.desired_content_version)
@@ -129,6 +147,9 @@ class KioskHeartbeatView(views.APIView):
             "success": True,
             "device_id": kiosk.device_id,
             "name": kiosk.name,
+            "latitude": str(kiosk.latitude) if kiosk.latitude is not None else None,
+            "longitude": str(kiosk.longitude) if kiosk.longitude is not None else None,
+            "has_location_recorded": (kiosk.latitude is not None and kiosk.longitude is not None),
             "server_time": now.isoformat(),
             "heartbeat_interval": 10,
             "status": current_status,
@@ -136,5 +157,6 @@ class KioskHeartbeatView(views.APIView):
             "desired_content_version": kiosk.desired_content_version,
             "commands": commands
         }, status=status.HTTP_200_OK)
+
 
 

@@ -188,12 +188,28 @@
                 </div>
                 {% endif %}
 
-                <div style="margin-top: 1.25rem;">
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 0.4rem;">Deployment Coordinates</div>
-                    <div style="font-size: 0.85rem; color: var(--primary-color);">
-                        Latitude: <strong>{{ kiosk.latitude|default:"—" }}</strong> &nbsp;|&nbsp; Longitude: <strong>{{ kiosk.longitude|default:"—" }}</strong>
+                <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Geo-Location Telemetry (24-Hour Cycle)</div>
+                        {% if kiosk.latitude and kiosk.longitude %}
+                        <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">✓ Synced (24h Window)</span>
+                        {% else %}
+                        <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">Pending Initial Signal</span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--primary-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            Lat: <code style="font-weight: 700; color: var(--accent-color);">{{ kiosk.latitude|default:"Not recorded yet" }}</code> &nbsp;|&nbsp; 
+                            Lon: <code style="font-weight: 700; color: var(--accent-color);">{{ kiosk.longitude|default:"Not recorded yet" }}</code>
+                        </div>
+                        {% if kiosk.latitude and kiosk.longitude %}
+                        <a href="https://www.google.com/maps?q={{ kiosk.latitude }},{{ kiosk.longitude }}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration: none; padding: 0.25rem 0.6rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                            <span>🗺️ View on Google Maps</span>
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
+
             </div>
         </div>
 
