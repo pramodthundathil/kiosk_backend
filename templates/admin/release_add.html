@@ -44,7 +44,7 @@
                         </label>
                         <input type="number" name="version_code" value="{{ form_data.version_code|default:suggested_code }}" required min="1"
                                style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.9rem; background: var(--bg-card); color: var(--text-primary);">
-                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Monotonically increasing integer (e.g. {{ suggested_code }})</span>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Monotonically increasing integer (e.g. {{ suggested_code|default:1 }})</span>
                     </div>
                 </div>
 
@@ -93,7 +93,7 @@
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 0.75rem; background: var(--bg-body); padding: 0.75rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <input type="checkbox" name="is_mandatory" id="isMandatoryCheck" style="width: 18px; height: 18px; accent-color: #ef4444;">
+                    <input type="checkbox" name="is_mandatory" id="isMandatoryCheck" {% if form_data.is_mandatory %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #ef4444;">
                     <label for="isMandatoryCheck" style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary); cursor: pointer;">
                         Mandatory Update (Blocks normal kiosk usage until update is installed)
                     </label>
@@ -141,7 +141,7 @@
                     <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.5rem; background: var(--bg-card); display: flex; flex-direction: column; gap: 0.4rem;">
                         {% for k in kiosks %}
                         <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; padding: 0.3rem 0.5rem; border-radius: 4px; cursor: pointer;">
-                            <input type="checkbox" name="target_kiosks" value="{{ k.id }}" style="accent-color: var(--accent-color);">
+                            <input type="checkbox" name="target_kiosks" value="{{ k.id }}" {% if target_kiosk_ids and k.id|stringformat:"s" in target_kiosk_ids %}checked{% endif %} style="accent-color: var(--accent-color);">
                             <span><strong>{{ k.name }}</strong> ({{ k.device_id }}) {% if k.store %}&bull; {{ k.store.name }}{% endif %}</span>
                         </label>
                         {% endfor %}
@@ -149,7 +149,7 @@
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(245, 158, 11, 0.08); padding: 0.75rem 1rem; border-radius: var(--radius-md); border: 1px solid rgba(245, 158, 11, 0.3);">
-                    <input type="checkbox" name="allow_rollback" id="allowRollbackCheck" style="width: 18px; height: 18px; accent-color: #f59e0b;">
+                    <input type="checkbox" name="allow_rollback" id="allowRollbackCheck" {% if form_data.allow_rollback %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #f59e0b;">
                     <label for="allowRollbackCheck" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); cursor: pointer;">
                         Rollback / Emergency Downgrade Override (Allow publishing equal or lower versionCode)
                     </label>
@@ -159,7 +159,7 @@
             <!-- SECTION 4: PUBLICATION & SUBMISSION -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1.25rem; flex-wrap: wrap; gap: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.6rem;">
-                    <input type="checkbox" name="is_published" id="isPublishedCheck" checked style="width: 18px; height: 18px; accent-color: var(--accent-color);">
+                    <input type="checkbox" name="is_published" id="isPublishedCheck" {% if not form_data or form_data.is_published %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent-color);">
                     <label for="isPublishedCheck" style="font-size: 0.9rem; font-weight: 700; color: var(--primary-color); cursor: pointer;">
                         Publish Release Immediately to Kiosks
                     </label>

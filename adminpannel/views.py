@@ -2260,6 +2260,10 @@ def admin_release_add(request):
     if not request.user.is_authenticated:
         return redirect('signin')
 
+    kiosks = KioskDevice.objects.all().order_by('name')
+    latest_rel = AppRelease.objects.order_by('-version_code').first()
+    suggested_code = (latest_rel.version_code + 1) if latest_rel else 1
+
     if request.method == "POST":
         version_name = request.POST.get('version_name', '').strip()
         version_code_str = request.POST.get('version_code', '').strip()
@@ -2325,9 +2329,10 @@ def admin_release_add(request):
         if errors:
             for err in errors:
                 messages.error(request, err)
-            kiosks = KioskDevice.objects.all().order_by('name')
             return render(request, "admin/release_add.html", {
                 'kiosks': kiosks,
+                'suggested_code': suggested_code,
+                'target_kiosk_ids': target_kiosk_ids,
                 'target_device_types': AppRelease.DeviceType.choices,
                 'form_data': request.POST,
                 'active_tab': 'releases',
@@ -2371,10 +2376,6 @@ def admin_release_add(request):
             + (" Published and dispatched to kiosks." if is_published else " Saved as draft.")
         )
         return redirect('admin_releases')
-
-    kiosks = KioskDevice.objects.all().order_by('name')
-    latest_rel = AppRelease.objects.order_by('-version_code').first()
-    suggested_code = (latest_rel.version_code + 1) if latest_rel else 1
 
     return render(request, "admin/release_add.html", {
         'kiosks': kiosks,
