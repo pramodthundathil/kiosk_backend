@@ -157,6 +157,11 @@
                     <input type="text" id="terminalSearchInput" onkeyup="filterTerminals()" placeholder="Search ID, Name, Version, Status...">
                 </div>
 
+                <button type="button" class="btn btn-secondary btn-sm" onclick="location.reload();" title="Refresh fleet statuses">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 3px; vertical-align: -2px;"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Refresh
+                </button>
+
                 <form method="post" style="display: inline;">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="check_update_all">
@@ -218,7 +223,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if row.update_status == 'UP_TO_DATE' or row.is_up_to_date %}
+                            {% if row.update_status == 'UP_TO_DATE' %}
                             <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
                                 &#10003; UP TO DATE
                             </span>
@@ -244,9 +249,9 @@
                             </span>
                             {% endif %}
 
-                            {% if row.kiosk.force_update_requested %}
+                            {% if row.kiosk.force_update_requested and not row.is_up_to_date %}
                             <div style="font-size: 0.72rem; color: #f59e0b; margin-top: 2px; font-weight: 600;">[Force Queued]</div>
-                            {% elif row.kiosk.check_update_requested %}
+                            {% elif row.kiosk.check_update_requested and not row.is_up_to_date %}
                             <div style="font-size: 0.72rem; color: #3b82f6; margin-top: 2px; font-weight: 600;">[Check Queued]</div>
                             {% endif %}
                         </td>
@@ -267,6 +272,11 @@
                                     </button>
                                 </form>
 
+                                {% if row.is_up_to_date %}
+                                <button type="button" class="btn btn-secondary btn-sm" disabled style="font-size: 0.75rem; padding: 3px 8px; opacity: 0.45; cursor: not-allowed;" title="Device is already running the target version">
+                                    Up to Date
+                                </button>
+                                {% else %}
                                 <form method="post" style="display: inline;" onsubmit="return confirm('Force immediate download & installation for {{ row.kiosk.name }}?');">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="force_update_single">
@@ -275,6 +285,7 @@
                                         Force Update
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

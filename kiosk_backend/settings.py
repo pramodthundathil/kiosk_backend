@@ -34,6 +34,10 @@ DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "t", "yes")
 # ALLOWED_HOSTS loaded from environment variable (comma-separated, e.g. "localhost,127.0.0.1,*" or "*")
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("ALLOWED_HOSTS", "*").split(",") if host.strip()]
 
+# Reverse proxy support (Nginx / HTTPS termination)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
 
 
 # Application definition

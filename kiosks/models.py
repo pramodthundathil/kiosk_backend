@@ -131,7 +131,10 @@ class AppRelease(models.Model):
             return self.apk_url
         if self.apk_file:
             if request:
-                return request.build_absolute_uri(self.apk_file.url)
+                url = request.build_absolute_uri(self.apk_file.url)
+                if request.is_secure() or request.META.get('HTTP_X_FORWARDED_PROTO') == 'https':
+                    url = url.replace('http://', 'https://', 1)
+                return url
             return self.apk_file.url
         return ""
 

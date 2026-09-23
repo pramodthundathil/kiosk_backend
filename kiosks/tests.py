@@ -329,4 +329,62 @@ class AppUpdateSystemTests(TestCase):
         commands = hb_res.data.get("commands", [])
         self.assertTrue(any(c.get("command") == "FORCE_APP_UPDATE" for c in commands))
 
+    def test_heartbeat_clears_command_flags_and_reconciles_status(self):
+        # Create published release with version_code 200
+        release = AppRelease.objects.create(
+            version_name="2.0.0",
+            version_code=200,
+            release_title="Release 2.0",
+            apk_url="https://example.com/kiosk-2.0.0.apk",
+            is_published=True
+        )
+
+        # Device is at code 101, request both check and force
+        self.kiosk.check_update_requested = True
+        self.kiosk.force_update_requested = True
+        self.kiosk.update_status = KioskDevice.UpdateStatus.UP_TO_DATE
+        self.kiosk.save()
+
+        # Send heartbeat with version_code 101
+        hb_res = self.client.post("/api/kiosk/heartbeat/", {
+            "device_id": "KIOSK-PUN-001",
+            "app_version": "1.0.1",
+            "app_version_code": 101
+        }, format="json", **self.auth_headers)
+        self.assertEqual(hb_res.status_code, status.HTTP_200_OK)
+
+        self.kiosk.refresh_from_db()
+        # Verify force_update_requested was cleared upon dispatch
+        self.assertFalse(self.kiosk.force_update_requested)
+        # Because target is 200 and device is 101, status transitioned to UPDATE_AVAILABLE
+        self.assertEqual(self.kiosk.update_status, KioskDevice.UpdateStatus.UPDATE_AVAILABLE)
+
+        # Now send heartbeat reporting version_code 200 (updated)
+        hb_res2 = self.client.post("/api/kiosk/heartbeat/", {
+            "device_id": "KIOSK-PUN-001",
+            "app_version": "2.0.0",
+            "app_version_code": 200
+        }, format="json", **self.auth_headers)
+        self.assertEqual(hb_res2.status_code, status.HTTP_200_OK)
+
+        self.kiosk.refresh_from_db()
+        # Should now be automatically reconciled to UP_TO_DATE
+        self.assertEqual(self.kiosk.update_status, KioskDevice.UpdateStatus.UP_TO_DATE)
+        self.assertEqual(self.kiosk.current_app_version_code, 200)
+
+    def test_app_update_check_clears_force_update_flag(self):
+        self.kiosk.force_update_requested = True
+        self.kiosk.check_update_requested = True
+        self.kiosk.save()
+
+        res = self.client.get(
+            "/api/kiosk/app-update/",
+            {"device_id": "KIOSK-PUN-001", "version_code": 101},
+            **self.auth_headers
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.kiosk.refresh_from_db()
+        self.assertFalse(self.kiosk.force_update_requested)
+        self.assertFalse(self.kiosk.check_update_requested)
+
 

@@ -2164,34 +2164,60 @@ def admin_releases(request):
 
     latest_code = latest_release.version_code if latest_release else 0
 
+    now = timezone.now()
     kiosk_rows = []
     for k in kiosks:
         k_code = k.current_app_version_code or 1
         k_status = update_kiosk_status_and_alerts(k)
         is_online = (k_status == KioskDevice.Status.ONLINE)
+        is_up_to_date = (k_code >= latest_code) if latest_release else True
 
         if not is_online:
             offline_count += 1
 
-        if k.update_status == KioskDevice.UpdateStatus.DOWNLOADING:
+        # Reconcile effective OTA update status
+        effective_status = k.update_status
+        if is_up_to_date:
+            effective_status = KioskDevice.UpdateStatus.UP_TO_DATE
+            if k.update_status != KioskDevice.UpdateStatus.UP_TO_DATE or k.force_update_requested:
+                k.update_status = KioskDevice.UpdateStatus.UP_TO_DATE
+                k.force_update_requested = False
+                k.pending_update_release = None
+                k.save(update_fields=['update_status', 'force_update_requested', 'pending_update_release'])
+        elif effective_status in [KioskDevice.UpdateStatus.DOWNLOADING, KioskDevice.UpdateStatus.INSTALLING]:
+            if not k.update_started_at or (now - k.update_started_at).total_seconds() > 900:
+                effective_status = KioskDevice.UpdateStatus.FAILED
+                k.update_status = KioskDevice.UpdateStatus.FAILED
+                k.update_error = "Installation timed out or was interrupted"
+                k.save(update_fields=['update_status', 'update_error'])
+        elif effective_status == KioskDevice.UpdateStatus.UP_TO_DATE:
+            effective_status = KioskDevice.UpdateStatus.UPDATE_AVAILABLE
+            k.update_status = KioskDevice.UpdateStatus.UPDATE_AVAILABLE
+            k.save(update_fields=['update_status'])
+
+        if effective_status == KioskDevice.UpdateStatus.DOWNLOADING:
             downloading_count += 1
-        elif k.update_status == KioskDevice.UpdateStatus.INSTALLING:
+        elif effective_status == KioskDevice.UpdateStatus.INSTALLING:
             installing_count += 1
-        elif k.update_status == KioskDevice.UpdateStatus.FAILED:
+        elif effective_status == KioskDevice.UpdateStatus.FAILED:
             failed_count += 1
-        elif latest_release and k_code >= latest_code:
+        elif is_up_to_date:
             updated_count += 1
         else:
             pending_count += 1
 
+        disp_ver = k.app_version or f"1.0.{k_code}"
+        if not disp_ver.startswith('v'):
+            disp_ver = f"v{disp_ver}"
+
         kiosk_rows.append({
             'kiosk': k,
             'is_online': is_online,
-            'current_version': k.app_version or f"v1.0.{k_code}",
+            'current_version': disp_ver,
             'current_code': k_code,
             'latest_code': latest_code,
-            'is_up_to_date': (k_code >= latest_code) if latest_release else True,
-            'update_status': k.update_status,
+            'is_up_to_date': is_up_to_date,
+            'update_status': effective_status,
             'last_seen': k.last_seen_at.strftime('%Y-%m-%d %H:%M') if k.last_seen_at else 'Never',
             'last_check': k.last_update_check.strftime('%Y-%m-%d %H:%M') if k.last_update_check else 'Never'
         })

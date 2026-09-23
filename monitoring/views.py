@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from django.utils import timezone
 from django.db.models import Q
 from kiosks.authentication import KioskJWTAuthentication
-from kiosks.models import KioskDevice
+from kiosks.models import KioskDevice, AppRelease
 from .serializers import KioskHeartbeatSerializer
 from .services import update_kiosk_status_and_alerts
 from .models import KioskEvent
@@ -69,13 +69,34 @@ class KioskHeartbeatView(views.APIView):
         kiosk.last_seen_at = now
         kiosk.last_ip_address = get_client_ip(request)
 
-
         if 'app_version' in data and data['app_version']:
-            kiosk.app_version = data['app_version']
+            kiosk.app_version = str(data['app_version']).strip()
+
         if 'app_version_code' in data and data['app_version_code'] is not None:
-            kiosk.current_app_version_code = int(data['app_version_code'])
-        if 'update_status' in data and data['update_status']:
-            kiosk.update_status = data['update_status']
+            try:
+                kiosk.current_app_version_code = int(data['app_version_code'])
+            except (ValueError, TypeError):
+                pass
+
+        # Reconcile OTA update status with active published releases
+        latest_rel = AppRelease.objects.filter(is_active=True, is_published=True).order_by('-version_code').first()
+        if latest_rel:
+            current_code = kiosk.current_app_version_code or 1
+            if current_code >= latest_rel.version_code:
+                kiosk.update_status = KioskDevice.UpdateStatus.UP_TO_DATE
+                kiosk.pending_update_release = None
+                kiosk.force_update_requested = False
+                kiosk.update_error = None
+            else:
+                if kiosk.update_status == KioskDevice.UpdateStatus.UP_TO_DATE:
+                    kiosk.update_status = KioskDevice.UpdateStatus.UPDATE_AVAILABLE
+                    kiosk.pending_update_release = latest_rel
+                elif kiosk.update_status in [KioskDevice.UpdateStatus.DOWNLOADING, KioskDevice.UpdateStatus.INSTALLING]:
+                    # If stuck in DOWNLOADING or INSTALLING for more than 15 minutes, mark as failed/timeout
+                    if not kiosk.update_started_at or (now - kiosk.update_started_at).total_seconds() > 900:
+                        kiosk.update_status = KioskDevice.UpdateStatus.FAILED
+                        kiosk.update_error = "Installation timed out or was interrupted"
+
         if 'android_version' in data and data['android_version']:
             kiosk.android_version = data['android_version']
         if 'device_model' in data and data['device_model']:
@@ -147,10 +168,14 @@ class KioskHeartbeatView(views.APIView):
             commands.append({
                 "command": "FORCE_APP_UPDATE"
             })
+            kiosk.force_update_requested = False
+            kiosk.save(update_fields=['force_update_requested'])
         elif kiosk.check_update_requested:
             commands.append({
                 "command": "CHECK_APP_UPDATE"
             })
+            kiosk.check_update_requested = False
+            kiosk.save(update_fields=['check_update_requested'])
 
 
         # Log occasional heartbeat event for telemetry stream (every 60s max per device)

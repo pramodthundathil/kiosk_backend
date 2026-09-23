@@ -176,11 +176,13 @@ class AppUpdateCheckView(views.APIView):
                 kiosk.app_version = client_version_name_raw.strip()
 
             kiosk.check_update_requested = False
+            kiosk.force_update_requested = False
             kiosk.save(update_fields=[
                 'last_update_check', 
                 'current_app_version_code', 
                 'app_version', 
-                'check_update_requested'
+                'check_update_requested',
+                'force_update_requested'
             ])
         else:
             if client_version_code is None:
@@ -238,12 +240,12 @@ class AppUpdateCheckView(views.APIView):
             }, status=status.HTTP_200_OK)
 
         # Already up to date
-        if kiosk and kiosk.update_status in [
-            KioskDevice.UpdateStatus.UPDATE_AVAILABLE, 
-            KioskDevice.UpdateStatus.FAILED
-        ]:
+        if kiosk:
             kiosk.update_status = KioskDevice.UpdateStatus.UP_TO_DATE
-            kiosk.save(update_fields=['update_status'])
+            kiosk.pending_update_release = None
+            kiosk.force_update_requested = False
+            kiosk.update_error = None
+            kiosk.save(update_fields=['update_status', 'pending_update_release', 'force_update_requested', 'update_error'])
 
         return Response({
             "update_available": False,
@@ -299,7 +301,7 @@ class AppUpdateStatusView(views.APIView):
             pass
         elif new_status == KioskDevice.UpdateStatus.UPDATED:
             kiosk.update_completed_at = now
-            kiosk.app_version = version_name
+            kiosk.app_version = str(version_name).strip()
             kiosk.current_app_version_code = version_code
             kiosk.force_update_requested = False
             kiosk.pending_update_release = None
@@ -308,6 +310,7 @@ class AppUpdateStatusView(views.APIView):
         elif new_status == KioskDevice.UpdateStatus.FAILED:
             kiosk.update_error = message or "Update failed"
             kiosk.force_update_requested = False
+            kiosk.pending_update_release = None
 
         kiosk.save()
 
