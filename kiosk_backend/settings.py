@@ -13,7 +13,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from django.conf.global_settings import STATICFILES_FINDERS
 from pathlib import Path
 import os
+import mimetypes
 from dotenv import load_dotenv
+
+# Register 3D model MIME types
+mimetypes.add_type("model/gltf-binary", ".glb")
+mimetypes.add_type("model/gltf+json", ".gltf")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

@@ -269,10 +269,29 @@
             }
         } else if (assetType === 'THREE_D' || ['gltf', 'glb'].includes(ext)) {
             container.innerHTML = `
-                <model-viewer src="${currentPreviewUrl}" camera-controls auto-rotate shadow-intensity="1" ar style="width: 100%; height: 55vh; min-height: 420px; background: #0f172a; border-radius: var(--radius-md);">
-                    <div slot="poster" style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff;">Loading 3D Model...</div>
+                <model-viewer id="activeModelViewer" src="${currentPreviewUrl}" camera-controls auto-rotate shadow-intensity="1" ar loading="eager" reveal="auto" bounds="tight" style="width: 100%; height: 55vh; min-height: 420px; background: #0f172a; border-radius: var(--radius-md);">
+                    <div slot="poster" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #fff; gap: 0.75rem;">
+                        <div style="width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.2); border-top-color: var(--accent-color, #3b82f6); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                        <span style="font-size: 0.9rem;">Loading 3D Model...</span>
+                    </div>
                 </model-viewer>
             `;
+            const mv = container.querySelector('#activeModelViewer');
+            if (mv) {
+                mv.addEventListener('error', () => {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 2.5rem 1.5rem; width: 100%; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8" style="margin-bottom: 1rem;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            <h4 style="font-size: 1.1rem; color: var(--primary-color); font-weight: 700; margin-bottom: 0.5rem;">Could not load 3D preview</h4>
+                            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">The 3D model could not be displayed. You can download the file directly below.</p>
+                            <a href="${currentPreviewUrl}" download target="_blank" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span>Download .GLB File</span>
+                            </a>
+                        </div>
+                    `;
+                });
+            }
         } else if (['mp3', 'wav', 'm4a', 'flac', 'aac'].includes(ext)) {
             container.innerHTML = `
                 <div style="text-align: center; width: 100%; padding: 3rem 1.5rem; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
