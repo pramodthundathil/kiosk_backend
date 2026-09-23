@@ -2132,7 +2132,8 @@ def admin_releases(request):
             if not rel.published_at:
                 rel.published_at = timezone.now()
             rel.save(update_fields=['is_published', 'published_at'])
-            messages.success(request, f"Release v{rel.version_name} ({rel.version_code}) published successfully.")
+            dispatched = KioskDevice.objects.filter(is_active=True).update(force_update_requested=True)
+            messages.success(request, f"Release v{rel.version_name} ({rel.version_code}) published successfully. Dispatched update signal to {dispatched} kiosks.")
             return redirect('admin_releases')
 
         elif action == "unpublish_release" and release_id:
@@ -2163,14 +2164,22 @@ def admin_releases(request):
     offline_count = 0
 
     latest_code = latest_release.version_code if latest_release else 0
+    rel_ver = (latest_release.version_name or '').lower().lstrip('v').strip() if latest_release else ''
 
     now = timezone.now()
     kiosk_rows = []
     for k in kiosks:
         k_code = k.current_app_version_code or 1
+        kiosk_ver = (k.app_version or '').lower().lstrip('v').strip()
         k_status = update_kiosk_status_and_alerts(k)
         is_online = (k_status == KioskDevice.Status.ONLINE)
-        is_up_to_date = (k_code >= latest_code) if latest_release else True
+
+        if latest_release:
+            is_up_to_date = (k_code > latest_code) or (
+                k_code == latest_code and (not kiosk_ver or kiosk_ver == rel_ver)
+            )
+        else:
+            is_up_to_date = True
 
         if not is_online:
             offline_count += 1
@@ -2350,10 +2359,16 @@ def admin_release_add(request):
         if target_kiosk_ids:
             release.target_kiosks.set(target_kiosk_ids)
 
+        if is_published:
+            if target_kiosk_ids:
+                KioskDevice.objects.filter(id__in=target_kiosk_ids, is_active=True).update(force_update_requested=True)
+            else:
+                KioskDevice.objects.filter(is_active=True).update(force_update_requested=True)
+
         messages.success(
             request, 
             f"Release v{release.version_name} ({release.version_code}) successfully created!"
-            + (" Published to kiosk fleet." if is_published else " Saved as draft.")
+            + (" Published and dispatched to kiosks." if is_published else " Saved as draft.")
         )
         return redirect('admin_releases')
 

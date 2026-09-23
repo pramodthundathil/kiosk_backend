@@ -80,9 +80,17 @@ class KioskHeartbeatView(views.APIView):
 
         # Reconcile OTA update status with active published releases
         latest_rel = AppRelease.objects.filter(is_active=True, is_published=True).order_by('-version_code').first()
+        is_up_to_date = True
         if latest_rel:
             current_code = kiosk.current_app_version_code or 1
-            if current_code >= latest_rel.version_code:
+            kiosk_ver = (kiosk.app_version or '').lower().lstrip('v').strip()
+            rel_ver = (latest_rel.version_name or '').lower().lstrip('v').strip()
+
+            is_up_to_date = (current_code > latest_rel.version_code) or (
+                current_code == latest_rel.version_code and (not kiosk_ver or kiosk_ver == rel_ver)
+            )
+
+            if is_up_to_date:
                 kiosk.update_status = KioskDevice.UpdateStatus.UP_TO_DATE
                 kiosk.pending_update_release = None
                 kiosk.force_update_requested = False
@@ -176,6 +184,10 @@ class KioskHeartbeatView(views.APIView):
             })
             kiosk.check_update_requested = False
             kiosk.save(update_fields=['check_update_requested'])
+        elif latest_rel and not is_up_to_date and kiosk.update_status not in [KioskDevice.UpdateStatus.DOWNLOADING, KioskDevice.UpdateStatus.INSTALLING]:
+            commands.append({
+                "command": "FORCE_APP_UPDATE"
+            })
 
 
         # Log occasional heartbeat event for telemetry stream (every 60s max per device)

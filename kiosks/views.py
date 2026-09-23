@@ -219,7 +219,17 @@ class AppUpdateCheckView(views.APIView):
             break
 
         # Check if matching release is newer than current installed version
-        if matching_release and matching_release.version_code > client_version_code:
+        kiosk_ver = (client_version_name_raw or (kiosk.app_version if kiosk else '') or '').lower().lstrip('v').strip()
+        rel_ver = (matching_release.version_name or '').lower().lstrip('v').strip() if matching_release else ''
+
+        is_newer = False
+        if matching_release:
+            if matching_release.version_code > client_version_code:
+                is_newer = True
+            elif matching_release.version_code == client_version_code and kiosk_ver and rel_ver and kiosk_ver != rel_ver:
+                is_newer = True
+
+        if is_newer:
             if kiosk:
                 kiosk.update_status = KioskDevice.UpdateStatus.UPDATE_AVAILABLE
                 kiosk.pending_update_release = matching_release
