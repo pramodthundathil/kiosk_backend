@@ -47,16 +47,27 @@
                     <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">SKU / PRODUCT CODE *</label>
                     <input type="text" name="sku" placeholder="e.g. EXE-CBR-16-3M" required style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
                 </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
                 <div>
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CATEGORY</label>
-                    <select name="category_id" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                        <option value="">-- Select Product Category --</option>
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">MAIN CATEGORY *</label>
+                    <select name="category_id" id="categorySelect" onchange="onCategoryChange()" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        <option value="">-- Select Main Category --</option>
                         {% for cat in categories %}
                         <option value="{{ cat.id }}">{{ cat.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
+                <div>
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">SUB-CATEGORY / PRODUCT CATEGORY</label>
+                    <select name="sub_category_id" id="subCategorySelect" onchange="onSubCategoryChange()" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        <option value="">-- Select Sub-Category (Optional) --</option>
+                        {% for sub in subcategories %}
+                        <option value="{{ sub.id }}" data-category-id="{{ sub.category.id }}">{{ sub.category.name }} ➔ {{ sub.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
+
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
                 <div>
@@ -184,6 +195,35 @@
             ['Expected Life Span', '30+ Years']
         ];
         defaultSpecs.forEach(pair => addSpecRow(pair[0], pair[1]));
+    }
+
+    function onCategoryChange() {
+        const catSelect = document.getElementById('categorySelect');
+        const subSelect = document.getElementById('subCategorySelect');
+        const selectedCatId = catSelect.value;
+
+        for (let i = 0; i < subSelect.options.length; i++) {
+            const opt = subSelect.options[i];
+            if (!opt.value) continue;
+            const parentCatId = opt.getAttribute('data-category-id');
+            if (!selectedCatId || parentCatId === selectedCatId) {
+                opt.style.display = '';
+            } else {
+                opt.style.display = 'none';
+            }
+        }
+    }
+
+    function onSubCategoryChange() {
+        const catSelect = document.getElementById('categorySelect');
+        const subSelect = document.getElementById('subCategorySelect');
+        const selectedSubOpt = subSelect.options[subSelect.selectedIndex];
+        if (selectedSubOpt && selectedSubOpt.value) {
+            const parentCatId = selectedSubOpt.getAttribute('data-category-id');
+            if (parentCatId && !catSelect.value) {
+                catSelect.value = parentCatId;
+            }
+        }
     }
 </script>
 {% endblock %}

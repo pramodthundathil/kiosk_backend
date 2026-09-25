@@ -44,6 +44,7 @@ urlpatterns = [
     path("api/kiosk/", include("kiosks.urls")),
     path("api/kiosk/", include("monitoring.urls")),
     path("api/products/", include("products.urls")),
+    path("api/categories/", include("products.urls")),
 
 
     #authentication urls 

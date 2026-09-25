@@ -15,11 +15,12 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" id="productSearchInput" onkeyup="filterProducts()" placeholder="Search product name or SKU...">
+                <input type="text" id="productSearchInput" placeholder="Search product name, SKU, category...">
             </div>
-            <button class="btn btn-secondary" onclick="openModal('categoryModal')">
-                <span>+ Add Category</span>
-            </button>
+            <a href="{% url 'admin_categories' %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Manage Categories</span>
+            </a>
             <a href="{% url 'admin_product_add' %}" class="btn btn-accent" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>Add Product</span>
@@ -27,11 +28,23 @@
         </div>
     </div>
 
-    <!-- Category Filter Bar -->
-    <div style="padding: 1rem 1.5rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); display: flex; gap: 0.5rem; overflow-x: auto;">
+    <!-- Category Filter Bar (Tier 1) -->
+    <div style="padding: 0.75rem 1.5rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem; overflow-x: auto;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); white-space: nowrap; margin-right: 0.25rem;">Main Category:</span>
         <button class="btn btn-secondary btn-sm filter-pill active" onclick="filterCategory('all', this)">All Categories</button>
         {% for cat in categories %}
         <button class="btn btn-secondary btn-sm filter-pill" onclick="filterCategory('{{ cat.id }}', this)">{{ cat.name }}</button>
+        {% endfor %}
+    </div>
+
+    <!-- Sub-Category Filter Bar (Tier 2) -->
+    <div id="subcategoryFilterBar" style="padding: 0.6rem 1.5rem; background: rgba(13, 96, 174, 0.03); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.4rem; overflow-x: auto;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--primary-color); white-space: nowrap; margin-right: 0.25rem;">Sub-Category:</span>
+        <button class="btn btn-secondary btn-sm subfilter-pill active" onclick="filterSubCategory('all', this)">All Sub-Categories</button>
+        {% for sub in subcategories %}
+        <button class="btn btn-secondary btn-sm subfilter-pill" data-parent-cat="{{ sub.category.id }}" onclick="filterSubCategory('{{ sub.id }}', this)">
+            {{ sub.name }}
+        </button>
         {% endfor %}
     </div>
 
@@ -42,32 +55,50 @@
             <thead>
                 <tr>
                     <th>Image</th>
-                    <th>Product Name</th>
+                    <th>Product Name & Description</th>
                     <th>SKU Code</th>
-                    <th>Category</th>
+                    <th>Classification (Category & Sub-Category)</th>
                     <th>Price & Stock</th>
-                    <th>Media Assets DB</th>
+                    <th>Media Assets</th>
                     <th style="text-align: center;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for p in products %}
-                <tr class="product-row" data-category="{% if p.category %}{{ p.category.id }}{% endif %}" data-search="{{ p.name }} {{ p.sku }} {% if p.category %}{{ p.category.name }}{% endif %}">
+                <tr class="product-row" 
+                    data-category="{% if p.category %}{{ p.category.id }}{% endif %}" 
+                    data-subcategory="{% if p.sub_category %}{{ p.sub_category.id }}{% endif %}"
+                    data-search="{{ p.name }} {{ p.sku }} {% if p.category %}{{ p.category.name }}{% endif %} {% if p.sub_category %}{{ p.sub_category.name }}{% endif %}">
                     <td style="width: 60px;">
                         {% if p.image %}
-                        <img src="{{ p.image.url }}" alt="{{ p.name }}" style="width: 42px; height: 42px; object-fit: cover; border-radius: var(--radius-sm);">
+                        <img src="{{ p.image.url }}" alt="{{ p.name }}" style="width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                         {% else %}
-                        <div style="width: 42px; height: 42px; background: var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700;">PROD</div>
+                        <div style="width: 44px; height: 44px; background: var(--border-color); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700;">PROD</div>
                         {% endif %}
                     </td>
                     <td>
                         <a href="{% url 'admin_product_detail' p.id %}" style="text-decoration: none;">
                             <strong style="color: var(--primary-color); font-size: 0.95rem;">{{ p.name }}</strong>
                         </a>
-                        {% if p.description %}<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">{{ p.description|truncatewords:8 }}</p>{% endif %}
+                        {% if p.description %}<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem; margin-bottom: 0;">{{ p.description|truncatewords:10 }}</p>{% endif %}
                     </td>
-                    <td><code style="font-size: 0.85rem; color: var(--text-secondary);">{{ p.sku }}</code></td>
-                    <td><span class="role-badge" style="background: var(--bg-body); color: var(--text-primary); border: 1px solid var(--border-color);">{% if p.category %}{{ p.category.name }}{% else %}General{% endif %}</span></td>
+                    <td><code style="font-size: 0.82rem; color: var(--text-secondary); background: var(--bg-body); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid var(--border-color);">{{ p.sku }}</code></td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            <!-- Category Badge -->
+                            <span class="role-badge" style="background: rgba(13, 96, 174, 0.08); color: var(--primary-color); border: 1px solid rgba(13, 96, 174, 0.2); font-weight: 700; width: fit-content;">
+                                📁 {% if p.category %}{{ p.category.name }}{% else %}Uncategorized{% endif %}
+                            </span>
+                            <!-- Sub-Category Badge -->
+                            {% if p.sub_category %}
+                            <span style="font-size: 0.76rem; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 600;">
+                                <span style="color: var(--primary-color);">↳</span> {{ p.sub_category.name }}
+                            </span>
+                            {% else %}
+                            <span style="font-size: 0.72rem; color: var(--text-secondary); opacity: 0.6; font-style: italic;">No sub-category</span>
+                            {% endif %}
+                        </div>
+                    </td>
                     <td>
                         <div><strong style="color: var(--accent-color);">₹{{ p.price }}</strong></div>
                         <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ p.stock }} in stock</span>
@@ -108,156 +139,22 @@
         <div class="empty-state">
             <h4>No Products in Catalog</h4>
             <p>Add products to display them on physical kiosk screens and manage inventory.</p>
-            <a href="{% url 'admin_product_add' %}" class="btn btn-accent" style="text-decoration: none;">
-                <span>Add First Product</span>
-            </a>
+            <a href="{% url 'admin_product_add' %}" class="btn btn-accent">Add First Product</a>
         </div>
         {% endif %}
-    </div>
-</div>
-
-<!-- ADD PRODUCT MODAL -->
-<div class="modal-overlay" id="addProductModal">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>Add New Product</h3>
-            <button class="modal-close-btn" onclick="closeModal('addProductModal')">&times;</button>
-        </div>
-        <form action="{% url 'admin_products' %}" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="add_product">
-            <div class="modal-body">
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PRODUCT NAME *</label>
-                    <input type="text" name="name" placeholder="e.g. Copper Bonded Earth Electrode 16mm" required>
-                </div>
-                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">SKU / CODE *</label>
-                        <input type="text" name="sku" placeholder="e.g. EXE-CBR-16" required>
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CATEGORY</label>
-                        <select name="category_id">
-                            <option value="">-- Select Category --</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat.id }}">{{ cat.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PRICE (₹)</label>
-                        <input type="number" step="0.01" name="price" placeholder="1500.00">
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">STOCK QUANTITY</label>
-                        <input type="number" name="stock" value="100">
-                    </div>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PRODUCT IMAGE</label>
-                    <input type="file" name="image" accept="image/*">
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">DESCRIPTION / SPECIFICATIONS</label>
-                    <textarea name="description" rows="3" style="width: 100%; padding: 0.75rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);" placeholder="Detailed product specifications..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('addProductModal')">Cancel</button>
-                <button type="submit" class="btn btn-accent">Save Product</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- EDIT PRODUCT MODAL -->
-<div class="modal-overlay" id="editProductModal">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>Edit Product Details</h3>
-            <button class="modal-close-btn" onclick="closeModal('editProductModal')">&times;</button>
-        </div>
-        <form action="{% url 'admin_products' %}" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_product">
-            <input type="hidden" name="product_id" id="editProdId">
-            <div class="modal-body">
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PRODUCT NAME</label>
-                    <input type="text" name="name" id="editProdName" required>
-                </div>
-                <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">PRICE (₹)</label>
-                        <input type="number" step="0.01" name="price" id="editProdPrice">
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CATEGORY</label>
-                        <select name="category_id" id="editProdCategory">
-                            <option value="">-- Select Category --</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat.id }}">{{ cat.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">DESCRIPTION</label>
-                    <textarea name="description" id="editProdDesc" rows="3" style="width: 100%; padding: 0.75rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-md);"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('editProductModal')">Cancel</button>
-                <button type="submit" class="btn btn-accent">Update Product</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ADD CATEGORY MODAL -->
-<div class="modal-overlay" id="categoryModal">
-    <div class="modal-card" style="max-width: 450px;">
-        <div class="modal-header">
-            <h3>Add Category</h3>
-            <button class="modal-close-btn" onclick="closeModal('categoryModal')">&times;</button>
-        </div>
-        <form action="{% url 'admin_products' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="add_category">
-            <div class="modal-body">
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CATEGORY NAME</label>
-                    <input type="text" name="name" placeholder="e.g. Lightning Protection" required>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CATEGORY CODE</label>
-                    <input type="text" name="code" placeholder="e.g. LIGHTNING" required>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('categoryModal')">Cancel</button>
-                <button type="submit" class="btn btn-accent">Save Category</button>
-            </div>
-        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function openModal(id) {
-        document.getElementById(id).classList.add('active');
-    }
-    function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
-    }
+    var currentCatFilter = 'all';
+    var currentSubCatFilter = 'all';
+
     $(document).ready(function() {
         if ($('#productTable').length) {
             var table = $('#productTable').DataTable({
-                "pageLength": 10,
+                "pageLength": 15,
                 "order": [],
                 "dom": '<"top"l>rt<"bottom"ip><"clear">',
                 "language": {
@@ -271,25 +168,59 @@
         }
     });
 
-    function openEditProduct(id, name, price, stock, catId, desc) {
-        document.getElementById('editProdId').value = id;
-        document.getElementById('editProdName').value = name;
-        document.getElementById('editProdPrice').value = price;
-        document.getElementById('editProdCategory').value = catId;
-        document.getElementById('editProdDesc').value = desc;
-        openModal('editProductModal');
-    }
     function filterCategory(catId, btnEl) {
         document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
         btnEl.classList.add('active');
-        
+        currentCatFilter = catId;
+        currentSubCatFilter = 'all';
+
+        // Reset subcategory pills
+        document.querySelectorAll('.subfilter-pill').forEach(b => {
+            b.classList.remove('active');
+            if (b.innerText.includes('All Sub-Categories')) {
+                b.classList.add('active');
+            }
+            if (catId === 'all') {
+                b.style.display = 'inline-flex';
+            } else {
+                var parent = b.getAttribute('data-parent-cat');
+                if (!parent || parent === catId) {
+                    b.style.display = 'inline-flex';
+                } else {
+                    b.style.display = 'none';
+                }
+            }
+        });
+
+        applyCombinedFilter();
+    }
+
+    function filterSubCategory(subId, btnEl) {
+        document.querySelectorAll('.subfilter-pill').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
+        currentSubCatFilter = subId;
+        applyCombinedFilter();
+    }
+
+    function applyCombinedFilter() {
         if ($.fn.DataTable.isDataTable('#productTable')) {
             var table = $('#productTable').DataTable();
-            if (catId === 'all') {
-                table.column(3).search('').draw();
-            } else {
-                table.column(3).search($(btnEl).text().trim()).draw();
-            }
+            $.fn.dataTable.ext.search.pop(); // Remove old custom search
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
+                var rowNode = table.row(dataIndex).node();
+                if (!rowNode) return true;
+
+                var rowCat = $(rowNode).attr('data-category') || '';
+                var rowSub = $(rowNode).attr('data-subcategory') || '';
+
+                var matchCat = (currentCatFilter === 'all' || rowCat === currentCatFilter);
+                var matchSub = (currentSubCatFilter === 'all' || rowSub === currentSubCatFilter);
+
+                return matchCat && matchSub;
+            });
+
+            table.draw();
         }
     }
 </script>

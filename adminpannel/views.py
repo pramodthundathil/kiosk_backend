@@ -17,8 +17,9 @@ from django.db.models.functions import ExtractHour, TruncDate
 from datetime import timedelta
 import csv
 from django.http import HttpResponse
-from products.models import Product, Category
+from products.models import Product, Category, SubCategory
 from content.models import MediaAsset, Screensaver
+
 
 User = get_user_model()
 
@@ -619,7 +620,9 @@ def admin_products(request):
                 product.stock = request.POST.get('stock', product.stock)
                 product.description = request.POST.get('description', product.description).strip()
                 cat_id = request.POST.get('category_id', '').strip()
-                product.category = Category.objects.filter(id=cat_id).first() if cat_id else product.category
+                subcat_id = request.POST.get('sub_category_id', '').strip()
+                product.sub_category = SubCategory.objects.filter(id=subcat_id).first() if subcat_id else None
+                product.category = Category.objects.filter(id=cat_id).first() if cat_id else (product.sub_category.category if product.sub_category else None)
                 if request.FILES.get('image'):
                     product.image = request.FILES.get('image')
                 product.save()
@@ -646,12 +649,40 @@ def admin_products(request):
                 messages.success(request, f"Category '{cat_name}' created.")
             return redirect('admin_products')
 
-    products = Product.objects.select_related('category').prefetch_related('media_assets').filter(is_active=True).order_by('-created_at')
-    categories = Category.objects.filter(is_active=True).order_by('name')
+        elif action == "add_subcategory":
+            cat_id = request.POST.get('category_id')
+            sub_name = request.POST.get('name', '').strip()
+            sub_code = request.POST.get('code', '').strip()
+            if cat_id and sub_name and sub_code:
+                category = Category.objects.filter(id=cat_id).first()
+                if category:
+                    SubCategory.objects.get_or_create(
+                        category=category,
+                        code=sub_code.upper(),
+                        defaults={'name': sub_name}
+                    )
+                    messages.success(request, f"Sub-Category '{sub_name}' created under '{category.name}'.")
+            return redirect('admin_products')
+
+    selected_cat_id = request.GET.get('category', '').strip()
+    selected_subcat_id = request.GET.get('subcategory', '').strip()
+
+    products = Product.objects.select_related('category', 'sub_category').prefetch_related('media_assets', 'assigned_kiosks').filter(is_active=True).order_by('-created_at')
+
+    if selected_cat_id and selected_cat_id != 'all':
+        products = products.filter(category_id=selected_cat_id)
+    if selected_subcat_id and selected_subcat_id != 'all':
+        products = products.filter(sub_category_id=selected_subcat_id)
+
+    categories = Category.objects.filter(is_active=True).prefetch_related('subcategories').order_by('display_order', 'name')
+    subcategories = SubCategory.objects.filter(is_active=True).select_related('category').order_by('category__name', 'display_order', 'name')
 
     context = {
         'products': products,
         'categories': categories,
+        'subcategories': subcategories,
+        'selected_cat_id': selected_cat_id,
+        'selected_subcat_id': selected_subcat_id,
         'total_products': products.count(),
         'active_tab': 'products',
         'page_title': 'Product Catalog Management',
@@ -671,6 +702,7 @@ def admin_product_add(request):
         name = request.POST.get('name', '').strip()
         sku = request.POST.get('sku', '').strip()
         category_id = request.POST.get('category_id', '').strip()
+        sub_category_id = request.POST.get('sub_category_id', '').strip()
         price = request.POST.get('price', '0.00').strip()
         stock = request.POST.get('stock', '100').strip()
         description = request.POST.get('description', '').strip()
@@ -693,11 +725,14 @@ def admin_product_add(request):
             messages.error(request, f"Product SKU '{sku}' already exists.")
             return redirect('admin_product_add')
 
-        category = Category.objects.filter(id=category_id).first() if category_id else None
+        sub_category = SubCategory.objects.filter(id=sub_category_id).first() if sub_category_id else None
+        category = Category.objects.filter(id=category_id).first() if category_id else (sub_category.category if sub_category else None)
+
         product = Product.objects.create(
             name=name,
             sku=sku,
             category=category,
+            sub_category=sub_category,
             price=price or 0.00,
             stock=stock or 100,
             description=description,
@@ -722,10 +757,12 @@ def admin_product_add(request):
         messages.success(request, f"Product '{name}' created successfully! Add specifications and media assets below.")
         return redirect('admin_product_detail', product_id=product.id)
 
-    categories = Category.objects.filter(is_active=True).order_by('name')
+    categories = Category.objects.filter(is_active=True).prefetch_related('subcategories').order_by('display_order', 'name')
+    subcategories = SubCategory.objects.filter(is_active=True).select_related('category').order_by('display_order', 'name')
 
     context = {
         'categories': categories,
+        'subcategories': subcategories,
         'active_tab': 'products',
         'page_title': 'Add New Product to Catalog',
         'breadcrumbs': [
@@ -741,7 +778,7 @@ def admin_product_detail(request, product_id):
     if not request.user.is_authenticated:
         return redirect('signin')
 
-    product = get_object_or_404(Product.objects.select_related('category').prefetch_related('media_assets'), id=product_id)
+    product = get_object_or_404(Product.objects.select_related('category', 'sub_category').prefetch_related('media_assets'), id=product_id)
 
     if request.method == "POST":
         action = request.POST.get('action')
@@ -753,7 +790,9 @@ def admin_product_detail(request, product_id):
             product.stock = request.POST.get('stock', product.stock)
             product.description = request.POST.get('description', product.description).strip()
             cat_id = request.POST.get('category_id', '').strip()
-            product.category = Category.objects.filter(id=cat_id).first() if cat_id else None
+            subcat_id = request.POST.get('sub_category_id', '').strip()
+            product.sub_category = SubCategory.objects.filter(id=subcat_id).first() if subcat_id else None
+            product.category = Category.objects.filter(id=cat_id).first() if cat_id else (product.sub_category.category if product.sub_category else None)
             if request.FILES.get('image'):
                 product.image = request.FILES.get('image')
             product.save()
@@ -761,7 +800,6 @@ def admin_product_detail(request, product_id):
             return redirect('admin_product_detail', product_id=product.id)
 
         elif action == "update_specifications":
-            # Dynamic Specifications processing from key-value arrays
             spec_keys = request.POST.getlist('spec_key')
             spec_values = request.POST.getlist('spec_value')
             
@@ -837,7 +875,8 @@ def admin_product_detail(request, product_id):
             messages.success(request, f"Updated kiosk display availability for '{product.name}' ({len(kiosk_ids)} kiosks).")
             return redirect('admin_product_detail', product_id=product.id)
 
-    categories = Category.objects.filter(is_active=True).order_by('name')
+    categories = Category.objects.filter(is_active=True).prefetch_related('subcategories').order_by('display_order', 'name')
+    subcategories = SubCategory.objects.filter(is_active=True).select_related('category').order_by('display_order', 'name')
     media_items = product.media_assets.filter(is_active=True).order_by('-created_at')
 
     # Kiosk Display Assignments
@@ -858,6 +897,7 @@ def admin_product_detail(request, product_id):
     context = {
         'product': product,
         'categories': categories,
+        'subcategories': subcategories,
         'media_items': media_items,
         'media_counts': media_counts,
         'asset_types': MediaAsset.AssetType.choices,
@@ -875,18 +915,20 @@ def admin_product_detail(request, product_id):
 
 
 def admin_categories(request):
-    """Dedicated Categories Management Page: Add, Edit, Delete Categories & Upload Category Images."""
+    """Dedicated Categories & Sub-Categories Management Page: Add, Edit, Delete Categories and Sub-Categories."""
     if not request.user.is_authenticated:
         return redirect('signin')
 
     if request.method == "POST":
         action = request.POST.get('action')
 
+        # ── Main Category Actions ──
         if action == "add_category":
             cat_name = request.POST.get('name', '').strip()
             cat_code = request.POST.get('code', '').strip()
             description = request.POST.get('description', '').strip()
             image = request.FILES.get('image')
+            display_order = int(request.POST.get('display_order', 0) or 0)
 
             if not cat_name or not cat_code:
                 messages.error(request, "Category Name and Code are required.")
@@ -897,6 +939,7 @@ def admin_categories(request):
                     name=cat_name,
                     code=cat_code.upper(),
                     description=description,
+                    display_order=display_order,
                 )
                 if image:
                     cat.image = image
@@ -910,6 +953,7 @@ def admin_categories(request):
                 cat = Category.objects.get(id=category_id)
                 cat.name = request.POST.get('name', cat.name).strip()
                 cat.description = request.POST.get('description', cat.description or '').strip()
+                cat.display_order = int(request.POST.get('display_order', cat.display_order) or 0)
                 if request.FILES.get('image'):
                     cat.image = request.FILES.get('image')
                 cat.save()
@@ -938,8 +982,9 @@ def admin_categories(request):
                 cat = Category.objects.get(id=category_id)
                 cat_name = cat.name
                 product_count = cat.products.count()
-                if product_count > 0:
-                    messages.error(request, f"Cannot delete '{cat_name}' — it has {product_count} product(s). Reassign or delete products first.")
+                subcat_count = cat.subcategories.count()
+                if product_count > 0 or subcat_count > 0:
+                    messages.error(request, f"Cannot delete '{cat_name}' — it has {subcat_count} sub-category(ies) and {product_count} product(s). Delete or reassign them first.")
                 else:
                     cat.delete()
                     messages.success(request, f"Category '{cat_name}' deleted successfully.")
@@ -959,20 +1004,116 @@ def admin_categories(request):
                 messages.error(request, "Category not found.")
             return redirect('admin_categories')
 
-    categories = Category.objects.prefetch_related('products').all().order_by('name')
+        # ── Sub-Category Actions ──
+        elif action == "add_subcategory":
+            category_id = request.POST.get('category_id')
+            sub_name = request.POST.get('name', '').strip()
+            sub_code = request.POST.get('code', '').strip()
+            description = request.POST.get('description', '').strip()
+            display_order = int(request.POST.get('display_order', 0) or 0)
+            image = request.FILES.get('image')
+
+            category = Category.objects.filter(id=category_id).first()
+            if not category:
+                messages.error(request, "Parent category is required.")
+            elif not sub_name or not sub_code:
+                messages.error(request, "Sub-Category Name and Code are required.")
+            elif SubCategory.objects.filter(category=category, code=sub_code.upper()).exists():
+                messages.error(request, f"Sub-Category code '{sub_code.upper()}' already exists under '{category.name}'.")
+            else:
+                sub = SubCategory.objects.create(
+                    category=category,
+                    name=sub_name,
+                    code=sub_code.upper(),
+                    description=description,
+                    display_order=display_order,
+                )
+                if image:
+                    sub.image = image
+                    sub.save()
+                messages.success(request, f"Sub-Category '{sub_name}' added under '{category.name}'.")
+            return redirect('admin_categories')
+
+        elif action == "update_subcategory":
+            subcategory_id = request.POST.get('subcategory_id')
+            try:
+                sub = SubCategory.objects.get(id=subcategory_id)
+                sub.name = request.POST.get('name', sub.name).strip()
+                sub.description = request.POST.get('description', sub.description or '').strip()
+                sub.display_order = int(request.POST.get('display_order', sub.display_order) or 0)
+                cat_id = request.POST.get('category_id')
+                if cat_id:
+                    new_cat = Category.objects.filter(id=cat_id).first()
+                    if new_cat:
+                        sub.category = new_cat
+                if request.FILES.get('image'):
+                    sub.image = request.FILES.get('image')
+                sub.save()
+                messages.success(request, f"Sub-Category '{sub.name}' updated successfully.")
+            except SubCategory.DoesNotExist:
+                messages.error(request, "Sub-Category not found.")
+            return redirect('admin_categories')
+
+        elif action == "upload_subcategory_image":
+            subcategory_id = request.POST.get('subcategory_id')
+            try:
+                sub = SubCategory.objects.get(id=subcategory_id)
+                if request.FILES.get('image'):
+                    sub.image = request.FILES.get('image')
+                    sub.save()
+                    messages.success(request, f"Image uploaded for sub-category '{sub.name}'.")
+                else:
+                    messages.error(request, "Please select an image file to upload.")
+            except SubCategory.DoesNotExist:
+                messages.error(request, "Sub-Category not found.")
+            return redirect('admin_categories')
+
+        elif action == "delete_subcategory":
+            subcategory_id = request.POST.get('subcategory_id')
+            try:
+                sub = SubCategory.objects.get(id=subcategory_id)
+                sub_name = sub.name
+                product_count = sub.products.count()
+                if product_count > 0:
+                    messages.error(request, f"Cannot delete '{sub_name}' — it has {product_count} product(s). Reassign or delete products first.")
+                else:
+                    sub.delete()
+                    messages.success(request, f"Sub-Category '{sub_name}' deleted successfully.")
+            except SubCategory.DoesNotExist:
+                messages.error(request, "Sub-Category not found.")
+            return redirect('admin_categories')
+
+        elif action == "toggle_subcategory_active":
+            subcategory_id = request.POST.get('subcategory_id')
+            try:
+                sub = SubCategory.objects.get(id=subcategory_id)
+                sub.is_active = not sub.is_active
+                sub.save()
+                status_label = "activated" if sub.is_active else "deactivated"
+                messages.success(request, f"Sub-Category '{sub.name}' {status_label}.")
+            except SubCategory.DoesNotExist:
+                messages.error(request, "Sub-Category not found.")
+            return redirect('admin_categories')
+
+    categories = Category.objects.prefetch_related('subcategories', 'products').all().order_by('display_order', 'name')
     for cat in categories:
         cat.product_count = cat.products.filter(is_active=True).count()
+        cat.subcat_count = cat.subcategories.filter(is_active=True).count()
+
+    total_subcategories = SubCategory.objects.count()
 
     context = {
         'categories': categories,
         'total_categories': categories.count(),
+        'total_subcategories': total_subcategories,
         'active_tab': 'categories',
-        'page_title': 'Product Categories Management',
+        'page_title': 'Categories & Product Categories Management',
         'breadcrumbs': [
             {'name': 'Categories', 'url': ''}
         ]
     }
     return render(request, "admin/categories.html", context)
+
 
 
 def admin_stores(request):

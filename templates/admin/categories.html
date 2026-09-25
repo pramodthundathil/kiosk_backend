@@ -1,100 +1,200 @@
 {% extends 'admin/base_admin.html' %}
 {% load static %}
 
-{% block title %}Categories Management - Excel Earthings CMS{% endblock %}
+{% block title %}Categories & Product Categories - Excel Earthings CMS{% endblock %}
 
 {% block content %}
 <div class="panel-card" style="margin-bottom: 2rem;">
     <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
         <div class="panel-title">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            <span>Product Categories ({{ total_categories }} Total)</span>
+            <span>Product Catalog Hierarchy ({{ total_categories }} Categories · {{ total_subcategories }} Sub-Categories)</span>
         </div>
-        <div class="panel-actions">
+        <div class="panel-actions" style="flex-wrap: wrap; gap: 0.5rem;">
             <a href="{% url 'admin_products' %}" class="btn btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                 <span>View Products</span>
             </a>
-            <button class="btn btn-accent" onclick="openModal('addCategoryModal')" style="display:inline-flex; align-items:center; gap:0.4rem;">
+            <button class="btn btn-secondary" onclick="openAddSubcategoryModal()" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"></path></svg>
+                <span>Add Sub-Category</span>
+            </button>
+            <button class="btn btn-accent" onclick="openModal('addCategoryModal')" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                <span>Add Category</span>
+                <span>Add Main Category</span>
             </button>
         </div>
     </div>
 
+    <!-- Hierarchy Notice Banner -->
+    <div style="padding: 0.9rem 1.5rem; background: rgba(13, 96, 174, 0.06); border-bottom: 1px solid rgba(13, 96, 174, 0.15); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--primary-color);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span><strong>3-Tier Catalog Architecture:</strong> Main Category (e.g. Electrical Earthing) ➔ Sub-Category (e.g. Earth Compounds) ➔ Product (e.g. Conductive Concrete)</span>
+        </div>
+    </div>
+
     {% if categories %}
-    <div style="padding: 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 2rem;">
         {% for cat in categories %}
-        <div class="panel-card" style="margin:0; border: 1.5px solid var(--border-color); overflow: hidden; transition: box-shadow 0.2s, transform 0.2s;" onmouseover="this.style.boxShadow='0 8px 30px rgba(0,0,0,0.15)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow=''; this.style.transform='';">
+        <div class="panel-card" style="margin: 0; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-card); box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+            
+            <!-- Category Banner Bar -->
+            <div style="padding: 1.25rem 1.5rem; background: linear-gradient(135deg, rgba(13, 96, 174, 0.04) 0%, rgba(248, 250, 252, 0.9) 100%); border-bottom: 1.5px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                
+                <div style="display: flex; align-items: center; gap: 1.25rem;">
+                    <!-- Category Thumbnail -->
+                    <div style="width: 64px; height: 64px; border-radius: var(--radius-md); background: #ffffff; border: 1.5px solid var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+                        {% if cat.image %}
+                        <img src="{{ cat.image.url }}" alt="{{ cat.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 0.25rem;">
+                        {% else %}
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="1.8" opacity="0.6"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        {% endif %}
+                    </div>
 
-            <!-- Image Area -->
-            <div style="width: 100%; height: 180px; background: #f8f9fa; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                {% if cat.image %}
-                <img src="{{ cat.image.url }}" alt="{{ cat.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 1rem;">
-                {% else %}
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    <span style="font-size: 0.75rem; opacity: 0.5;">No Image</span>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 0;">{{ cat.name }}</h3>
+                            <code style="font-size: 0.72rem; background: var(--bg-body); padding: 0.15rem 0.5rem; border-radius: 4px; color: var(--text-secondary); border: 1px solid var(--border-color);">{{ cat.code }}</code>
+                            {% if cat.is_active %}
+                            <span style="background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px;">ACTIVE</span>
+                            {% else %}
+                            <span style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px;">INACTIVE</span>
+                            {% endif %}
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0;">{{ cat.description|default:"No description provided." }}</p>
+                    </div>
                 </div>
-                {% endif %}
-                <div style="position: absolute; top: 0.6rem; right: 0.6rem;">
-                    {% if cat.is_active %}
-                    <span style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 999px;">ACTIVE</span>
-                    {% else %}
-                    <span style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 999px;">INACTIVE</span>
-                    {% endif %}
-                </div>
-            </div>
 
-            <!-- Card Body -->
-            <div style="padding: 1rem 1.1rem 0.8rem;">
-                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem;">
-                    <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0; line-height: 1.3;">{{ cat.name }}</h3>
-                    <code style="font-size: 0.7rem; background: var(--bg-body); padding: 0.15rem 0.4rem; border-radius: 4px; color: var(--text-secondary); white-space: nowrap; border: 1px solid var(--border-color);">{{ cat.code }}</code>
-                </div>
-                {% if cat.description %}
-                <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.75rem; line-height: 1.4;">{{ cat.description|truncatewords:12 }}</p>
-                {% else %}
-                <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.75rem; opacity: 0.5; font-style: italic;">No description</p>
-                {% endif %}
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                    <span style="background: rgba(99,102,241,0.1); color: var(--primary-color); border: 1px solid rgba(99,102,241,0.2); font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px;">
-                        {{ cat.product_count }} Product{{ cat.product_count|pluralize }}
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <span style="background: rgba(13, 96, 174, 0.08); color: var(--primary-color); border: 1px solid rgba(13, 96, 174, 0.2); font-size: 0.8rem; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 999px;">
+                        {{ cat.subcat_count }} Sub-Categories · {{ cat.product_count }} Products
                     </span>
-                </div>
 
-                <!-- Actions -->
-                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-                    <button class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.35rem 0.5rem; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem;"
-                        onclick="openUploadModal('{{ cat.id }}', '{{ cat.name|escapejs }}')">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <button class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" onclick="openUploadModal('{{ cat.id }}', '{{ cat.name|escapejs }}')">
                         <span>{% if cat.image %}Replace{% else %}Upload{% endif %} Image</span>
                     </button>
-                    <button class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.35rem 0.6rem; display:inline-flex; align-items:center; gap:0.3rem;"
-                        onclick="openEditModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.code }}', '{{ cat.description|default:""  |escapejs }}')">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+
+                    <button class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" onclick="openEditModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.code }}', '{{ cat.description|default:""|escapejs }}', '{{ cat.display_order }}')">
+                        <span>Edit</span>
                     </button>
+
+                    <button class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; background: var(--primary-color); color: #fff; display: inline-flex; align-items: center; gap: 0.3rem;" onclick="openAddSubcategoryForCategory('{{ cat.id }}', '{{ cat.name|escapejs }}')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Add Sub-Category</span>
+                    </button>
+
                     <form action="{% url 'admin_categories' %}" method="post" style="display:inline;">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="toggle_active">
                         <input type="hidden" name="category_id" value="{{ cat.id }}">
-                        <button type="submit" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.35rem 0.6rem;" title="{% if cat.is_active %}Deactivate{% else %}Activate{% endif %}">
+                        <button type="submit" class="btn btn-secondary btn-sm" style="font-size:0.8rem; padding:0.35rem 0.6rem;" title="{% if cat.is_active %}Deactivate Category{% else %}Activate Category{% endif %}">
                             {% if cat.is_active %}
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            <span style="color: #f59e0b;">Deactivate</span>
                             {% else %}
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            <span style="color: #10b981;">Activate</span>
                             {% endif %}
                         </button>
                     </form>
-                    <form action="{% url 'admin_categories' %}" method="post" style="display:inline;" onsubmit="return confirm('Delete \'{{ cat.name }}\'? Products in this category will be uncategorised.');">
+
+                    <form action="{% url 'admin_categories' %}" method="post" style="display:inline;" onsubmit="return confirm('Delete \'{{ cat.name }}\'? Any subcategories and products must be reassigned or deleted first.');">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete_category">
                         <input type="hidden" name="category_id" value="{{ cat.id }}">
-                        <button type="submit" class="action-icon-btn" style="border-color: rgba(239,68,68,0.3); color: var(--danger-color); padding:0.35rem 0.5rem;">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <button type="submit" class="action-icon-btn" style="border-color: rgba(239,68,68,0.3); color: var(--danger-color); padding:0.35rem 0.5rem;" title="Delete Category">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
                     </form>
                 </div>
+            </div>
+
+            <!-- Sub-Categories Section -->
+            <div style="padding: 1.5rem; background: var(--bg-card);">
+                <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">
+                        Sub-Categories under {{ cat.name }} ({{ cat.subcategories.count }})
+                    </span>
+                    <a href="{% url 'admin_products' %}?category={{ cat.id }}" style="font-size: 0.8rem; color: var(--primary-color); text-decoration: none; font-weight: 600;">
+                        View all products in this category &rarr;
+                    </a>
+                </div>
+
+                {% if cat.subcategories.all %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1.1rem;">
+                    {% for sub in cat.subcategories.all %}
+                    <div style="border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 4px 14px rgba(0,0,0,0.06)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none';">
+                        <div>
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: var(--bg-body); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                        {% if sub.image %}
+                                        <img src="{{ sub.image.url }}" alt="{{ sub.name }}" style="width: 100%; height: 100%; object-fit: contain;">
+                                        {% else %}
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.8"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0;">{{ sub.name }}</h4>
+                                        <code style="font-size: 0.68rem; color: var(--text-secondary); background: var(--bg-body); padding: 0.1rem 0.35rem; border-radius: 3px; border: 1px solid var(--border-color);">{{ sub.code }}</code>
+                                    </div>
+                                </div>
+                                {% if sub.is_active %}
+                                <span style="background: rgba(16,185,129,0.12); color: #10b981; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 999px;">Active</span>
+                                {% else %}
+                                <span style="background: rgba(239,68,68,0.1); color: #ef4444; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 999px;">Inactive</span>
+                                {% endif %}
+                            </div>
+
+                            {% if sub.description %}
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.4rem 0 0.8rem; line-height: 1.4;">{{ sub.description|truncatewords:14 }}</p>
+                            {% else %}
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.4rem 0 0.8rem; opacity: 0.5; font-style: italic;">No description</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid var(--border-color); font-size: 0.8rem;">
+                                <a href="{% url 'admin_products' %}?subcategory={{ sub.id }}" style="text-decoration: none; font-weight: 700; color: var(--primary-color); display: inline-flex; align-items: center; gap: 0.3rem;">
+                                    <span>📦 {{ sub.products_count }} Product{{ sub.products_count|pluralize }}</span>
+                                </a>
+
+                                <div style="display: flex; gap: 0.35rem; align-items: center;">
+                                    <button class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.45rem;" onclick="openSubUploadModal('{{ sub.id }}', '{{ sub.name|escapejs }}')" title="Upload / Replace Sub-Category Image">
+                                        📷
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.5rem;" onclick="openEditSubModal('{{ sub.id }}', '{{ cat.id }}', '{{ sub.name|escapejs }}', '{{ sub.code }}', '{{ sub.description|default:""|escapejs }}', '{{ sub.display_order }}')" title="Edit Sub-Category">
+                                        ✏️ Edit
+                                    </button>
+                                    <form action="{% url 'admin_categories' %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="toggle_subcategory_active">
+                                        <input type="hidden" name="subcategory_id" value="{{ sub.id }}">
+                                        <button type="submit" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:0.25rem 0.45rem;" title="{% if sub.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                            {% if sub.is_active %}⏸{% else %}▶{% endif %}
+                                        </button>
+                                    </form>
+                                    <form action="{% url 'admin_categories' %}" method="post" style="display:inline;" onsubmit="return confirm('Delete sub-category \'{{ sub.name }}\'?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_subcategory">
+                                        <input type="hidden" name="subcategory_id" value="{{ sub.id }}">
+                                        <button type="submit" class="action-icon-btn" style="padding:0.25rem 0.4rem; color:var(--danger-color);" title="Delete Sub-Category">
+                                            🗑
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="padding: 1.5rem; background: var(--bg-body); border: 1.5px dashed var(--border-color); border-radius: var(--radius-md); text-align: center;">
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 0.75rem;">No sub-categories defined under <strong>{{ cat.name }}</strong> yet.</p>
+                    <button class="btn btn-accent btn-sm" onclick="openAddSubcategoryForCategory('{{ cat.id }}', '{{ cat.name|escapejs }}')">
+                        + Add First Sub-Category
+                    </button>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -102,17 +202,17 @@
     {% else %}
     <div class="empty-state">
         <h4>No Categories Found</h4>
-        <p>Create your first product category to organise products on kiosk screens.</p>
+        <p>Create your first product category to organize products on kiosk screens.</p>
         <button class="btn btn-accent" onclick="openModal('addCategoryModal')">Add First Category</button>
     </div>
     {% endif %}
 </div>
 
-<!-- ADD CATEGORY MODAL -->
+<!-- ADD MAIN CATEGORY MODAL -->
 <div class="modal-overlay" id="addCategoryModal">
     <div class="modal-card" style="max-width: 480px;">
         <div class="modal-header">
-            <h3>Add New Category</h3>
+            <h3>Add New Main Category</h3>
             <button class="modal-close-btn" onclick="closeModal('addCategoryModal')">&times;</button>
         </div>
         <form action="{% url 'admin_categories' %}" method="post" enctype="multipart/form-data">
@@ -121,26 +221,28 @@
             <div class="modal-body">
                 <div style="margin-bottom: 1rem;">
                     <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">CATEGORY NAME *</label>
-                    <input type="text" name="name" placeholder="e.g. Lightning Protection" required>
+                    <input type="text" name="name" placeholder="e.g. Electrical Earthing" required>
                 </div>
                 <div style="margin-bottom: 1rem;">
                     <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">CATEGORY CODE *</label>
-                    <input type="text" name="code" placeholder="e.g. LIGHTNING_PROT" required>
+                    <input type="text" name="code" placeholder="e.g. ELECTRICAL_EARTHING" required>
                     <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Unique code (auto-uppercased)</p>
                 </div>
                 <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DISPLAY ORDER</label>
+                    <input type="number" name="display_order" value="1" style="width: 100%;">
+                </div>
+                <div style="margin-bottom: 1rem;">
                     <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DESCRIPTION</label>
-                    <textarea name="description" rows="2" style="width:100%; padding:0.75rem; border:1.5px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-body); color:var(--text-primary); resize:vertical;" placeholder="Optional category description..."></textarea>
+                    <textarea name="description" rows="2" style="width:100%; padding:0.75rem; border:1.5px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-body); color:var(--text-primary); resize:vertical;" placeholder="Overview of this main category..."></textarea>
                 </div>
                 <div style="margin-bottom: 1rem;">
                     <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">CATEGORY IMAGE</label>
-                    <div style="border:2px dashed var(--border-color); border-radius:var(--radius-md); padding:1.5rem; text-align:center; cursor:pointer; position:relative; transition:border-color 0.2s;">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary); display:block; margin:0 auto 0.5rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Click to upload</p>
-                        <p style="font-size:0.75rem; color:var(--text-secondary); margin:0.2rem 0 0; opacity:0.65;">PNG, JPG (white background recommended)</p>
+                    <div style="border:2px dashed var(--border-color); border-radius:var(--radius-md); padding:1.5rem; text-align:center; cursor:pointer; position:relative;">
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Click to upload category image</p>
                         <input type="file" name="image" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;" onchange="previewImage(this, 'addImagePreview')">
                     </div>
-                    <img id="addImagePreview" src="" alt="" style="display:none; width:100%; max-height:160px; object-fit:contain; border-radius:var(--radius-md); margin-top:0.75rem; border:1px solid var(--border-color); padding:0.5rem; background:#fff;">
+                    <img id="addImagePreview" src="" alt="" style="display:none; width:100%; max-height:140px; object-fit:contain; border-radius:var(--radius-md); margin-top:0.75rem; border:1px solid var(--border-color); padding:0.5rem; background:#fff;">
                 </div>
             </div>
             <div class="modal-footer">
@@ -151,11 +253,11 @@
     </div>
 </div>
 
-<!-- EDIT CATEGORY MODAL -->
+<!-- EDIT MAIN CATEGORY MODAL -->
 <div class="modal-overlay" id="editCategoryModal">
     <div class="modal-card" style="max-width: 480px;">
         <div class="modal-header">
-            <h3>Edit Category</h3>
+            <h3>Edit Main Category</h3>
             <button class="modal-close-btn" onclick="closeModal('editCategoryModal')">&times;</button>
         </div>
         <form action="{% url 'admin_categories' %}" method="post" enctype="multipart/form-data">
@@ -170,7 +272,10 @@
                 <div style="margin-bottom: 1rem;">
                     <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">CODE</label>
                     <input type="text" id="editCatCode" disabled style="opacity:0.55; cursor:not-allowed;">
-                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.2rem;">Code cannot be changed after creation</p>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DISPLAY ORDER</label>
+                    <input type="number" name="display_order" id="editCatOrder" style="width: 100%;">
                 </div>
                 <div style="margin-bottom: 1rem;">
                     <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DESCRIPTION</label>
@@ -193,7 +298,116 @@
     </div>
 </div>
 
-<!-- UPLOAD IMAGE MODAL -->
+<!-- ADD SUB-CATEGORY MODAL -->
+<div class="modal-overlay" id="addSubCategoryModal">
+    <div class="modal-card" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Add Sub-Category</h3>
+            <button class="modal-close-btn" onclick="closeModal('addSubCategoryModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_categories' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_subcategory">
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">PARENT MAIN CATEGORY *</label>
+                    <select name="category_id" id="addSubCatParentId" required style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-body); color: var(--text-primary);">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">SUB-CATEGORY NAME *</label>
+                    <input type="text" name="name" placeholder="e.g. Earth Compounds or Vertical Air Termination Rods" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">SUB-CATEGORY CODE *</label>
+                        <input type="text" name="code" placeholder="e.g. EARTH_COMPOUNDS" required>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DISPLAY ORDER</label>
+                        <input type="number" name="display_order" value="1">
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DESCRIPTION</label>
+                    <textarea name="description" rows="2" style="width:100%; padding:0.75rem; border:1.5px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-body); color:var(--text-primary); resize:vertical;" placeholder="Details about this sub-category..."></textarea>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">SUB-CATEGORY IMAGE (optional)</label>
+                    <div style="border:2px dashed var(--border-color); border-radius:var(--radius-md); padding:1.2rem; text-align:center; cursor:pointer; position:relative;">
+                        <p style="font-size:0.8rem; color:var(--text-secondary); margin:0;">Click to upload image</p>
+                        <input type="file" name="image" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;" onchange="previewImage(this, 'addSubImagePreview')">
+                    </div>
+                    <img id="addSubImagePreview" src="" alt="" style="display:none; width:100%; max-height:120px; object-fit:contain; border-radius:var(--radius-md); margin-top:0.75rem; border:1px solid var(--border-color); padding:0.5rem; background:#fff;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addSubCategoryModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Add Sub-Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT SUB-CATEGORY MODAL -->
+<div class="modal-overlay" id="editSubCategoryModal">
+    <div class="modal-card" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Edit Sub-Category</h3>
+            <button class="modal-close-btn" onclick="closeModal('editSubCategoryModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_categories' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_subcategory">
+            <input type="hidden" name="subcategory_id" id="editSubId">
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">PARENT MAIN CATEGORY *</label>
+                    <select name="category_id" id="editSubCatParentId" required style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-body); color: var(--text-primary);">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">SUB-CATEGORY NAME *</label>
+                    <input type="text" name="name" id="editSubName" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">CODE</label>
+                        <input type="text" id="editSubCode" disabled style="opacity:0.55; cursor:not-allowed;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DISPLAY ORDER</label>
+                        <input type="number" name="display_order" id="editSubOrder">
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">DESCRIPTION</label>
+                    <textarea name="description" id="editSubDesc" rows="2" style="width:100%; padding:0.75rem; border:1.5px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-body); color:var(--text-primary); resize:vertical;"></textarea>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:0.35rem;">REPLACE IMAGE (optional)</label>
+                    <div style="border:2px dashed var(--border-color); border-radius:var(--radius-md); padding:1.2rem; text-align:center; cursor:pointer; position:relative;">
+                        <p style="font-size:0.8rem; color:var(--text-secondary); margin:0;">Click to select a new image</p>
+                        <input type="file" name="image" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;" onchange="previewImage(this, 'editSubImagePreview')">
+                    </div>
+                    <img id="editSubImagePreview" src="" alt="" style="display:none; width:100%; max-height:120px; object-fit:contain; border-radius:var(--radius-md); margin-top:0.75rem; border:1px solid var(--border-color); padding:0.5rem; background:#fff;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editSubCategoryModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- UPLOAD CATEGORY IMAGE MODAL -->
 <div class="modal-overlay" id="uploadImageModal">
     <div class="modal-card" style="max-width: 440px;">
         <div class="modal-header">
@@ -207,15 +421,40 @@
             <div class="modal-body">
                 <p style="font-size:0.9rem; color:var(--text-secondary); margin:0 0 1.25rem;">Category: <strong id="uploadCatName" style="color:var(--text-primary);"></strong></p>
                 <div style="border:2px dashed var(--border-color); border-radius:var(--radius-md); padding:2rem; text-align:center; cursor:pointer; position:relative;">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary); display:block; margin:0 auto 0.75rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <p style="font-size:0.9rem; color:var(--text-secondary); margin:0; font-weight:500;">Click to browse or drag & drop</p>
-                    <p style="font-size:0.78rem; color:var(--text-secondary); margin:0.3rem 0 0; opacity:0.65;">White background PNG or JPG recommended</p>
-                    <input type="file" name="image" accept="image/*" id="uploadImageFileInput" style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;" required onchange="previewImage(this, 'uploadImagePreview')">
+                    <p style="font-size:0.9rem; color:var(--text-secondary); margin:0; font-weight:500;">Click to browse image</p>
+                    <input type="file" name="image" accept="image/*" required onchange="previewImage(this, 'uploadCatImagePreview')" style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;">
                 </div>
-                <img id="uploadImagePreview" src="" alt="Preview" style="display:none; width:100%; max-height:180px; object-fit:contain; border-radius:var(--radius-md); margin-top:1rem; border:1px solid var(--border-color); padding:0.5rem; background:#fff;">
+                <img id="uploadCatImagePreview" src="" alt="Preview" style="display:none; width:100%; max-height:160px; object-fit:contain; border-radius:var(--radius-md); margin-top:1rem; border:1px solid var(--border-color); padding:0.5rem; background:#fff;">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('uploadImageModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Upload Image</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- UPLOAD SUB-CATEGORY IMAGE MODAL -->
+<div class="modal-overlay" id="uploadSubImageModal">
+    <div class="modal-card" style="max-width: 440px;">
+        <div class="modal-header">
+            <h3>Upload Sub-Category Image</h3>
+            <button class="modal-close-btn" onclick="closeModal('uploadSubImageModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_categories' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="upload_subcategory_image">
+            <input type="hidden" name="subcategory_id" id="uploadSubCatId">
+            <div class="modal-body">
+                <p style="font-size:0.9rem; color:var(--text-secondary); margin:0 0 1.25rem;">Sub-Category: <strong id="uploadSubCatName" style="color:var(--text-primary);"></strong></p>
+                <div style="border:2px dashed var(--border-color); border-radius:var(--radius-md); padding:2rem; text-align:center; cursor:pointer; position:relative;">
+                    <p style="font-size:0.9rem; color:var(--text-secondary); margin:0; font-weight:500;">Click to browse image</p>
+                    <input type="file" name="image" accept="image/*" required onchange="previewImage(this, 'uploadSubImagePreviewTag')" style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;">
+                </div>
+                <img id="uploadSubImagePreviewTag" src="" alt="Preview" style="display:none; width:100%; max-height:160px; object-fit:contain; border-radius:var(--radius-md); margin-top:1rem; border:1px solid var(--border-color); padding:0.5rem; background:#fff;">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('uploadSubImageModal')">Cancel</button>
                 <button type="submit" class="btn btn-accent">Upload Image</button>
             </div>
         </form>
@@ -228,23 +467,55 @@
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) {
         document.getElementById(id).classList.remove('active');
-        ['addImagePreview','editImagePreview','uploadImagePreview'].forEach(function(pid){
+        ['addImagePreview','editImagePreview','addSubImagePreview','editSubImagePreview','uploadCatImagePreview','uploadSubImagePreviewTag'].forEach(function(pid){
             var el = document.getElementById(pid);
             if(el){ el.src=''; el.style.display='none'; }
         });
     }
-    function openEditModal(id, name, code, description) {
+
+    function openEditModal(id, name, code, description, order) {
         document.getElementById('editCatId').value = id;
         document.getElementById('editCatName').value = name;
         document.getElementById('editCatCode').value = code;
         document.getElementById('editCatDesc').value = description;
+        document.getElementById('editCatOrder').value = order || 0;
         openModal('editCategoryModal');
     }
+
     function openUploadModal(id, name) {
         document.getElementById('uploadCatId').value = id;
         document.getElementById('uploadCatName').textContent = name;
         openModal('uploadImageModal');
     }
+
+    function openAddSubcategoryModal() {
+        openModal('addSubCategoryModal');
+    }
+
+    function openAddSubcategoryForCategory(catId, catName) {
+        var selectEl = document.getElementById('addSubCatParentId');
+        if (selectEl) {
+            selectEl.value = catId;
+        }
+        openModal('addSubCategoryModal');
+    }
+
+    function openEditSubModal(subId, parentCatId, name, code, description, order) {
+        document.getElementById('editSubId').value = subId;
+        document.getElementById('editSubCatParentId').value = parentCatId;
+        document.getElementById('editSubName').value = name;
+        document.getElementById('editSubCode').value = code;
+        document.getElementById('editSubDesc').value = description;
+        document.getElementById('editSubOrder').value = order || 0;
+        openModal('editSubCategoryModal');
+    }
+
+    function openSubUploadModal(subId, name) {
+        document.getElementById('uploadSubCatId').value = subId;
+        document.getElementById('uploadSubCatName').textContent = name;
+        openModal('uploadSubImageModal');
+    }
+
     function previewImage(input, previewId) {
         var preview = document.getElementById(previewId);
         if (input.files && input.files[0]) {
@@ -253,6 +524,7 @@
             reader.readAsDataURL(input.files[0]);
         }
     }
+
     document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
         overlay.addEventListener('click', function(e) { if(e.target === overlay) overlay.classList.remove('active'); });
     });
