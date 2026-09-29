@@ -15,7 +15,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" id="productSearchInput" placeholder="Search product name, SKU, category...">
+                <input type="text" id="productSearchInput" placeholder="Search product name, category, variants...">
             </div>
             <a href="{% url 'admin_categories' %}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -56,7 +56,6 @@
                 <tr>
                     <th>Image</th>
                     <th>Product Name & Description</th>
-                    <th>SKU Code</th>
                     <th>Classification (Category & Sub-Category)</th>
                     <th>Price & Stock</th>
                     <th>Media Assets</th>
@@ -65,10 +64,11 @@
             </thead>
             <tbody>
                 {% for p in products %}
-                <tr class="product-row" 
+                <!-- Main Product Row -->
+                <tr class="product-row main-product-row" 
                     data-category="{% if p.category %}{{ p.category.id }}{% endif %}" 
                     data-subcategory="{% if p.sub_category %}{{ p.sub_category.id }}{% endif %}"
-                    data-search="{{ p.name }} {{ p.sku }} {% if p.category %}{{ p.category.name }}{% endif %} {% if p.sub_category %}{{ p.sub_category.name }}{% endif %}">
+                    data-search="{{ p.name }} {% if p.category %}{{ p.category.name }}{% endif %} {% if p.sub_category %}{{ p.sub_category.name }}{% endif %} {% for v in p.child_variants.all %}{{ v.name }} {% endfor %}">
                     <td style="width: 60px;">
                         {% if p.image %}
                         <img src="{{ p.image.url }}" alt="{{ p.name }}" style="width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
@@ -77,12 +77,18 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{% url 'admin_product_detail' p.id %}" style="text-decoration: none;">
-                            <strong style="color: var(--primary-color); font-size: 0.95rem;">{{ p.name }}</strong>
-                        </a>
-                        {% if p.description %}<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem; margin-bottom: 0;">{{ p.description|truncatewords:10 }}</p>{% endif %}
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{% url 'admin_product_detail' p.id %}" style="text-decoration: none;">
+                                <strong style="color: var(--primary-color); font-size: 0.96rem;">{{ p.name }}</strong>
+                            </a>
+                            {% if p.child_variants.all %}
+                            <span class="role-badge" style="background: rgba(13, 96, 174, 0.08); color: var(--primary-color); border: 1px solid rgba(13, 96, 174, 0.22); font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.45rem;">
+                                ⚡ {{ p.child_variants.count }} Child Variant{{ p.child_variants.count|pluralize }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if p.description %}<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem; margin-bottom: 0;">{{ p.description|truncatewords:10 }}</p>{% endif %}
                     </td>
-                    <td><code style="font-size: 0.82rem; color: var(--text-secondary); background: var(--bg-body); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid var(--border-color);">{{ p.sku }}</code></td>
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                             <!-- Category Badge -->
@@ -132,6 +138,63 @@
                         </div>
                     </td>
                 </tr>
+
+                <!-- Child Product Rows (Variants) Indented Directly Under Main Product -->
+                {% for v in p.child_variants.all %}
+                <tr class="product-row child-variant-row" 
+                    data-category="{% if p.category %}{{ p.category.id }}{% endif %}" 
+                    data-subcategory="{% if p.sub_category %}{{ p.sub_category.id }}{% endif %}"
+                    data-search="{{ v.name }} {{ p.name }} {% if p.category %}{{ p.category.name }}{% endif %}"
+                    style="background: #F8FAFC; border-left: 3px solid var(--accent-color);">
+                    <td style="width: 60px; padding-left: 1.25rem;">
+                        {% if v.image %}
+                        <img src="{{ v.image.url }}" alt="{{ v.name }}" style="width: 36px; height: 36px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        {% else %}
+                        <div style="width: 36px; height: 36px; background: var(--bg-body); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.7rem; font-weight: 700;">VAR</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.45rem;">
+                            <span style="color: var(--accent-color); font-weight: 800; font-size: 1rem; line-height: 1;">↳</span>
+                            <div>
+                                <a href="{% url 'admin_product_detail' v.id %}" style="text-decoration: none;">
+                                    <strong style="color: var(--text-primary); font-size: 0.88rem;">{{ v.name }}</strong>
+                                </a>
+                                <span class="role-badge" style="background: rgba(217, 119, 6, 0.1); color: #B45309; border: 1px solid rgba(217, 119, 6, 0.25); font-size: 0.68rem; margin-left: 0.35rem; font-weight: 700;">Child Variant</span>
+                                {% if v.description %}<p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.1rem; margin-bottom: 0;">{{ v.description|truncatewords:8 }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.74rem; color: var(--text-secondary); font-style: italic;">Child of {{ p.name|truncatewords:4 }}</span>
+                    </td>
+                    <td>
+                        <div><strong style="color: var(--accent-color); font-size: 0.88rem;">₹{{ v.price }}</strong></div>
+                        <span style="font-size: 0.72rem; color: var(--text-secondary);">{{ v.stock }} in stock</span>
+                    </td>
+                    <td>
+                        <span class="role-badge" style="background: var(--bg-body); color: var(--text-secondary); border: 1px solid var(--border-color); font-size: 0.72rem;">
+                            📁 {{ v.media_assets.count }} Media
+                        </span>
+                    </td>
+                    <td>
+                        <div class="actions-cell" style="justify-content: center; gap: 0.35rem;">
+                            <a href="{% url 'admin_product_detail' v.id %}" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 0.25rem 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;" title="Edit Child Variant">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                <span>Edit</span>
+                            </a>
+                            <form action="{% url 'admin_products' %}" method="post" style="display: inline;" onsubmit="return confirm('Delete child variant {{ v.name }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_product">
+                                <input type="hidden" name="product_id" value="{{ v.id }}">
+                                <button type="submit" class="action-icon-btn" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-color); padding: 0.25rem;" title="Delete Variant">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
                 {% endfor %}
             </tbody>
         </table>

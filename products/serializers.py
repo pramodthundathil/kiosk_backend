@@ -107,6 +107,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     sub_category_id = serializers.UUIDField(source='sub_category.id', read_only=True)
     sub_category_name = serializers.CharField(source='sub_category.name', read_only=True)
+    media_assets = ProductMediaAssetSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -115,7 +116,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             'image', 'image_url', 'description', 'specifications', 'features',
             'certifications', 'in_house_tests', 'applicable_areas',
             'category_id', 'category_name', 'sub_category_id', 'sub_category_name',
-            'is_active', 'created_at', 'updated_at'
+            'media_assets', 'is_active', 'created_at', 'updated_at'
         ]
 
     def get_image_url(self, obj):

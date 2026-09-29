@@ -27,7 +27,7 @@ class ProductListAPIView(generics.ListCreateAPIView):
             'category', 'sub_category', 'parent'
         ).prefetch_related(
             'media_assets', 'child_variants'
-        ).filter(is_active=True).order_by('-created_at')
+        ).filter(is_active=True, parent__isnull=True).order_by('-created_at')
         
         # 1. Filter by Main Category (by ID or Code)
         category_param = self.request.query_params.get('category_id') or self.request.query_params.get('category')
@@ -56,7 +56,7 @@ class ProductListAPIView(generics.ListCreateAPIView):
 
         # If this request is for a specific kiosk device, return ONLY products assigned to that device
         if kiosk:
-            return qs.filter(assigned_kiosks=kiosk).distinct()
+            return qs.filter(Q(assigned_kiosks=kiosk) | Q(child_variants__assigned_kiosks=kiosk)).distinct()
 
         return qs
 

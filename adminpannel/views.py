@@ -667,7 +667,11 @@ def admin_products(request):
     selected_cat_id = request.GET.get('category', '').strip()
     selected_subcat_id = request.GET.get('subcategory', '').strip()
 
-    products = Product.objects.select_related('category', 'sub_category').prefetch_related('media_assets', 'assigned_kiosks').filter(is_active=True).order_by('-created_at')
+    products = Product.objects.filter(parent__isnull=True, is_active=True).select_related(
+        'category', 'sub_category'
+    ).prefetch_related(
+        'media_assets', 'assigned_kiosks', 'child_variants', 'child_variants__media_assets'
+    ).order_by('-created_at')
 
     if selected_cat_id and selected_cat_id != 'all':
         products = products.filter(category_id=selected_cat_id)
