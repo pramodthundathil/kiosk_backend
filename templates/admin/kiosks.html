@@ -54,7 +54,11 @@
                             </span>
                             {% endif %}
                             
-                            {% if k.is_deployed %}
+                            {% if not k.is_active %}
+                            <span class="role-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.72rem; padding: 2px 6px;">
+                                Deactivated
+                            </span>
+                            {% elif k.is_deployed %}
                             <span class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem; padding: 2px 6px;">
                                 &#10003; Deployed
                             </span>
@@ -124,6 +128,19 @@
                             <button class="action-icon-btn" title="Inspect Terminal Logs" onclick="viewLogs('{{ k.name }}', '{{ k.store_name }}', '{{ k.device_id }}', '{{ k.app_version }}', '{{ k.is_online }}', '{{ k.device_info }}')">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                             </button>
+                            <!-- Activate / Deactivate Toggle Button -->
+                            <form action="{% url 'admin_kiosks' %}" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to {% if k.is_active %}deactivate{% else %}activate{% endif %} kiosk {{ k.name }}? {% if k.is_active %}Deactivating will log out the kiosk immediately.{% endif %}');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_active">
+                                <input type="hidden" name="kiosk_id" value="{{ k.id }}">
+                                <button type="submit" class="action-icon-btn" style="color: {% if k.is_active %}#f59e0b{% else %}#10b981{% endif %};" title="{% if k.is_active %}Deactivate Kiosk (Force Logout){% else %}Activate Kiosk{% endif %}">
+                                    {% if k.is_active %}
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                    {% else %}
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    {% endif %}
+                                </button>
+                            </form>
                             <!-- Delete Button -->
                             <form action="{% url 'admin_kiosks' %}" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to remove kiosk {{ k.name }}?');">
                                 {% csrf_token %}

@@ -388,3 +388,98 @@ class AppUpdateSystemTests(TestCase):
         self.assertFalse(self.kiosk.check_update_requested)
 
 
+class KioskDeviceStartupAndDeactivationTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.store = Store.objects.create(name="Delhi Store", code="DEL001", city="Delhi")
+        self.profile = KioskProfile.objects.create(name="Standard Profile", code="STD_DEL")
+        self.kiosk, self.secret = register_kiosk_device(
+            name="Delhi Terminal 1",
+            device_id="DEV-DEL-MAC-01",
+            store=self.store,
+            profile=self.profile
+        )
+        tokens = issue_kiosk_jwt_tokens(self.kiosk)
+        self.access_token = tokens["access"]
+        self.auth_headers = {"HTTP_AUTHORIZATION": f"Bearer {self.access_token}"}
+
+    def test_verify_active_kiosk_with_mac(self):
+        res = self.client.get(
+            "/api/kiosk/verify/",
+            {"mac_address": "DEV-DEL-MAC-01"},
+            **self.auth_headers
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["available"])
+        self.assertTrue(res.data["active"])
+        self.assertTrue(res.data["authenticated"])
+        self.assertEqual(res.data["action"], "OK")
+
+    def test_verify_deleted_kiosk_mac_returns_404_logout(self):
+        # Admin deletes the kiosk
+        self.kiosk.delete()
+
+        res = self.client.get(
+            "/api/kiosk/verify/",
+            {"mac_address": "DEV-DEL-MAC-01"}
+        )
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(res.data["available"])
+        self.assertEqual(res.data["action"], "LOGOUT")
+        self.assertTrue(res.data["logout"])
+
+    def test_verify_deactivated_kiosk_returns_403_logout(self):
+        # Admin deactivates the kiosk
+        self.kiosk.is_active = False
+        self.kiosk.save()
+
+        res = self.client.get(
+            "/api/kiosk/verify/",
+            {"mac_address": "DEV-DEL-MAC-01"}
+        )
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(res.data["active"])
+        self.assertEqual(res.data["action"], "LOGOUT")
+        self.assertTrue(res.data["logout"])
+
+    def test_verify_disabled_kiosk_returns_403_logout(self):
+        # Admin marks kiosk status as DISABLED
+        self.kiosk.status = KioskDevice.Status.DISABLED
+        self.kiosk.save()
+
+        res = self.client.get(
+            "/api/kiosk/verify/",
+            {"mac_address": "DEV-DEL-MAC-01"}
+        )
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(res.data["active"])
+        self.assertEqual(res.data["action"], "LOGOUT")
+
+    def test_heartbeat_deleted_kiosk_returns_404_logout(self):
+        mac = self.kiosk.device_id
+        self.kiosk.delete()
+
+        res = self.client.post(
+            "/api/kiosk/heartbeat/",
+            {"mac_address": mac, "device_id": mac},
+            format="json"
+        )
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(res.data["action"], "LOGOUT")
+        self.assertTrue(res.data["logout"])
+
+    def test_heartbeat_deactivated_kiosk_returns_403_logout(self):
+        self.kiosk.is_active = False
+        self.kiosk.save()
+
+        res = self.client.post(
+            "/api/kiosk/heartbeat/",
+            {"mac_address": self.kiosk.device_id, "device_id": self.kiosk.device_id},
+            format="json"
+        )
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data["action"], "LOGOUT")
+        self.assertTrue(res.data["logout"])
+
+
+

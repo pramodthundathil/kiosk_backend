@@ -54,9 +54,19 @@ class ProductListAPIView(generics.ListCreateAPIView):
                 query |= Q(device_id__iexact=device_id) | Q(serial_number__iexact=device_id)
             kiosk = KioskDevice.objects.filter(query).first()
 
-        # If this request is for a specific kiosk device, return ONLY products assigned to that device
+        # If this request is for a specific kiosk device, return ONLY products assigned to that device.
+        # We check BOTH:
+        #   a) Products directly assigned to this kiosk (assigned_kiosks M2M)
+        #   b) Parent products whose child variants are assigned to this kiosk
+        # An empty assigned_products set intentionally returns an empty list (not all products).
         if kiosk:
-            return qs.filter(Q(assigned_kiosks=kiosk) | Q(child_variants__assigned_kiosks=kiosk)).distinct()
+            assigned_ids = kiosk.assigned_products.values_list('id', flat=True)
+            # Also resolve parent IDs for any assigned variant/child products
+            parent_ids = Product.objects.filter(
+                id__in=assigned_ids, parent__isnull=False
+            ).values_list('parent_id', flat=True)
+            all_ids = list(set(list(assigned_ids) + list(parent_ids)))
+            return qs.filter(id__in=all_ids).distinct()
 
         return qs
 

@@ -182,7 +182,23 @@ def admin_kiosks(request):
             try:
                 kiosk = KioskDevice.objects.get(id=kiosk_id)
                 kiosk.delete()
-                messages.success(request, "Kiosk device deleted successfully.")
+                messages.success(request, "Kiosk device deleted successfully. Terminal will be logged out on next ping.")
+            except KioskDevice.DoesNotExist:
+                messages.error(request, "Kiosk device not found.")
+            return redirect('admin_kiosks')
+
+        elif action == "toggle_active":
+            kiosk_id = request.POST.get('kiosk_id')
+            try:
+                kiosk = KioskDevice.objects.get(id=kiosk_id)
+                kiosk.is_active = not kiosk.is_active
+                if not kiosk.is_active:
+                    kiosk.status = KioskDevice.Status.DISABLED
+                else:
+                    kiosk.status = KioskDevice.Status.OFFLINE
+                kiosk.save(update_fields=['is_active', 'status'])
+                label = "activated" if kiosk.is_active else "deactivated (will force terminal logout)"
+                messages.success(request, f"Kiosk '{kiosk.name}' has been {label}.")
             except KioskDevice.DoesNotExist:
                 messages.error(request, "Kiosk device not found.")
             return redirect('admin_kiosks')
@@ -225,6 +241,7 @@ def admin_kiosks(request):
             'profile_id': str(k.profile.id) if k.profile else '',
             'status': status,
             'is_online': (status == KioskDevice.Status.ONLINE),
+            'is_active': k.is_active,
             'is_deployed': k.is_deployed,
             'deployed_at': k.deployed_at.strftime('%Y-%m-%d %H:%M') if k.deployed_at else 'Not Deployed',
             'latitude': str(k.latitude) if k.latitude is not None else '',
@@ -436,6 +453,13 @@ def admin_kiosk_edit(request, kiosk_id):
         kiosk.desired_content_version = desired_ver
         kiosk.latitude = float(latitude_str) if latitude_str else None
         kiosk.longitude = float(longitude_str) if longitude_str else None
+
+        is_active = request.POST.get('is_active') in ['true', 'on', '1']
+        kiosk.is_active = is_active
+        if not is_active:
+            kiosk.status = KioskDevice.Status.DISABLED
+        elif kiosk.status == KioskDevice.Status.DISABLED:
+            kiosk.status = KioskDevice.Status.OFFLINE
 
         if is_deployed and not kiosk.is_deployed:
             kiosk.deployed_at = timezone.now()

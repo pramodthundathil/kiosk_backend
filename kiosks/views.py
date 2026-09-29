@@ -80,6 +80,117 @@ class KioskDeviceSelfView(views.APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class KioskDeviceVerifyView(views.APIView):
+    """
+    GET/POST /api/kiosk/verify/
+    Verifies that a kiosk terminal identified by MAC ID / Device ID is registered, active,
+    and valid on the backend.
+
+    Used by the Kiosk client during startup and session verification.
+    If the kiosk MAC is not found (deleted by admin):
+        returns 404 NOT_FOUND with action="LOGOUT" and available=False.
+    If the kiosk is deactivated or disabled (is_active=False or status=DISABLED):
+        returns 403 FORBIDDEN with action="LOGOUT" and active=False.
+    If the kiosk is registered and active:
+        returns 200 OK with action="OK" (or "LOGIN_REQUIRED" if no valid token).
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def _verify(self, request):
+        data = request.data if (request.method == "POST" and hasattr(request, 'data')) else {}
+
+        device_id = (
+            request.query_params.get('mac_address') or
+            request.query_params.get('device_id') or
+            request.headers.get('X-Device-MAC') or
+            request.headers.get('X-Device-Id') or
+            data.get('mac_address') or
+            data.get('device_id')
+        )
+
+        # Also inspect Authorization header if present
+        header = request.headers.get("Authorization")
+        token_device_id = None
+        token_kiosk_id = None
+        is_token_valid = False
+
+        if header and header.startswith("Bearer "):
+            raw_token = header.split(" ")[1]
+            try:
+                from rest_framework_simplejwt.tokens import AccessToken
+                token = AccessToken(raw_token)
+                if token.get("token_category") == "kiosk":
+                    token_device_id = token.get("device_id")
+                    token_kiosk_id = token.get("kiosk_id")
+                    is_token_valid = True
+            except Exception:
+                is_token_valid = False
+
+        lookup_id = device_id or token_device_id
+
+        kiosk = None
+        if token_kiosk_id:
+            kiosk = KioskDevice.objects.filter(id=token_kiosk_id).first()
+
+        if not kiosk and lookup_id:
+            clean_id = str(lookup_id).strip()
+            kiosk = KioskDevice.objects.filter(
+                Q(device_id__iexact=clean_id) | Q(serial_number__iexact=clean_id) | Q(name__iexact=clean_id)
+            ).first()
+
+        if not kiosk:
+            return Response({
+                "available": False,
+                "active": False,
+                "authenticated": False,
+                "status": "NOT_FOUND",
+                "error": "Kiosk MAC address / Device ID is not available or was deleted by an administrator.",
+                "action": "LOGOUT",
+                "logout": True
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if not kiosk.is_active or kiosk.status == KioskDevice.Status.DISABLED:
+            return Response({
+                "available": True,
+                "active": False,
+                "authenticated": False,
+                "status": kiosk.status if kiosk.status == KioskDevice.Status.DISABLED else "INACTIVE",
+                "error": "This kiosk has been deactivated or disabled by an administrator.",
+                "action": "LOGOUT",
+                "logout": True
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if hasattr(kiosk, "credential") and kiosk.credential.revoked_at is not None:
+            return Response({
+                "available": True,
+                "active": False,
+                "authenticated": False,
+                "status": "CREDENTIAL_REVOKED",
+                "error": "This kiosk credential has been revoked by an administrator.",
+                "action": "LOGOUT",
+                "logout": True
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        return Response({
+            "available": True,
+            "active": True,
+            "authenticated": is_token_valid,
+            "status": kiosk.status,
+            "kiosk_id": str(kiosk.id),
+            "device_id": kiosk.device_id,
+            "name": kiosk.name,
+            "action": "OK" if is_token_valid else "LOGIN_REQUIRED"
+        }, status=status.HTTP_200_OK)
+
+    def get(self, request):
+        return self._verify(request)
+
+    def post(self, request):
+        return self._verify(request)
+
+
+
 class ScreensaverListAPIView(views.APIView):
     """
     GET /api/kiosk/screensavers/

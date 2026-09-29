@@ -52,15 +52,27 @@ class KioskHeartbeatView(views.APIView):
 
         if not kiosk:
             return Response(
-                {"error": "Kiosk not recognized. Please provide a registered device MAC address or valid Bearer token."},
+                {
+                    "error": "Kiosk not recognized or was deleted. Please provide a registered device MAC address or valid Bearer token.",
+                    "action": "LOGOUT",
+                    "logout": True
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
 
         if not kiosk.is_active:
-            return Response({"error": "This kiosk device is marked inactive."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({
+                "error": "This kiosk device is marked inactive.",
+                "action": "LOGOUT",
+                "logout": True
+            }, status=status.HTTP_403_FORBIDDEN)
 
         if kiosk.status == KioskDevice.Status.DISABLED:
-            return Response({"error": "This kiosk device has been disabled by an administrator."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({
+                "error": "This kiosk device has been disabled by an administrator.",
+                "action": "LOGOUT",
+                "logout": True
+            }, status=status.HTTP_403_FORBIDDEN)
 
         now = timezone.now()
 
