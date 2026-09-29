@@ -13,8 +13,18 @@ class SubCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'code', 'category__name')
     list_filter = ('category', 'is_active')
 
+class ProductVariantInline(admin.TabularInline):
+    model = Product
+    fk_name = 'parent'
+    extra = 0
+    fields = ('name', 'sku', 'price', 'stock', 'is_active')
+    verbose_name = 'Child Variant Product'
+    verbose_name_plural = 'Child Variant Products'
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'sku', 'category', 'sub_category', 'price', 'stock', 'is_active')
+    list_display = ('name', 'sku', 'parent', 'category', 'sub_category', 'price', 'stock', 'is_active')
     search_fields = ('name', 'sku', 'category__name', 'sub_category__name')
-    list_filter = ('category', 'sub_category', 'is_active')
+    list_filter = ('category', 'sub_category', 'is_active', ('parent', admin.EmptyFieldListFilter))
+    inlines = [ProductVariantInline]
+

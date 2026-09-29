@@ -72,8 +72,9 @@
                             <input type="text" name="name" value="{{ product.name }}" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
                         </div>
                         <div>
-                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">SKU CODE *</label>
-                            <input type="text" name="sku" value="{{ product.sku }}" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">SKU / PRODUCT CODE (OPTIONAL)</label>
+                            <input type="text" name="sku" value="{{ product.sku }}" placeholder="Leave blank to auto-generate" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Leave blank to auto-generate unique code automatically.</span>
                         </div>
                     </div>
 
@@ -158,32 +159,257 @@
                             </div>
                             {% endfor %}
                         {% else %}
-                            <!-- Default Initial Empty Spec Rows -->
-                            <div class="spec-row" style="display: grid; grid-template-columns: 1fr 1fr 40px; gap: 0.75rem; align-items: center;">
-                                <input type="text" name="spec_key" value="Material" placeholder="Specification Name" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                                <input type="text" name="spec_value" value="" placeholder="Specification Value" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                                <button type="button" class="action-icon-btn" onclick="removeSpecRow(this)" style="color: var(--danger-color); border-color: rgba(239,68,68,0.3);" title="Remove">
-                                    &times;
-                                </button>
-                            </div>
-                            <div class="spec-row" style="display: grid; grid-template-columns: 1fr 1fr 40px; gap: 0.75rem; align-items: center;">
-                                <input type="text" name="spec_key" value="Rod Diameter / Size" placeholder="Specification Name" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                                <input type="text" name="spec_value" value="" placeholder="Specification Value" style="padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                                <button type="button" class="action-icon-btn" onclick="removeSpecRow(this)" style="color: var(--danger-color); border-color: rgba(239,68,68,0.3);" title="Remove">
-                                    &times;
-                                </button>
-                            </div>
+                            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0.5rem 0;">No technical specifications configured yet. Click "+ Add Specification Row" above to add attributes.</p>
                         {% endif %}
                     </div>
 
-                    <div class="spec-form-actions" style="display: flex; justify-content: space-between; align-items: center;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="loadEarthingTemplate()">
-                            ⚡ Load Earthing Specs Template
-                        </button>
+                    <div class="spec-form-actions" style="display: flex; justify-content: flex-end; align-items: center;">
                         <button type="submit" class="btn btn-accent">Save Dynamic Specifications</button>
                     </div>
                 </form>
             </div>
+
+            <!-- SECTION 3: Product Variants Architecture (e.g. 100 Microns, With V Strip 100 Microns, etc.) -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                            <span>Product Variants & Sub-Models ({{ variants|length }})</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Variants are distinct products in the same category/sub-category linked to this main parent product.</p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        {% if candidate_variants %}
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('linkVariantModal')">
+                            <span>🔗 Link Existing Product</span>
+                        </button>
+                        {% endif %}
+                        <button type="button" class="btn btn-accent btn-sm" onclick="openModal('addVariantModal')">
+                            <span>+ Create Variant Product</span>
+                        </button>
+                    </div>
+                </div>
+
+                {% if variants %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+                        <thead>
+                            <tr style="background: var(--bg-body); border-bottom: 2px solid var(--border-color); color: var(--text-secondary);">
+                                <th style="padding: 0.75rem;">Variant Product</th>
+                                <th style="padding: 0.75rem;">SKU</th>
+                                <th style="padding: 0.75rem;">Sub-Category</th>
+                                <th style="padding: 0.75rem;">Price</th>
+                                <th style="padding: 0.75rem;">Stock</th>
+                                <th style="padding: 0.75rem;">Specs</th>
+                                <th style="padding: 0.75rem; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in variants %}
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.75rem; font-weight: 600; color: var(--text-primary);">
+                                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981; margin-right: 6px;"></span>
+                                    <a href="{% url 'admin_product_detail' v.id %}" style="color: inherit; text-decoration: underline;">{{ v.name }}</a>
+                                </td>
+                                <td style="padding: 0.75rem; color: var(--text-secondary); font-family: monospace;">{{ v.sku|default:"-" }}</td>
+                                <td style="padding: 0.75rem; color: var(--text-secondary);">{{ v.sub_category.name|default:v.category.name|default:"-" }}</td>
+                                <td style="padding: 0.75rem; font-weight: 600;">₹{{ v.price }}</td>
+                                <td style="padding: 0.75rem;">{{ v.stock }} units</td>
+                                <td style="padding: 0.75rem;">
+                                    <span class="badge" style="background: #EFF6FF; color: #2563EB; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
+                                        {{ v.specifications|length }} specs
+                                    </span>
+                                </td>
+                                <td style="padding: 0.75rem; text-align: right;">
+                                    <div style="display: inline-flex; gap: 0.4rem; align-items: center;">
+                                        <a href="{% url 'admin_product_detail' v.id %}" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                            Edit
+                                        </a>
+                                        <form action="{% url 'admin_product_detail' product.id %}" method="post" style="display: inline;" onsubmit="return confirm('Unlink \'{{ v.name|escapejs }}\' from this parent product? It will remain in the catalog as a standalone product.');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="unlink_variant">
+                                            <input type="hidden" name="variant_id" value="{{ v.id }}">
+                                            <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--warning-color, #F59E0B); padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                Unlink
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div style="padding: 2rem 1rem; text-align: center; background: var(--bg-body); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+                    <p style="color: var(--text-secondary); margin-bottom: 0.75rem; font-size: 0.88rem;">No child variant products linked to this product yet.</p>
+                    <div style="display: inline-flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                        {% if candidate_variants %}
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('linkVariantModal')">
+                            🔗 Link Existing Product from Category
+                        </button>
+                        {% endif %}
+                        <button type="button" class="btn btn-accent btn-sm" onclick="openModal('addVariantModal')">
+                            + Create Variant Product (e.g. With V Strip 100 Microns)
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- SECTION 4: Engineering Features & Highlights (Pointed with Sub-Points) -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            <span>Features & Engineering Highlights (Pointed & Sub-Points)</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Main feature bullet point accompanied by optional nested sub-bullet technical points.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addFeatureRow()">
+                        <span>+ Add Feature Point</span>
+                    </button>
+                </div>
+
+                <form action="{% url 'admin_product_detail' product.id %}" method="post" id="featuresForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_features">
+
+                    <div id="featuresContainer" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.25rem;">
+                        {% if product.features %}
+                            {% for f in product.features %}
+                            <div class="feature-card-row" style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; position: relative;">
+                                <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger-color); font-size: 1.2rem; cursor: pointer;">&times;</button>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem;">Main Point:</label>
+                                <input type="text" name="feat_point" value="{% if f.point %}{{ f.point }}{% else %}{{ f }}{% endif %}" placeholder="e.g. Superior Electrical, Mechanical and Thermal Properties (IEEE 837)" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.6rem;">
+                                <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">Sub-Points (one per line, optional):</label>
+                                <textarea name="feat_subpoints" rows="2" placeholder="Sub-point 1&#10;Sub-point 2" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem;">{% if f.sub_points %}{% for sp in f.sub_points %}{{ sp }}&#10;{% endfor %}{% endif %}</textarea>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0.5rem 0;">No feature highlights configured yet. Click "+ Add Feature Point" above to add engineering features.</p>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center;">
+                        <button type="submit" class="btn btn-accent">Save Features</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SECTION 5: Certifications & Standards (Pointed with Test Sub-Points) -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            <span>Certificates & Compliance Standards (Pointed & Sub-Points)</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Certificate or compliance standard title (point) and verified test items / procedures (sub-points).</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addCertRow()">
+                        <span>+ Add Certificate</span>
+                    </button>
+                </div>
+
+                <form action="{% url 'admin_product_detail' product.id %}" method="post" id="certsForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_certifications">
+
+                    <div id="certsContainer" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.25rem;">
+                        {% if product.certifications %}
+                            {% for c in product.certifications %}
+                            <div class="cert-card-row" style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; position: relative;">
+                                <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger-color); font-size: 1.2rem; cursor: pointer;">&times;</button>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem;">Certificate Standard / Heading:</label>
+                                <input type="text" name="cert_title" value="{% if c.title %}{{ c.title }}{% else %}{{ c }}{% endif %}" placeholder="e.g. IEC 62561-2:2018 Lightning Protection System Components" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.6rem;">
+                                <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">Test Sub-Points (one per line, optional):</label>
+                                <textarea name="cert_subpoints" rows="2" placeholder="Adhesion Test&#10;Bend Test&#10;Electrical Resistivity Test" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem;">{% if c.sub_points %}{% for sp in c.sub_points %}{{ sp }}&#10;{% endfor %}{% endif %}</textarea>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0.5rem 0;">No certifications configured yet. Click "+ Add Certificate" above to add standards.</p>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center;">
+                        <button type="submit" class="btn btn-accent">Save Certifications</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SECTION 6: In-House Test Reports (Pointed with Sub-Points) -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <span>In-House Test Reports (Pointed & Sub-Points)</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Internal quality control laboratory test standards, inspection points, and compliance sub-points.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addTestRow()">
+                        <span>+ Add In-House Test</span>
+                    </button>
+                </div>
+
+                <form action="{% url 'admin_product_detail' product.id %}" method="post" id="testsForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_in_house_tests">
+
+                    <div id="testsContainer" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.25rem;">
+                        {% if product.in_house_tests %}
+                            {% for t in product.in_house_tests %}
+                            <div class="test-card-row" style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; position: relative;">
+                                <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger-color); font-size: 1.2rem; cursor: pointer;">&times;</button>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem;">In-House Test Name / Clause:</label>
+                                <input type="text" name="test_title" value="{% if t.title %}{{ t.title }}{% else %}{{ t }}{% endif %}" placeholder="e.g. Coating Thickness Test as per Clause 9.6.1 UL 467" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.6rem;">
+                                <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">Sub-Points (one per line, optional):</label>
+                                <textarea name="test_subpoints" rows="2" placeholder="Inspection methodology&#10;Criteria passed" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem;">{% if t.sub_points %}{% for sp in t.sub_points %}{{ sp }}&#10;{% endfor %}{% endif %}</textarea>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0.5rem 0;">No in-house tests configured yet. Click "+ Add In-House Test" above to add test reports.</p>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center;">
+                        <button type="submit" class="btn btn-accent">Save In-House Tests</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SECTION 7: Applicable Areas & Industries -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line></svg>
+                            <span>Applicable Areas & Industries</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Target deployment environments, industrial sectors, and installation grounds.</p>
+                    </div>
+                </div>
+
+                <form action="{% url 'admin_product_detail' product.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_applicable_areas">
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem;">
+                            Applicable Areas (one area per line):
+                        </label>
+                        <textarea name="applicable_areas_text" rows="5" placeholder="Substations & High Voltage Transmission Lines&#10;Telecommunication & Microwave Towers&#10;Oil, Gas & Petrochemical Refineries&#10;Solar PV & Wind Energy Farms" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem; line-height: 1.6;">{% if product.applicable_areas %}{% for area in product.applicable_areas %}{{ area }}&#10;{% endfor %}{% endif %}</textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center;">
+                        <button type="submit" class="btn btn-accent">Save Applicable Areas</button>
+                    </div>
+                </form>
+            </div>
+
 
             <!-- SECTION 3: Multi-Media Assets Gallery & Documents -->
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
@@ -520,6 +746,87 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Link Existing Product as Variant -->
+<div class="modal-overlay" id="linkVariantModal" style="z-index: 1050;" onclick="if(event.target === this) closeModal('linkVariantModal');">
+    <div class="modal-card" style="max-width: 550px; width: 90vw; background: #ffffff; border-radius: var(--radius-lg); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid var(--border-color);">
+        <div class="modal-header" style="background: var(--bg-card, #ffffff); padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">Link Product as Variant</h3>
+            <button type="button" class="modal-close-btn" onclick="closeModal('linkVariantModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_product_detail' product.id %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="link_existing_variant">
+            <div class="modal-body" style="background: #ffffff; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+                    Select an existing product from <strong>{{ product.sub_category.name|default:product.category.name|default:"the catalog" }}</strong> to link it as a child variant of <strong>{{ product.name }}</strong>.
+                </p>
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">Select Product *</label>
+                    <select name="candidate_product_id" required style="width: 100%; padding: 0.75rem 0.9rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.88rem; background: #ffffff; color: var(--text-primary);">
+                        <option value="">-- Choose Product from Category --</option>
+                        {% for cand in candidate_variants %}
+                        <option value="{{ cand.id }}">{{ cand.name }} (SKU: {{ cand.sku }}) - ₹{{ cand.price }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer" style="background: var(--bg-body, #f8fafc); padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('linkVariantModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent btn-sm">Link as Variant</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Add Product Variant -->
+<div class="modal-overlay" id="addVariantModal" style="z-index: 1050;" onclick="if(event.target === this) closeModal('addVariantModal');">
+    <div class="modal-card" style="max-width: 600px; width: 90vw; background: #ffffff; border-radius: var(--radius-lg); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid var(--border-color);">
+        <div class="modal-header" style="background: var(--bg-card, #ffffff); padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">Create New Variant Product</h3>
+            <button type="button" class="modal-close-btn" onclick="closeModal('addVariantModal')">&times;</button>
+        </div>
+        <form action="{% url 'admin_product_detail' product.id %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_variant">
+            <div class="modal-body" style="background: #ffffff; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">Variant Name *</label>
+                    <input type="text" name="variant_name" placeholder="e.g. With V Strip 100 Microns, Copper Bonded Rod 100 Microns" required style="width: 100%; padding: 0.7rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.88rem; background: #ffffff;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">SKU / Item Code (Optional)</label>
+                        <input type="text" name="variant_sku" placeholder="Leave blank to auto-generate (e.g. {{ product.sku }}-V1)" style="width: 100%; padding: 0.7rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.88rem; background: #ffffff;">
+                        <span style="font-size: 0.73rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Auto-generates if left blank.</span>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">Display Order</label>
+                        <input type="number" name="variant_display_order" value="0" style="width: 100%; padding: 0.7rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.88rem; background: #ffffff;">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">Price (₹)</label>
+                        <input type="number" step="0.01" name="variant_price" value="{{ product.price }}" style="width: 100%; padding: 0.7rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.88rem; background: #ffffff;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">Stock Units</label>
+                        <input type="number" name="variant_stock" value="100" style="width: 100%; padding: 0.7rem 0.85rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.88rem; background: #ffffff;">
+                    </div>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">Variant Specific Image (Optional)</label>
+                    <input type="file" name="variant_image" accept="image/*" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem; background: #ffffff;">
+                </div>
+            </div>
+            <div class="modal-footer" style="background: var(--bg-body, #f8fafc); padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('addVariantModal')">Cancel</button>
+                <button type="submit" class="btn btn-accent btn-sm">Create Variant Product</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -531,6 +838,51 @@
     }
     function closeModal(id) {
         document.getElementById(id).classList.remove('active');
+    }
+
+    function addFeatureRow(point = '', subpoints = '') {
+        const container = document.getElementById('featuresContainer');
+        const div = document.createElement('div');
+        div.className = 'feature-card-row';
+        div.style.cssText = 'background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; position: relative;';
+        div.innerHTML = `
+            <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger-color); font-size: 1.2rem; cursor: pointer;">&times;</button>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem;">Main Point:</label>
+            <input type="text" name="feat_point" value="${point}" placeholder="e.g. Superior Electrical, Mechanical and Thermal Properties (IEEE 837)" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.6rem;">
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">Sub-Points (one per line, optional):</label>
+            <textarea name="feat_subpoints" rows="2" placeholder="Sub-point 1&#10;Sub-point 2" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem;">${subpoints}</textarea>
+        `;
+        container.appendChild(div);
+    }
+
+    function addCertRow(title = '', subpoints = '') {
+        const container = document.getElementById('certsContainer');
+        const div = document.createElement('div');
+        div.className = 'cert-card-row';
+        div.style.cssText = 'background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; position: relative;';
+        div.innerHTML = `
+            <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger-color); font-size: 1.2rem; cursor: pointer;">&times;</button>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem;">Certificate Standard / Heading:</label>
+            <input type="text" name="cert_title" value="${title}" placeholder="e.g. IEC 62561-2:2018 Lightning Protection System Components" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.6rem;">
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">Test Sub-Points (one per line, optional):</label>
+            <textarea name="cert_subpoints" rows="3" placeholder="Adhesion Test&#10;Bend Test&#10;Electrical Resistivity Test" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem;">${subpoints}</textarea>
+        `;
+        container.appendChild(div);
+    }
+
+    function addTestRow(title = '', subpoints = '') {
+        const container = document.getElementById('testsContainer');
+        const div = document.createElement('div');
+        div.className = 'test-card-row';
+        div.style.cssText = 'background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; position: relative;';
+        div.innerHTML = `
+            <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger-color); font-size: 1.2rem; cursor: pointer;">&times;</button>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem;">In-House Test Name / Clause:</label>
+            <input type="text" name="test_title" value="${title}" placeholder="e.g. Coating Thickness Test as per Clause 9.6.1 UL 467" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.6rem;">
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">Sub-Points (one per line, optional):</label>
+            <textarea name="test_subpoints" rows="2" placeholder="Inspection methodology&#10;Criteria passed" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.85rem;">${subpoints}</textarea>
+        `;
+        container.appendChild(div);
     }
 
     function previewMediaAsset(title, assetType, mediaUrl, description, fileSizeMb) {
@@ -708,21 +1060,6 @@
     function removeSpecRow(btn) {
         const row = btn.closest('.spec-row');
         row.remove();
-    }
-
-    function loadEarthingTemplate() {
-        const container = document.getElementById('specContainer');
-        container.innerHTML = '';
-        const defaultSpecs = [
-            ['Material', 'Pure Electrolytic Copper / High Tensile Steel'],
-            ['Copper Coating Thickness', '250 Microns (UL 467 Standard)'],
-            ['Rod Diameter', '16 mm / 17.2 mm / 19 mm'],
-            ['Rod Length', '2.0 Meters / 3.0 Meters'],
-            ['Current Carrying Capacity', 'Up to 25 KA for 1 sec'],
-            ['Applicable Standard', 'IEEE 80 / IS 3043 / IEC 62561-2'],
-            ['Expected Life Span', '30+ Years']
-        ];
-        defaultSpecs.forEach(pair => addSpecRow(pair[0], pair[1]));
     }
 
     function filterProductMedia(type, btnEl) {

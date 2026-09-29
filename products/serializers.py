@@ -101,6 +101,32 @@ class ProductMediaAssetSerializer(serializers.ModelSerializer):
         return obj.external_url or None
 
 
+class ProductVariantSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    category_id = serializers.UUIDField(source='category.id', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    sub_category_id = serializers.UUIDField(source='sub_category.id', read_only=True)
+    sub_category_name = serializers.CharField(source='sub_category.name', read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'parent_id', 'name', 'sku', 'price', 'stock',
+            'image', 'image_url', 'description', 'specifications', 'features',
+            'certifications', 'in_house_tests', 'applicable_areas',
+            'category_id', 'category_name', 'sub_category_id', 'sub_category_name',
+            'is_active', 'created_at', 'updated_at'
+        ]
+
+    def get_image_url(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
+
 class SubProductSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
@@ -123,7 +149,8 @@ class ProductSerializer(serializers.ModelSerializer):
     sub_category = SubCategorySimpleSerializer(read_only=True)
     sub_category_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     parent_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
-    sub_products = SubProductSerializer(many=True, read_only=True)
+    variants = ProductVariantSerializer(source='direct_variants', many=True, read_only=True)
+    sub_products = SubProductSerializer(source='direct_variants', many=True, read_only=True)
     image_url = serializers.SerializerMethodField()
     media_assets = ProductMediaAssetSerializer(many=True, read_only=True)
 
@@ -131,8 +158,9 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'sku', 'category', 'category_id', 
-            'sub_category', 'sub_category_id', 'parent_id', 'sub_products',
+            'sub_category', 'sub_category_id', 'parent_id', 'variants', 'sub_products',
             'description', 'price', 'stock', 'specifications', 
+            'features', 'certifications', 'in_house_tests', 'applicable_areas',
             'image', 'image_url', 'media_assets', 'is_active', 
             'created_at', 'updated_at'
         ]
@@ -144,4 +172,5 @@ class ProductSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
 

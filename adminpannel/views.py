@@ -591,10 +591,10 @@ def admin_products(request):
             description = request.POST.get('description', '').strip()
             image = request.FILES.get('image')
 
-            if not name or not sku:
-                messages.error(request, "Product Name and SKU code are required.")
+            if not name:
+                messages.error(request, "Product Name is required.")
                 return redirect('admin_products')
-            elif Product.objects.filter(sku=sku).exists():
+            elif sku and Product.objects.filter(sku=sku).exists():
                 messages.error(request, f"Product SKU '{sku}' already exists.")
                 return redirect('admin_products')
             else:
@@ -608,7 +608,7 @@ def admin_products(request):
                     description=description,
                     image=image
                 )
-                messages.success(request, f"Product '{name}' added successfully! You can now configure specifications and media assets.")
+                messages.success(request, f"Product '{name}' (SKU: {product.sku}) added successfully!")
                 return redirect('admin_product_detail', product_id=product.id)
 
         elif action == "update_product":
@@ -718,10 +718,73 @@ def admin_product_add(request):
             if k_clean:
                 specs_dict[k_clean] = v_clean
 
-        if not name or not sku:
-            messages.error(request, "Product Name and SKU code are required.")
+        # Features Highlights (Point & Sub-points)
+        raw_feat_json = request.POST.get('features_json')
+        feat_list = []
+        if raw_feat_json and raw_feat_json.strip():
+            try:
+                feat_list = json.loads(raw_feat_json)
+            except Exception:
+                pass
+        if not feat_list:
+            feat_points = request.POST.getlist('feat_point')
+            feat_subs = request.POST.getlist('feat_subpoints')
+            for p, s in zip(feat_points, feat_subs):
+                p_clean = p.strip()
+                if p_clean:
+                    sub_list = [item.strip() for item in s.split('\n') if item.strip()]
+                    feat_list.append({'point': p_clean, 'sub_points': sub_list})
+
+        # Certifications (Title & Test Sub-points)
+        raw_cert_json = request.POST.get('certifications_json')
+        cert_list = []
+        if raw_cert_json and raw_cert_json.strip():
+            try:
+                cert_list = json.loads(raw_cert_json)
+            except Exception:
+                pass
+        if not cert_list:
+            cert_titles = request.POST.getlist('cert_title')
+            cert_subs = request.POST.getlist('cert_subpoints')
+            for t, s in zip(cert_titles, cert_subs):
+                t_clean = t.strip()
+                if t_clean:
+                    sub_list = [item.strip() for item in s.split('\n') if item.strip()]
+                    cert_list.append({'title': t_clean, 'sub_points': sub_list})
+
+        # In-House Quality Tests (Title & Sub-points)
+        raw_tests_json = request.POST.get('in_house_tests_json')
+        test_list = []
+        if raw_tests_json and raw_tests_json.strip():
+            try:
+                test_list = json.loads(raw_tests_json)
+            except Exception:
+                pass
+        if not test_list:
+            test_titles = request.POST.getlist('test_title')
+            test_subs = request.POST.getlist('test_subpoints')
+            for t, s in zip(test_titles, test_subs):
+                t_clean = t.strip()
+                if t_clean:
+                    sub_list = [item.strip() for item in s.split('\n') if item.strip()]
+                    test_list.append({'title': t_clean, 'sub_points': sub_list})
+
+        # Applicable Areas
+        raw_areas_json = request.POST.get('applicable_areas_json')
+        areas_list = []
+        if raw_areas_json and raw_areas_json.strip():
+            try:
+                areas_list = json.loads(raw_areas_json)
+            except Exception:
+                pass
+        if not areas_list:
+            areas_text = request.POST.get('applicable_areas_text', '')
+            areas_list = [a.strip() for a in areas_text.split('\n') if a.strip()]
+
+        if not name:
+            messages.error(request, "Product Name is required.")
             return redirect('admin_product_add')
-        elif Product.objects.filter(sku=sku).exists():
+        elif sku and Product.objects.filter(sku=sku).exists():
             messages.error(request, f"Product SKU '{sku}' already exists.")
             return redirect('admin_product_add')
 
@@ -737,6 +800,10 @@ def admin_product_add(request):
             stock=stock or 100,
             description=description,
             specifications=specs_dict,
+            features=feat_list,
+            certifications=cert_list,
+            in_house_tests=test_list,
+            applicable_areas=areas_list,
             image=image
         )
 
@@ -754,7 +821,7 @@ def admin_product_add(request):
                     product=product
                 )
 
-        messages.success(request, f"Product '{name}' created successfully! Add specifications and media assets below.")
+        messages.success(request, f"Product '{name}' (SKU: {product.sku}) created successfully! Add specifications and media assets below.")
         return redirect('admin_product_detail', product_id=product.id)
 
     categories = Category.objects.filter(is_active=True).prefetch_related('subcategories').order_by('display_order', 'name')
@@ -785,7 +852,11 @@ def admin_product_detail(request, product_id):
 
         if action == "update_product":
             product.name = request.POST.get('name', product.name).strip()
-            product.sku = request.POST.get('sku', product.sku).strip()
+            new_sku = request.POST.get('sku', '').strip()
+            if new_sku and Product.objects.filter(sku=new_sku).exclude(id=product.id).exists():
+                messages.error(request, f"Product SKU '{new_sku}' already exists.")
+                return redirect('admin_product_detail', product_id=product.id)
+            product.sku = new_sku  # If left empty, save() will auto-generate a unique SKU
             product.price = request.POST.get('price', product.price)
             product.stock = request.POST.get('stock', product.stock)
             product.description = request.POST.get('description', product.description).strip()
@@ -796,7 +867,7 @@ def admin_product_detail(request, product_id):
             if request.FILES.get('image'):
                 product.image = request.FILES.get('image')
             product.save()
-            messages.success(request, f"Product '{product.name}' basic information updated successfully.")
+            messages.success(request, f"Product '{product.name}' (SKU: {product.sku}) updated successfully.")
             return redirect('admin_product_detail', product_id=product.id)
 
         elif action == "update_specifications":
@@ -813,6 +884,148 @@ def admin_product_detail(request, product_id):
             product.specifications = specs_dict
             product.save(update_fields=['specifications', 'updated_at'])
             messages.success(request, f"Product specifications updated successfully ({len(specs_dict)} items).")
+            return redirect('admin_product_detail', product_id=product.id)
+
+        elif action == "update_features":
+            raw_json = request.POST.get('features_json')
+            if raw_json and raw_json.strip():
+                try:
+                    product.features = json.loads(raw_json)
+                except Exception as e:
+                    messages.error(request, f"Invalid JSON format for features: {e}")
+                    return redirect('admin_product_detail', product_id=product.id)
+            else:
+                pts = request.POST.getlist('feat_point')
+                subs = request.POST.getlist('feat_subpoints')
+                feat_list = []
+                for p, s in zip(pts, subs):
+                    p_clean = p.strip()
+                    if p_clean:
+                        sub_list = [item.strip() for item in s.split('\n') if item.strip()]
+                        feat_list.append({'point': p_clean, 'sub_points': sub_list})
+                product.features = feat_list
+            product.save(update_fields=['features', 'updated_at'])
+            messages.success(request, f"Product features updated successfully ({len(product.features)} items).")
+            return redirect('admin_product_detail', product_id=product.id)
+
+        elif action == "update_certifications":
+            raw_json = request.POST.get('certifications_json')
+            if raw_json and raw_json.strip():
+                try:
+                    product.certifications = json.loads(raw_json)
+                except Exception as e:
+                    messages.error(request, f"Invalid JSON format for certifications: {e}")
+                    return redirect('admin_product_detail', product_id=product.id)
+            else:
+                titles = request.POST.getlist('cert_title')
+                subs = request.POST.getlist('cert_subpoints')
+                cert_list = []
+                for t, s in zip(titles, subs):
+                    t_clean = t.strip()
+                    if t_clean:
+                        sub_list = [item.strip() for item in s.split('\n') if item.strip()]
+                        cert_list.append({'title': t_clean, 'sub_points': sub_list})
+                product.certifications = cert_list
+            product.save(update_fields=['certifications', 'updated_at'])
+            messages.success(request, f"Product certifications updated successfully ({len(product.certifications)} items).")
+            return redirect('admin_product_detail', product_id=product.id)
+
+        elif action == "update_in_house_tests":
+            raw_json = request.POST.get('in_house_tests_json')
+            if raw_json and raw_json.strip():
+                try:
+                    product.in_house_tests = json.loads(raw_json)
+                except Exception as e:
+                    messages.error(request, f"Invalid JSON format for in-house tests: {e}")
+                    return redirect('admin_product_detail', product_id=product.id)
+            else:
+                titles = request.POST.getlist('test_title')
+                subs = request.POST.getlist('test_subpoints')
+                test_list = []
+                for t, s in zip(titles, subs):
+                    t_clean = t.strip()
+                    if t_clean:
+                        sub_list = [item.strip() for item in s.split('\n') if item.strip()]
+                        test_list.append({'title': t_clean, 'sub_points': sub_list})
+                product.in_house_tests = test_list
+            product.save(update_fields=['in_house_tests', 'updated_at'])
+            messages.success(request, f"Product in-house tests updated successfully ({len(product.in_house_tests)} items).")
+            return redirect('admin_product_detail', product_id=product.id)
+
+        elif action == "update_applicable_areas":
+            raw_json = request.POST.get('applicable_areas_json')
+            if raw_json and raw_json.strip():
+                try:
+                    product.applicable_areas = json.loads(raw_json)
+                except Exception as e:
+                    messages.error(request, f"Invalid JSON format: {e}")
+                    return redirect('admin_product_detail', product_id=product.id)
+            else:
+                areas_text = request.POST.get('applicable_areas_text', '')
+                areas_list = [a.strip() for a in areas_text.split('\n') if a.strip()]
+                product.applicable_areas = areas_list
+            product.save(update_fields=['applicable_areas', 'updated_at'])
+            messages.success(request, f"Applicable areas updated successfully ({len(product.applicable_areas)} items).")
+            return redirect('admin_product_detail', product_id=product.id)
+
+        elif action == "link_existing_variant":
+            candidate_id = request.POST.get('candidate_product_id', '').strip()
+            candidate = Product.objects.filter(id=candidate_id).first()
+            if not candidate:
+                messages.error(request, "Selected product not found.")
+            elif str(candidate.id) == str(product.id):
+                messages.error(request, "A product cannot be a variant of itself.")
+            else:
+                candidate.parent = product
+                candidate.save(update_fields=['parent', 'updated_at'])
+                messages.success(request, f"Product '{candidate.name}' linked as a variant of '{product.name}'.")
+            return redirect('admin_product_detail', product_id=product.id)
+
+        elif action == "add_variant":
+            v_name = request.POST.get('variant_name', '').strip()
+            v_sku = request.POST.get('variant_sku', '').strip()
+            v_price = request.POST.get('variant_price', '0.00').strip()
+            v_stock = request.POST.get('variant_stock', '100').strip()
+            v_image = request.FILES.get('variant_image')
+
+            if not v_name:
+                messages.error(request, "Variant product name is required.")
+            elif v_sku and Product.objects.filter(sku=v_sku).exists():
+                messages.error(request, f"SKU code '{v_sku}' already exists.")
+            else:
+                new_var = Product.objects.create(
+                    parent=product,
+                    name=v_name,
+                    sku=v_sku,
+                    category=product.category,
+                    sub_category=product.sub_category,
+                    price=float(v_price) if v_price else product.price,
+                    stock=int(v_stock) if v_stock else product.stock,
+                    image=v_image or product.image,
+                    specifications={},
+                    features=[],
+                    certifications=[],
+                    in_house_tests=[],
+                    applicable_areas=[]
+                )
+                messages.success(request, f"Variant Product '{v_name}' (SKU: {new_var.sku}) created and linked to '{product.name}'.")
+            return redirect('admin_product_detail', product_id=product.id)
+
+        elif action == "delete_variant" or action == "unlink_variant":
+            v_id = request.POST.get('variant_id')
+            var = Product.objects.filter(id=v_id, parent=product).first()
+            if var:
+                remove_mode = request.POST.get('remove_mode', 'unlink')
+                if remove_mode == 'delete':
+                    var_name = var.name
+                    var.delete()
+                    messages.success(request, f"Variant product '{var_name}' deleted permanently.")
+                else:
+                    var.parent = None
+                    var.save(update_fields=['parent', 'updated_at'])
+                    messages.success(request, f"Product '{var.name}' unlinked from '{product.name}'. It is now a standalone product.")
+            else:
+                messages.error(request, "Variant product not found.")
             return redirect('admin_product_detail', product_id=product.id)
 
         elif action == "upload_media":
@@ -877,6 +1090,16 @@ def admin_product_detail(request, product_id):
 
     categories = Category.objects.filter(is_active=True).prefetch_related('subcategories').order_by('display_order', 'name')
     subcategories = SubCategory.objects.filter(is_active=True).select_related('category').order_by('display_order', 'name')
+    variants = product.child_variants.filter(is_active=True).order_by('name')
+
+    # Products in the same category/subcategory that can be linked as variants
+    candidate_variants = Product.objects.filter(is_active=True).exclude(id=product.id).exclude(parent=product)
+    if product.sub_category:
+        candidate_variants = candidate_variants.filter(sub_category=product.sub_category)
+    elif product.category:
+        candidate_variants = candidate_variants.filter(category=product.category)
+    candidate_variants = candidate_variants.order_by('name')
+
     media_items = product.media_assets.filter(is_active=True).order_by('-created_at')
 
     # Kiosk Display Assignments
@@ -896,6 +1119,8 @@ def admin_product_detail(request, product_id):
 
     context = {
         'product': product,
+        'variants': variants,
+        'candidate_variants': candidate_variants,
         'categories': categories,
         'subcategories': subcategories,
         'media_items': media_items,
@@ -912,6 +1137,7 @@ def admin_product_detail(request, product_id):
         ]
     }
     return render(request, "admin/product_detail.html", context)
+
 
 
 def admin_categories(request):

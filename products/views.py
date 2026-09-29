@@ -26,7 +26,7 @@ class ProductListAPIView(generics.ListCreateAPIView):
         qs = Product.objects.select_related(
             'category', 'sub_category', 'parent'
         ).prefetch_related(
-            'media_assets', 'sub_products'
+            'media_assets', 'child_variants'
         ).filter(is_active=True).order_by('-created_at')
         
         # 1. Filter by Main Category (by ID or Code)
@@ -69,7 +69,7 @@ class ProductDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.select_related(
         'category', 'sub_category', 'parent'
     ).prefetch_related(
-        'media_assets', 'sub_products'
+        'media_assets', 'child_variants'
     ).filter(is_active=True)
     serializer_class = ProductSerializer
     permission_classes = [permissions.AllowAny]
