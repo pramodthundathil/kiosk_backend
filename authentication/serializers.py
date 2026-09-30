@@ -53,3 +53,9 @@ def issue_cms_jwt_tokens(user: User) -> dict:
         "role": user.role,
         "role_display": user.get_role_display(),
     }
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True, min_length=4)
+

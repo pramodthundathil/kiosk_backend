@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, SubCategory, Product
+from .models import Category, SubCategory, Product, ProductShare
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -27,4 +27,11 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name', 'sku', 'category__name', 'sub_category__name')
     list_filter = ('category', 'sub_category', 'is_active', ('parent', admin.EmptyFieldListFilter))
     inlines = [ProductVariantInline]
+
+@admin.register(ProductShare)
+class ProductShareAdmin(admin.ModelAdmin):
+    list_display = ('staff_user', 'customer_name', 'customer_phone', 'product', 'shared_via', 'created_at')
+    search_fields = ('customer_name', 'customer_phone', 'staff_user__username', 'product__name')
+    list_filter = ('shared_via', 'created_at')
+
 

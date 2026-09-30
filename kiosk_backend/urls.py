@@ -30,7 +30,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from products.views import CategoryListAPIView, SubCategoryListAPIView
+from products.views import CategoryListAPIView, SubCategoryListAPIView, ProductShareListCreateAPIView
 
 urlpatterns = [
     path("favicon.ico", RedirectView.as_view(url=settings.STATIC_URL + "images/favicon.ico", permanent=True)),
@@ -47,8 +47,10 @@ urlpatterns = [
     path("api/kiosk/", include("kiosks.urls")),
     path("api/kiosk/", include("monitoring.urls")),
     path("api/products/", include("products.urls")),
+    path("api/product-shares/", ProductShareListCreateAPIView.as_view(), name="product_shares_root_api"),
     path("api/categories/", CategoryListAPIView.as_view(), name="categories_api"),
     path("api/subcategories/", SubCategoryListAPIView.as_view(), name="subcategories_api"),
+
 
     #authentication urls 
     path("", include("authentication.urls")),

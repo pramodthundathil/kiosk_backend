@@ -1613,7 +1613,11 @@ def admin_users(request):
                 messages.error(request, "User not found.")
             return redirect('admin_users')
 
-    users = User.objects.prefetch_related('assigned_stores').all().order_by('-date_joined')
+    users = User.objects.prefetch_related(
+        'assigned_stores', 
+        'product_shares__product', 
+        'product_shares__variant'
+    ).all().order_by('-date_joined')
     stores = Store.objects.filter(is_active=True).order_by('name')
 
     context = {
@@ -1624,6 +1628,7 @@ def admin_users(request):
         'active_tab': 'users',
     }
     return render(request, "admin/users.html", context)
+
 
 
 def admin_monitoring(request):

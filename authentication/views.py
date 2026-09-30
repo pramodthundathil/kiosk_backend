@@ -34,8 +34,8 @@ def signout(request):
 
 from rest_framework import views, status
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from .serializers import CMSLoginSerializer, issue_cms_jwt_tokens
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import CMSLoginSerializer, ChangePasswordSerializer, issue_cms_jwt_tokens
 
 class CMSAuthLoginView(views.APIView):
     """
@@ -53,4 +53,29 @@ class CMSAuthLoginView(views.APIView):
         user = serializer.validated_data['user']
         tokens = issue_cms_jwt_tokens(user)
         return Response(tokens, status=status.HTTP_200_OK)
+
+
+class CMSChangePasswordView(views.APIView):
+    """
+    POST /api/cms/auth/change-password/
+    Allows logged-in staff user to update their account password.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        old_password = serializer.validated_data['old_password']
+        new_password = serializer.validated_data['new_password']
+
+        if not user.check_password(old_password):
+            return Response({"detail": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
 

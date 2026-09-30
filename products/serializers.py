@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Product, Category, SubCategory
+from .models import Product, Category, SubCategory, ProductShare
+
 from content.models import MediaAsset
 
 
@@ -181,5 +182,46 @@ class ProductSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
+
+class ProductShareSerializer(serializers.ModelSerializer):
+    staff_username = serializers.SerializerMethodField()
+    product_name = serializers.CharField(source='product.name', read_only=True, default='')
+    product_sku = serializers.CharField(source='product.sku', read_only=True, default='')
+    variant_name = serializers.CharField(source='variant.name', read_only=True, default='')
+    product_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    variant_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+
+    class Meta:
+        model = ProductShare
+        fields = [
+            'id', 'staff_user', 'staff_username', 'customer_name', 'customer_phone',
+            'product', 'product_id', 'product_name', 'product_sku',
+            'variant', 'variant_id', 'variant_name',
+            'shared_via', 'options', 'created_at'
+        ]
+        read_only_fields = ['id', 'staff_user', 'created_at']
+
+    def get_staff_username(self, obj):
+        return obj.staff_user.username if obj.staff_user else 'Staff'
+
+    def create(self, validated_data):
+        product_id = validated_data.pop('product_id', None)
+        variant_id = validated_data.pop('variant_id', None)
+
+        if product_id:
+            try:
+                validated_data['product'] = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                pass
+
+        if variant_id:
+            try:
+                validated_data['variant'] = Product.objects.get(id=variant_id)
+            except Product.DoesNotExist:
+                pass
+
+        return super().create(validated_data)
+
 
 

@@ -10,4 +10,6 @@ urlpatterns = [
     # REST API endpoints for CMS User authentication
     path("api/cms/auth/login/", views.CMSAuthLoginView.as_view(), name="cms_auth_login"),
     path("api/cms/auth/refresh/", TokenRefreshView.as_view(), name="cms_auth_refresh"),
+    path("api/cms/auth/change-password/", views.CMSChangePasswordView.as_view(), name="cms_auth_change_password"),
+    path("api/change-password/", views.CMSChangePasswordView.as_view(), name="change_password_alias"),
 ]

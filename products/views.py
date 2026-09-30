@@ -4,8 +4,12 @@ from rest_framework import generics, permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from kiosks.authentication import KioskJWTAuthentication
 from kiosks.models import KioskDevice
-from .models import Product, Category, SubCategory
-from .serializers import ProductSerializer, CategorySerializer, SubCategorySimpleSerializer, SubCategoryDetailSerializer
+from .models import Product, Category, SubCategory, ProductShare
+from .serializers import (
+    ProductSerializer, CategorySerializer, SubCategorySimpleSerializer, 
+    SubCategoryDetailSerializer, ProductShareSerializer
+)
+
 
 
 class ProductListAPIView(generics.ListCreateAPIView):
@@ -127,5 +131,21 @@ class SubCategoryListAPIView(generics.ListCreateAPIView):
             except (ValueError, TypeError):
                 qs = qs.filter(category__code__iexact=category_param)
         return qs
+
+
+class ProductShareListCreateAPIView(generics.ListCreateAPIView):
+    """
+    GET /api/products/product-shares/
+    POST /api/products/product-shares/
+    Logs product sharing activity from Staff App.
+    """
+    queryset = ProductShare.objects.select_related('staff_user', 'product', 'variant').all().order_by('-created_at')
+    serializer_class = ProductShareSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def perform_create(self, serializer):
+        user = self.request.user if (self.request.user and self.request.user.is_authenticated) else None
+        serializer.save(staff_user=user)
+
 
 

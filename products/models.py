@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 from django.db.models import Q
+from django.conf import settings
+
 
 class Category(models.Model):
 
@@ -172,6 +174,33 @@ class Product(models.Model):
     @property
     def three_d_assets(self):
         return self.media_assets.filter(asset_type='THREE_D', is_active=True)
+
+
+class ProductShare(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    staff_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='product_shares',
+        help_text="Staff user who shared this product detail"
+    )
+    customer_name = models.CharField(max_length=255, blank=True, default='', help_text="Optional customer name")
+    customer_phone = models.CharField(max_length=50, help_text="Customer mobile number")
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='shares')
+    variant = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='variant_shares')
+    shared_via = models.CharField(max_length=50, default='whatsapp')
+    options = models.JSONField(default=list, blank=True, help_text="List of sections shared (e.g. overview, specs)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        user_str = self.staff_user.username if self.staff_user else 'Unknown Staff'
+        return f"{user_str} shared with {self.customer_name or self.customer_phone} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
 
 
 

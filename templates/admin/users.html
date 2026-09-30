@@ -80,9 +80,29 @@
                     </td>
                     <td style="color: var(--text-secondary); font-size: 0.85rem;">{{ u.date_joined|date:"Y-m-d" }}</td>
                     <td>
+                        <script id="user-shares-data-{{ u.id }}" type="application/json">
+                        [
+                            {% for share in u.product_shares.all %}
+                            {
+                                "id": "{{ share.id }}",
+                                "customer_name": "{{ share.customer_name|escapejs }}",
+                                "customer_phone": "{{ share.customer_phone|escapejs }}",
+                                "product_name": "{% if share.product %}{{ share.product.name|escapejs }}{% else %}Product{% endif %}",
+                                "product_sku": "{% if share.product %}{{ share.product.sku|escapejs }}{% else %}-{% endif %}",
+                                "variant_name": "{% if share.variant %}{{ share.variant.name|escapejs }}{% else %}{% endif %}",
+                                "shared_via": "{{ share.shared_via|escapejs }}",
+                                "created_at": "{{ share.created_at|date:'Y-m-d H:i:s' }}"
+                            }{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                        </script>
                         <div class="actions-cell" style="justify-content: center; gap: 0.4rem;">
+                            <!-- View User Shares -->
+                            <button class="action-icon-btn" style="border-color: rgba(16, 185, 129, 0.3); color: #10b981;" title="View Sharing Details" onclick="openUserSharesModal('{{ u.id }}', '{{ u.username|escapejs }}', '{{ u.get_role_display|escapejs }}')">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                            </button>
                             <!-- Edit User -->
-                            <button class="action-icon-btn" title="Edit User Role" onclick="openEditUser('{{ u.id }}', '{{ u.username }}', '{{ u.role }}', '{{ u.is_active|yesno:'true,false' }}')">
+                            <button class="action-icon-btn" title="Edit User Role" onclick="openEditUser('{{ u.id }}', '{{ u.username|escapejs }}', '{{ u.role }}', '{{ u.is_active|yesno:'true,false' }}')">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
                             {% if u != request.user %}
@@ -101,6 +121,7 @@
                 </tr>
                 {% endfor %}
             </tbody>
+
         </table>
         {% else %}
         <div class="empty-state">
@@ -204,6 +225,27 @@
         </form>
     </div>
 </div>
+
+<!-- VIEW USER SHARES MODAL -->
+<div class="modal-overlay" id="viewUserSharesModal">
+    <div class="modal-card" style="max-width: 850px; width: 95%;">
+        <div class="modal-header">
+            <div>
+                <h3 id="sharesModalTitle" style="margin: 0; font-size: 1.1rem; color: var(--primary-color);">Staff Sharing History</h3>
+                <span id="sharesModalSub" style="font-size: 0.85rem; color: var(--text-secondary);"></span>
+            </div>
+            <button class="modal-close-btn" onclick="closeModal('viewUserSharesModal')">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
+            <div id="sharesModalContent">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('viewUserSharesModal')">Close</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -238,5 +280,64 @@
         document.getElementById('editUserActive').value = isActive;
         openModal('editUserModal');
     }
+
+    function openUserSharesModal(userId, username, role) {
+        document.getElementById('sharesModalTitle').innerText = 'WhatsApp Sharing Details - ' + username;
+        document.getElementById('sharesModalSub').innerText = 'Role: ' + role;
+        
+        var scriptElem = document.getElementById('user-shares-data-' + userId);
+        var shares = scriptElem ? JSON.parse(scriptElem.textContent) : [];
+        
+        var html = '';
+        if (!shares || shares.length === 0) {
+            html = '<div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">' +
+                   '<h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">No WhatsApp Sharing Activity</h4>' +
+                   '<p style="color: var(--text-secondary); font-size: 0.9rem;">This staff user has not recorded any product share entries yet.</p>' +
+                   '</div>';
+        } else {
+            html = '<div style="margin-bottom: 0.85rem; font-weight: 700; font-size: 0.9rem; color: var(--primary-color); display: flex; align-items: center; justify-content: space-between;">' +
+                   '<span>Total Logged Shares: <strong style="color: #10b981;">' + shares.length + '</strong></span>' +
+                   '<span style="font-size: 0.8rem; color: var(--text-secondary);">Showing full customer mobile numbers</span>' +
+                   '</div>' +
+                   '<div class="kiosk-table-wrapper">' +
+                   '<table class="kiosk-table" style="font-size: 0.85rem;">' +
+                   '<thead>' +
+                   '<tr>' +
+                   '<th>Date & Time</th>' +
+                   '<th>Customer Name</th>' +
+                   '<th>Customer Mobile Number</th>' +
+                   '<th>Shared Item</th>' +
+                   '<th>Channel</th>' +
+                   '</tr>' +
+                   '</thead>' +
+                   '<tbody>';
+                   
+            shares.forEach(function(item) {
+                var prodText = '<strong>' + item.product_name + '</strong>';
+                if (item.variant_name) {
+                    prodText += ' <span class="role-badge" style="background: #fef3c7; color: #92400e; font-size: 0.75rem;">Variant: ' + item.variant_name + '</span>';
+                }
+                if (item.product_sku && item.product_sku !== '-') {
+                    prodText += '<br><span style="color: var(--text-secondary); font-size: 0.75rem;">SKU: ' + item.product_sku + '</span>';
+                }
+                var custName = item.customer_name ? '<strong>' + item.customer_name + '</strong>' : '<span style="color: var(--text-secondary); italic;">Not Provided</span>';
+                var phoneBadge = '<strong style="color: var(--primary-color); font-family: monospace; font-size: 0.95rem; background: #e0f2fe; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px;">' + item.customer_phone + '</strong>';
+                
+                html += '<tr>' +
+                        '<td style="white-space: nowrap; color: var(--text-secondary); font-weight: 500;">' + item.created_at + '</td>' +
+                        '<td>' + custName + '</td>' +
+                        '<td>' + phoneBadge + '</td>' +
+                        '<td>' + prodText + '</td>' +
+                        '<td><span class="role-badge" style="background: #dcfce7; color: #166534; font-weight: 700;">WhatsApp</span></td>' +
+                        '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+        }
+        
+        document.getElementById('sharesModalContent').innerHTML = html;
+        openModal('viewUserSharesModal');
+    }
 </script>
 {% endblock %}
+
