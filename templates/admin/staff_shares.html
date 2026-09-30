@@ -4,7 +4,20 @@
 {% block title %}Staff WhatsApp Share Activity - Excel Earthings CMS{% endblock %}
 
 {% block content %}
+<style>
+    select[name="per_page"],
+    .dataTables_length select,
+    .panel-actions select {
+        width: auto !important;
+        max-width: 120px !important;
+        min-width: 90px !important;
+        display: inline-block !important;
+        flex-shrink: 0 !important;
+    }
+</style>
+
 <!-- Page Header & Metrics Summary Cards -->
+
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
     <div class="panel-card" style="padding: 1.25rem;">
         <div style="display: flex; align-items: center; justify-content: space-between;">
