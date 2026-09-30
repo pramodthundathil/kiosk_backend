@@ -19,6 +19,18 @@ class CMSLoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("User account is disabled.")
 
+        # Enforce staff and admin role access restriction for Staff App
+        allowed_roles = [
+            User.Role.STAFF,
+            User.Role.ADMIN,
+            User.Role.SUPER_ADMIN,
+            User.Role.CONTENT_MANAGER,
+            User.Role.STORE_MANAGER,
+            User.Role.MONITORING_MANAGER,
+        ]
+        if user.role not in allowed_roles and not user.is_staff and not user.is_superuser:
+            raise serializers.ValidationError("Access denied. Only Staff and Admin users can access this application.")
+
         attrs['user'] = user
         return attrs
 
