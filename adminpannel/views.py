@@ -17,7 +17,8 @@ from django.db.models.functions import ExtractHour, TruncDate
 from datetime import timedelta
 import csv
 from django.http import HttpResponse
-from products.models import Product, Category, SubCategory
+from products.models import Product, Category, SubCategory, ProductShare
+
 from content.models import MediaAsset, Screensaver
 
 
@@ -1628,6 +1629,28 @@ def admin_users(request):
         'active_tab': 'users',
     }
     return render(request, "admin/users.html", context)
+
+
+def admin_staff_shares(request):
+    """Dedicated Page displaying WhatsApp product share details of all staff members."""
+    if not request.user.is_authenticated:
+        return redirect('signin')
+
+    shares = ProductShare.objects.select_related('staff_user', 'product', 'variant').all().order_by('-created_at')
+
+    total_shares = shares.count()
+    unique_staff_count = shares.filter(staff_user__isnull=False).values('staff_user').distinct().count()
+    unique_customers_count = shares.values('customer_phone').distinct().count()
+
+    context = {
+        'shares': shares,
+        'total_shares': total_shares,
+        'unique_staff_count': unique_staff_count,
+        'unique_customers_count': unique_customers_count,
+        'active_tab': 'staff_shares',
+    }
+    return render(request, "admin/staff_shares.html", context)
+
 
 
 

@@ -74,3 +74,21 @@ class AWSIntegrationTest(TestCase):
         self.assertIn("excelearthing-437377029279-ap-south-1-an", presigned_url)
         self.assertIn("direct_upload.mp4", presigned_url)
         self.assertIn("X-Amz-Signature", presigned_url)
+
+
+class StaffSharesViewTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_superuser(username="admin_sharer", password="Password123!")
+
+    def test_admin_staff_shares_view_requires_login(self):
+        res = self.client.get("/admin_pannel/staff-shares/")
+        self.assertEqual(res.status_code, 302)
+
+    def test_admin_staff_shares_view_authenticated(self):
+        self.client.login(username="admin_sharer", password="Password123!")
+        res = self.client.get("/admin_pannel/staff-shares/")
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Staff WhatsApp Share Details")
+

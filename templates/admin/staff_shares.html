@@ -1,0 +1,169 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Staff WhatsApp Share Activity - Excel Earthings CMS{% endblock %}
+
+{% block content %}
+<!-- Page Header & Metrics Summary Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="panel-card" style="padding: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">TOTAL SHARES LOGGED</span>
+                <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--primary-color); margin-top: 0.25rem;">{{ total_shares }}</h2>
+            </div>
+            <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-card" style="padding: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">ACTIVE STAFF SHARERS</span>
+                <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--primary-color); margin-top: 0.25rem;">{{ unique_staff_count }}</h2>
+            </div>
+            <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(14, 165, 233, 0.12); color: #0ea5e9; display: flex; align-items: center; justify-content: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-card" style="padding: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">CUSTOMERS REACHED</span>
+                <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--primary-color); margin-top: 0.25rem;">{{ unique_customers_count }}</h2>
+            </div>
+            <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(245, 158, 11, 0.12); color: #f59e0b; display: flex; align-items: center; justify-content: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel-card" style="margin-bottom: 2rem;">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+        <div class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            <span>Staff WhatsApp Share Details ({{ total_shares }})</span>
+        </div>
+        <div class="panel-actions" style="gap: 0.75rem;">
+            <div class="toolbar-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="shareSearchInput" placeholder="Filter staff, customer, or phone...">
+            </div>
+        </div>
+    </div>
+
+    <!-- Shares Data Table -->
+    <div class="kiosk-table-wrapper">
+        {% if shares %}
+        <table class="kiosk-table" id="sharesTable">
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Shared By Staff</th>
+                    <th>Customer Name</th>
+                    <th>Customer Phone Number</th>
+                    <th>Product / Variant</th>
+                    <th>Channel</th>
+                    <th>Options Included</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in shares %}
+                <tr>
+                    <td style="white-space: nowrap; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">
+                        {{ s.created_at|date:"Y-m-d H:i:s" }}
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                            <div class="user-avatar" style="width: 30px; height: 30px; font-size: 0.8rem; font-weight: bold; background: var(--primary-light); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                {% if s.staff_user %}{{ s.staff_user.username|slice:":1"|upper }}{% else %}S{% endif %}
+                            </div>
+                            <div>
+                                <strong style="color: var(--primary-color);">{% if s.staff_user %}{{ s.staff_user.username }}{% else %}Staff Member{% endif %}</strong>
+                                {% if s.staff_user and s.staff_user.role %}
+                                <br><span style="font-size: 0.75rem; color: var(--text-secondary);">{{ s.staff_user.get_role_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if s.customer_name %}
+                            <strong style="color: var(--text-primary);">{{ s.customer_name }}</strong>
+                        {% else %}
+                            <span style="color: var(--text-secondary); font-style: italic;">Not Provided</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong style="color: var(--primary-color); font-family: monospace; font-size: 0.95rem; background: #e0f2fe; padding: 4px 8px; border-radius: 4px; letter-spacing: 0.5px;">
+                            {{ s.customer_phone }}
+                        </strong>
+                    </td>
+                    <td>
+                        {% if s.product %}
+                            <strong>{{ s.product.name }}</strong>
+                            {% if s.variant %}
+                                <span class="role-badge" style="background: #fef3c7; color: #92400e; font-size: 0.75rem; margin-left: 4px;">Variant: {{ s.variant.name }}</span>
+                            {% endif %}
+                            {% if s.product.sku %}
+                                <br><small style="color: var(--text-secondary);">SKU: {{ s.product.sku }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: var(--text-secondary);">Product Details</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="role-badge" style="background: #dcfce7; color: #166534; font-weight: 700;">WhatsApp</span>
+                    </td>
+                    <td>
+                        {% if s.options %}
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                {% for opt in s.options %}
+                                    <span class="role-badge" style="background: var(--bg-body); border: 1px solid var(--border-color); font-size: 0.7rem;">{{ opt }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span style="color: var(--text-secondary); font-size: 0.8rem;">Standard Package</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding: 3rem 1rem; text-align: center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary); margin-bottom: 1rem;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            <h4 style="color: var(--primary-color);">No Staff WhatsApp Shares Found</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">When staff members share product details via WhatsApp in the mobile app, their sharing activity and full customer phone numbers will appear here.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        if ($('#sharesTable').length) {
+            var table = $('#sharesTable').DataTable({
+                "pageLength": 15,
+                "order": [],
+                "dom": '<"top"l>rt<"bottom"ip><"clear">',
+                "language": {
+                    "search": "Filter shares:"
+                }
+            });
+
+            $('#shareSearchInput').on('keyup', function() {
+                table.search(this.value).draw();
+            });
+        }
+    });
+</script>
+{% endblock %}

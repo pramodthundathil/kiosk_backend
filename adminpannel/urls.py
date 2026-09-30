@@ -15,7 +15,9 @@ urlpatterns = [
     path("stores/", views.admin_stores, name="admin_stores"),
     path("stores/<uuid:store_id>/", views.admin_store_detail, name="admin_store_detail"),
     path("users/", views.admin_users, name="admin_users"),
+    path("staff-shares/", views.admin_staff_shares, name="admin_staff_shares"),
     path("monitoring/", views.admin_monitoring, name="admin_monitoring"),
+
     path("monitoring/<uuid:kiosk_id>/", views.admin_monitoring_kiosk_detail, name="admin_monitoring_kiosk_detail"),
     path("monitoring/api/live-status/", views.admin_monitoring_live_status, name="admin_monitoring_live_status"),
     path("analytics/", views.admin_analytics, name="admin_analytics"),
