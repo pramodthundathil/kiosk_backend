@@ -13,7 +13,8 @@ class SubCategorySimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubCategory
         fields = [
-            'id', 'name', 'code', 'description', 'image_url', 
+            'id', 'name', 'code', 'description', 'image', 'image_url', 
+            'display_order', 'is_active', 'created_at',
             'category_id', 'category_name', 'category_code', 'products_count'
         ]
 
@@ -35,7 +36,8 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = [
-            'id', 'name', 'code', 'description', 'image_url', 
+            'id', 'name', 'code', 'description', 'image', 'image_url', 
+            'display_order', 'is_active', 'created_at',
             'subcategories', 'subcategories_count', 'products_count'
         ]
 
@@ -61,6 +63,7 @@ class CategorySerializer(serializers.ModelSerializer):
             is_active=True,
             parent__isnull=True
         ).distinct().count()
+
 
 
 class SubCategoryDetailSerializer(serializers.ModelSerializer):
