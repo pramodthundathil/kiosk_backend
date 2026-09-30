@@ -26,7 +26,11 @@ class Category(models.Model):
 
     @property
     def all_products_count(self):
-        return self.products.filter(is_active=True).count()
+        return Product.objects.filter(
+            Q(category=self) | Q(sub_category__category=self),
+            is_active=True,
+            parent__isnull=True
+        ).distinct().count()
 
 
 class SubCategory(models.Model):

@@ -55,7 +55,12 @@ class CategorySerializer(serializers.ModelSerializer):
         return obj.subcategories.filter(is_active=True).count()
 
     def get_products_count(self, obj):
-        return obj.products.filter(is_active=True).count()
+        from django.db.models import Q
+        return Product.objects.filter(
+            Q(category=obj) | Q(sub_category__category=obj),
+            is_active=True,
+            parent__isnull=True
+        ).distinct().count()
 
 
 class SubCategoryDetailSerializer(serializers.ModelSerializer):

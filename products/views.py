@@ -32,7 +32,12 @@ class ProductListAPIView(generics.ListCreateAPIView):
         # 1. Filter by Main Category (by ID or Code)
         category_param = self.request.query_params.get('category_id') or self.request.query_params.get('category')
         if category_param and category_param.lower() != 'all':
-            qs = qs.filter(Q(category__id__iexact=category_param) | Q(category__code__iexact=category_param))
+            qs = qs.filter(
+                Q(category__id__iexact=category_param) |
+                Q(category__code__iexact=category_param) |
+                Q(sub_category__category__id__iexact=category_param) |
+                Q(sub_category__category__code__iexact=category_param)
+            )
 
         # 2. Filter by Sub Category (by ID or Code)
         sub_cat_param = self.request.query_params.get('sub_category_id') or self.request.query_params.get('subcategory')
