@@ -1,3 +1,4 @@
+import uuid
 from django.db.models import Q
 from rest_framework import generics, permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -32,17 +33,28 @@ class ProductListAPIView(generics.ListCreateAPIView):
         # 1. Filter by Main Category (by ID or Code)
         category_param = self.request.query_params.get('category_id') or self.request.query_params.get('category')
         if category_param and category_param.lower() != 'all':
-            qs = qs.filter(
-                Q(category__id__iexact=category_param) |
-                Q(category__code__iexact=category_param) |
-                Q(sub_category__category__id__iexact=category_param) |
-                Q(sub_category__category__code__iexact=category_param)
-            )
+            try:
+                cat_uuid = uuid.UUID(category_param)
+                qs = qs.filter(
+                    Q(category__id=cat_uuid) |
+                    Q(category__code__iexact=category_param) |
+                    Q(sub_category__category__id=cat_uuid) |
+                    Q(sub_category__category__code__iexact=category_param)
+                )
+            except (ValueError, TypeError):
+                qs = qs.filter(
+                    Q(category__code__iexact=category_param) |
+                    Q(sub_category__category__code__iexact=category_param)
+                )
 
         # 2. Filter by Sub Category (by ID or Code)
         sub_cat_param = self.request.query_params.get('sub_category_id') or self.request.query_params.get('subcategory')
         if sub_cat_param and sub_cat_param.lower() != 'all':
-            qs = qs.filter(Q(sub_category__id__iexact=sub_cat_param) | Q(sub_category__code__iexact=sub_cat_param))
+            try:
+                sub_uuid = uuid.UUID(sub_cat_param)
+                qs = qs.filter(Q(sub_category__id=sub_uuid) | Q(sub_category__code__iexact=sub_cat_param))
+            except (ValueError, TypeError):
+                qs = qs.filter(sub_category__code__iexact=sub_cat_param)
 
         # 3. Check if authenticated via Kiosk JWT Bearer token
         kiosk = getattr(self.request, 'kiosk', None)
@@ -59,14 +71,8 @@ class ProductListAPIView(generics.ListCreateAPIView):
                 query |= Q(device_id__iexact=device_id) | Q(serial_number__iexact=device_id)
             kiosk = KioskDevice.objects.filter(query).first()
 
-        # If this request is for a specific kiosk device, return ONLY products assigned to that device.
-        # We check BOTH:
-        #   a) Products directly assigned to this kiosk (assigned_kiosks M2M)
-        #   b) Parent products whose child variants are assigned to this kiosk
-        # An empty assigned_products set intentionally returns an empty list (not all products).
         if kiosk:
             assigned_ids = kiosk.assigned_products.values_list('id', flat=True)
-            # Also resolve parent IDs for any assigned variant/child products
             parent_ids = Product.objects.filter(
                 id__in=assigned_ids, parent__isnull=False
             ).values_list('parent_id', flat=True)
@@ -115,6 +121,11 @@ class SubCategoryListAPIView(generics.ListCreateAPIView):
         qs = SubCategory.objects.select_related('category').filter(is_active=True).order_by('display_order', 'name')
         category_param = self.request.query_params.get('category_id') or self.request.query_params.get('category')
         if category_param and category_param.lower() != 'all':
-            qs = qs.filter(Q(category__id__iexact=category_param) | Q(category__code__iexact=category_param))
+            try:
+                cat_uuid = uuid.UUID(category_param)
+                qs = qs.filter(Q(category__id=cat_uuid) | Q(category__code__iexact=category_param))
+            except (ValueError, TypeError):
+                qs = qs.filter(category__code__iexact=category_param)
         return qs
+
 

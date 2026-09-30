@@ -30,6 +30,8 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from products.views import CategoryListAPIView, SubCategoryListAPIView
+
 urlpatterns = [
     path("favicon.ico", RedirectView.as_view(url=settings.STATIC_URL + "images/favicon.ico", permanent=True)),
     path("admin/", admin.site.urls),
@@ -41,13 +43,12 @@ urlpatterns = [
     path("api/schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 
-
     # Kiosk device & monitoring endpoints
     path("api/kiosk/", include("kiosks.urls")),
     path("api/kiosk/", include("monitoring.urls")),
     path("api/products/", include("products.urls")),
-    path("api/categories/", include("products.urls")),
-
+    path("api/categories/", CategoryListAPIView.as_view(), name="categories_api"),
+    path("api/subcategories/", SubCategoryListAPIView.as_view(), name="subcategories_api"),
 
     #authentication urls 
     path("", include("authentication.urls")),
