@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 
 from django.contrib import messages
 from django.utils import timezone
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 from stores.models import Store
 from kiosks.models import KioskDevice, KioskProfile, AppRelease, KioskUpdateLog
 from kiosks.apk_validator import validate_apk_file, compute_file_sha256_and_size
@@ -1632,24 +1634,78 @@ def admin_users(request):
 
 
 def admin_staff_shares(request):
-    """Dedicated Page displaying WhatsApp product share details of all staff members."""
+    """Dedicated Page displaying WhatsApp product share details of all staff members with date filtering, search, and pagination."""
     if not request.user.is_authenticated:
         return redirect('signin')
 
-    shares = ProductShare.objects.select_related('staff_user', 'product', 'variant').all().order_by('-created_at')
+    query = request.GET.get('q', '').strip()
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
 
-    total_shares = shares.count()
-    unique_staff_count = shares.filter(staff_user__isnull=False).values('staff_user').distinct().count()
-    unique_customers_count = shares.values('customer_phone').distinct().count()
+    shares_qs = ProductShare.objects.select_related('staff_user', 'product', 'variant').all().order_by('-created_at')
+
+    if query:
+        shares_qs = shares_qs.filter(
+            Q(customer_name__icontains=query) |
+            Q(customer_phone__icontains=query) |
+            Q(staff_user__username__icontains=query) |
+            Q(product__name__icontains=query) |
+            Q(product__sku__icontains=query)
+        )
+
+    if start_date:
+        try:
+            shares_qs = shares_qs.filter(created_at__date__gte=start_date)
+        except Exception:
+            pass
+
+    if end_date:
+        try:
+            shares_qs = shares_qs.filter(created_at__date__lte=end_date)
+        except Exception:
+            pass
+
+    total_shares = shares_qs.count()
+    unique_staff_count = shares_qs.filter(staff_user__isnull=False).values('staff_user').distinct().count()
+    unique_customers_count = shares_qs.values('customer_phone').distinct().count()
+
+    # Backend Pagination (default 25 per page or customizable)
+    per_page_param = request.GET.get('per_page', 25)
+    try:
+        per_page = int(per_page_param)
+        if per_page not in [10, 15, 25, 50, 100, 250, 500]:
+            per_page = 25
+    except (ValueError, TypeError):
+        per_page = 25
+
+    paginator = Paginator(shares_qs, per_page)
+    page_number = request.GET.get('page', 1)
+
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
 
     context = {
-        'shares': shares,
+        'shares': page_obj.object_list,
+        'all_shares': shares_qs,  # Full queryset if DataTables handles all items
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
         'total_shares': total_shares,
         'unique_staff_count': unique_staff_count,
         'unique_customers_count': unique_customers_count,
+        'query': query,
+        'start_date': start_date,
+        'end_date': end_date,
+        'per_page': per_page,
         'active_tab': 'staff_shares',
     }
     return render(request, "admin/staff_shares.html", context)
+
+
 
 
 

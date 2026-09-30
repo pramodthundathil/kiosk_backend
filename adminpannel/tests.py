@@ -90,5 +90,6 @@ class StaffSharesViewTest(TestCase):
         self.client.login(username="admin_sharer", password="Password123!")
         res = self.client.get("/admin_pannel/staff-shares/")
         self.assertEqual(res.status_code, 200)
-        self.assertContains(res, "Staff WhatsApp Share Details")
+        self.assertContains(res, "Staff WhatsApp Share Audit Log")
+
 
