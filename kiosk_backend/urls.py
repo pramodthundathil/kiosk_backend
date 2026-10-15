@@ -30,7 +30,10 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from products.views import CategoryListAPIView, SubCategoryListAPIView, ProductShareListCreateAPIView
+from products.views import (
+    CategoryListAPIView, SubCategoryListAPIView, ProductShareListCreateAPIView,
+    public_product_detail, public_product_list
+)
 
 urlpatterns = [
     path("favicon.ico", RedirectView.as_view(url=settings.STATIC_URL + "images/favicon.ico", permanent=True)),
@@ -51,6 +54,13 @@ urlpatterns = [
     path("api/categories/", CategoryListAPIView.as_view(), name="categories_api"),
     path("api/subcategories/", SubCategoryListAPIView.as_view(), name="subcategories_api"),
 
+
+    # Public Responsive Product Details & Catalog Pages (for web & mobile visitors, WhatsApp links, QR codes)
+    path("products/", public_product_list, name="public_product_list"),
+    path("products/<uuid:identifier>/", public_product_detail, name="public_product_detail"),
+    path("products/<str:identifier>/", public_product_detail, name="public_product_detail_by_code"),
+    path("product/<uuid:identifier>/", public_product_detail, name="public_product_detail_alias"),
+    path("product/<str:identifier>/", public_product_detail, name="public_product_detail_alias_by_code"),
 
     #authentication urls 
     path("", include("authentication.urls")),

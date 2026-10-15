@@ -1,0 +1,508 @@
+{% extends 'public/base_public.html' %}
+{% load static %}
+
+{% block title %}Electrical Earthing & Lightning Protection Product Catalog | Excel Earthings{% endblock %}
+
+{% block meta_description %}Browse the complete catalogue of chemical earthing electrodes, copper bonded earth rods, heavy-duty pit inspection covers, and lightning protection systems from Excel Earthings.{% endblock %}
+
+{% block og_title %}Product Catalog - Excel Earthings{% endblock %}
+{% block og_description %}Discover advanced electrical earthing and lightning safety products with complete technical specifications.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .catalog-hero-header {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+        color: #ffffff;
+        padding: 3rem 0 2.5rem 0;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .catalog-hero-header::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(226, 138, 0, 0.15) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .catalog-hero-title {
+        font-size: 2.25rem;
+        font-weight: 900;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+        margin-bottom: 0.75rem;
+    }
+
+    .catalog-hero-subtitle {
+        font-size: 1.05rem;
+        color: #cbd5e1;
+        max-width: 650px;
+        line-height: 1.6;
+        margin-bottom: 1.75rem;
+    }
+
+    /* Search & Filter Bar */
+    .catalog-search-form {
+        display: flex;
+        gap: 0.75rem;
+        max-width: 600px;
+        background: #ffffff;
+        padding: 0.4rem;
+        border-radius: var(--radius-full);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .search-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+        padding-left: 1rem;
+    }
+
+    .search-input-wrap input {
+        width: 100%;
+        border: none;
+        outline: none;
+        font-size: 0.95rem;
+        color: var(--text-main);
+        font-family: inherit;
+    }
+
+    .btn-search-submit {
+        background: var(--brand-accent);
+        color: #ffffff;
+        font-weight: 700;
+        padding: 0.65rem 1.4rem;
+        border-radius: var(--radius-full);
+        font-size: 0.88rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: background 0.15s ease;
+    }
+
+    .btn-search-submit:hover {
+        background: var(--brand-accent-hover);
+    }
+
+    /* Category Filter Pills */
+    .category-pills-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding: 0.5rem 0 1.25rem 0;
+        margin-bottom: 1.5rem;
+        scrollbar-width: none;
+    }
+    .category-pills-bar::-webkit-scrollbar { display: none; }
+
+    .cat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.55rem 1.1rem;
+        border-radius: var(--radius-full);
+        font-size: 0.86rem;
+        font-weight: 600;
+        background: #ffffff;
+        border: 1.5px solid var(--border-subtle);
+        color: var(--text-secondary);
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    .cat-pill:hover {
+        border-color: var(--border-strong);
+        color: var(--brand-primary);
+    }
+
+    .cat-pill.active {
+        background: var(--brand-primary);
+        border-color: var(--brand-primary);
+        color: #ffffff;
+    }
+
+    /* Catalog Toolbar */
+    .catalog-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .results-count-text {
+        font-size: 0.92rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* Products Grid */
+    .products-catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .product-grid-card {
+        background: #ffffff;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--shadow-xs);
+        overflow: hidden;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .product-grid-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--border-strong);
+    }
+
+    .card-thumb-link {
+        height: 220px;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .card-thumb-link img {
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+
+    .product-grid-card:hover .card-thumb-link img {
+        transform: scale(1.05);
+    }
+
+    .card-badge-overlay {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        background: rgba(0, 33, 101, 0.85);
+        backdrop-filter: blur(4px);
+        color: #ffffff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.6rem;
+        border-radius: var(--radius-full);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .card-product-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--brand-primary);
+        line-height: 1.3;
+        margin-bottom: 0.35rem;
+    }
+
+    .card-product-title a:hover {
+        color: var(--brand-accent);
+    }
+
+    .card-sku {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-family: monospace;
+        margin-bottom: 0.75rem;
+    }
+
+    .card-desc-snippet {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 1rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .card-footer-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 0.85rem;
+        border-top: 1px solid var(--border-subtle);
+        gap: 0.5rem;
+    }
+
+    .card-price-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-price-amount {
+        font-size: 1.15rem;
+        font-weight: 900;
+        color: var(--text-main);
+    }
+
+    .btn-view-card {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: var(--brand-primary);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 0.55rem 0.95rem;
+        border-radius: var(--radius-sm);
+        transition: background 0.15s ease;
+    }
+
+    .btn-view-card:hover {
+        background: var(--brand-primary-light);
+    }
+
+    /* Empty state */
+    .empty-catalog-state {
+        text-align: center;
+        padding: 4rem 1.5rem;
+        background: #ffffff;
+        border-radius: var(--radius-md);
+        border: 1px dashed var(--border-strong);
+        margin-bottom: 3rem;
+    }
+
+    .empty-catalog-state h3 {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--brand-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-catalog-state p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Pagination */
+    .pagination-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 3rem;
+        flex-wrap: wrap;
+    }
+
+    .page-btn {
+        padding: 0.55rem 0.95rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-subtle);
+        background: #ffffff;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-main);
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+
+    .page-btn:hover {
+        border-color: var(--border-strong);
+        background: var(--bg-canvas);
+    }
+
+    .page-btn.active {
+        background: var(--brand-primary);
+        color: #ffffff;
+        border-color: var(--brand-primary);
+    }
+
+    @media (max-width: 640px) {
+        .catalog-hero-header {
+            padding: 2rem 0 1.75rem 0;
+        }
+
+        .catalog-hero-title {
+            font-size: 1.7rem;
+        }
+
+        .products-catalog-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .card-thumb-link {
+            height: 190px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Catalog Hero Header -->
+<header class="catalog-hero-header">
+    <div class="public-container">
+        <h1 class="catalog-hero-title">High-Grade Electrical Earthing Products</h1>
+        <p class="catalog-hero-subtitle">
+            Engineered chemical earth electrodes, pure copper bonded rods, and heavy-duty inspection chambers tested to CPRI, IEEE 80, and IEC standards.
+        </p>
+
+        <!-- Search Form -->
+        <form method="get" action="{% url 'public_product_list' %}" class="catalog-search-form">
+            <div class="search-input-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search by model, SKU (e.g. EXE-EPC), or name...">
+            </div>
+            {% if selected_category %}
+            <input type="hidden" name="category" value="{{ selected_category.code }}">
+            {% endif %}
+            <button type="submit" class="btn-search-submit">
+                <span>Search</span>
+            </button>
+        </form>
+    </div>
+</header>
+
+<div class="public-container">
+    
+    <!-- Category Filter Bar -->
+    <div class="category-pills-bar" aria-label="Category Filters">
+        <a href="{% url 'public_product_list' %}{% if query %}?q={{ query }}{% endif %}" class="cat-pill {% if not selected_category and not selected_subcategory %}active{% endif %}">
+            <span>All Products ({{ total_count }})</span>
+        </a>
+
+        {% for cat in categories %}
+        <a href="{% url 'public_product_list' %}?category={{ cat.code }}{% if query %}&q={{ query }}{% endif %}" class="cat-pill {% if selected_category and selected_category.id == cat.id %}active{% endif %}">
+            <span>{{ cat.name }}</span>
+            <span style="font-size: 0.75rem; opacity: 0.7;">({{ cat.products_count }})</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Active Filter Notice -->
+    {% if query or selected_category or selected_subcategory %}
+    <div class="catalog-toolbar">
+        <div class="results-count-text">
+            Found <strong>{{ total_count }}</strong> product{{ total_count|pluralize }} 
+            {% if query %}matching "<strong>{{ query }}</strong>"{% endif %}
+            {% if selected_category %}in <strong>{{ selected_category.name }}</strong>{% endif %}
+            {% if selected_subcategory %}➔ <strong>{{ selected_subcategory.name }}</strong>{% endif %}
+        </div>
+        <a href="{% url 'public_product_list' %}" style="font-size: 0.85rem; font-weight: 600; color: #ef4444; display: flex; align-items: center; gap: 0.3rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <span>Clear Filters</span>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Products Grid -->
+    {% if products %}
+    <div class="products-catalog-grid">
+        {% for prod in products %}
+        <div class="product-grid-card">
+            <a href="{% url 'public_product_detail' prod.id %}" class="card-thumb-link">
+                {% if prod.category %}
+                <span class="card-badge-overlay">{{ prod.category.name }}</span>
+                {% endif %}
+
+                {% if prod.image %}
+                <img src="{{ prod.image.url }}" alt="{{ prod.name }}" loading="lazy">
+                {% else %}
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                {% endif %}
+            </a>
+
+            <div class="card-body">
+                <div>
+                    <h3 class="card-product-title">
+                        <a href="{% url 'public_product_detail' prod.id %}">{{ prod.name }}</a>
+                    </h3>
+                    <div class="card-sku">SKU: {{ prod.sku }}</div>
+                    {% if prod.description %}
+                    <p class="card-desc-snippet">{{ prod.description }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer-row">
+                    <div class="card-price-group">
+                        {% if prod.price > 0 %}
+                        <span class="card-price-amount">₹{{ prod.price|floatformat:0 }}</span>
+                        {% else %}
+                        <span style="font-size: 0.88rem; font-weight: 700; color: var(--brand-primary);">Inquire for Price</span>
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'public_product_detail' prod.id %}" class="btn-view-card">
+                        <span>Details</span>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="pagination-bar">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category.code }}{% endif %}" class="page-btn">
+            &larr; Prev
+        </a>
+        {% endif %}
+
+        {% for num in paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="page-btn active">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category.code }}{% endif %}" class="page-btn">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category.code }}{% endif %}" class="page-btn">
+            Next &rarr;
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-catalog-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin: 0 auto 1rem auto;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <h3>No products found</h3>
+        <p>No products match your current search or category filter. Try clearing your search keyword.</p>
+        <a href="{% url 'public_product_list' %}" class="btn-search-submit" style="display: inline-flex;">
+            <span>View All Products</span>
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

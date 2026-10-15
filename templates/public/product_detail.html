@@ -1,0 +1,1782 @@
+{% extends 'public/base_public.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} ({{ product.sku }}) - Specifications & Details | Excel Earthings{% endblock %}
+
+{% block meta_description %}{{ product.description|default:"Technical specifications, dimensions, testing standards, and features for "|truncatewords:25 }}{{ product.name }} - Excel Earthings.{% endblock %}
+
+{% block og_title %}{{ product.name }} | Excel Earthings{% endblock %}
+{% block og_description %}SKU: {{ product.sku }} • {{ product.description|default:"Engineered for safety and electrical grounding performance."|truncatewords:25 }}{% endblock %}
+{% block og_type %}product{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Top Spacer */
+    .showcase-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2.5rem;
+    }
+
+    /* Product Workspace Hero */
+    .product-hero-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 1fr;
+        gap: 2.25rem;
+        margin-bottom: 2.25rem;
+        align-items: start;
+    }
+
+    /* Media Stage Card */
+    .gallery-stage-card {
+        background: #ffffff;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--shadow-sm);
+        padding: 1.25rem;
+        position: relative;
+    }
+
+    /* Media Mode Selector */
+    .media-mode-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--border-subtle);
+        padding-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .media-tabs-group {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    .media-pill-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.9rem;
+        border-radius: var(--radius-full);
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        background: var(--bg-canvas);
+        border: 1.5px solid var(--border-subtle);
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .media-pill-btn:hover {
+        color: var(--brand-primary);
+        border-color: var(--brand-primary-light);
+    }
+
+    .media-pill-btn.active {
+        background: var(--brand-primary);
+        color: #ffffff;
+        border-color: var(--brand-primary);
+    }
+
+    .media-pill-btn.btn-3d-pill {
+        border-color: #fde68a;
+        background: #fffbeb;
+        color: #b45309;
+    }
+
+    .media-pill-btn.btn-3d-pill.active {
+        background: var(--brand-accent);
+        color: #ffffff;
+        border-color: var(--brand-accent);
+    }
+
+    /* Slideshow Container */
+    .slideshow-viewport {
+        width: 100%;
+        height: 440px;
+        border-radius: var(--radius-md);
+        background: #ffffff;
+        border: 1px solid var(--border-subtle);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+    }
+
+    .slideshow-slide {
+        display: none;
+        width: 100%;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        transition: opacity 0.3s ease;
+    }
+
+    .slideshow-slide.active {
+        display: flex;
+    }
+
+    .slideshow-slide img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        cursor: zoom-in;
+    }
+
+    /* Slideshow Controls Overlays */
+    .slide-arrow-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(4px);
+        border: 1px solid var(--border-subtle);
+        color: var(--brand-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s ease;
+    }
+
+    .slide-arrow-btn:hover {
+        background: #ffffff;
+        transform: translateY(-50%) scale(1.08);
+        box-shadow: var(--shadow-md);
+    }
+
+    .slide-arrow-btn.prev-btn {
+        left: 0.85rem;
+    }
+
+    .slide-arrow-btn.next-btn {
+        right: 0.85rem;
+    }
+
+    .slide-badge-counter {
+        position: absolute;
+        top: 0.85rem;
+        left: 0.85rem;
+        background: rgba(0, 33, 101, 0.8);
+        backdrop-filter: blur(4px);
+        color: #ffffff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.25rem 0.65rem;
+        border-radius: var(--radius-full);
+        letter-spacing: 0.05em;
+        z-index: 10;
+    }
+
+    /* Slideshow Bottom Bar */
+    .slideshow-bottom-bar {
+        position: absolute;
+        bottom: 0.85rem;
+        right: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        z-index: 10;
+    }
+
+    .btn-slide-ctrl {
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(4px);
+        border: 1px solid var(--border-subtle);
+        padding: 0.4rem 0.75rem;
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--brand-primary);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        box-shadow: var(--shadow-xs);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .btn-slide-ctrl:hover {
+        background: #ffffff;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-slide-ctrl.playing {
+        background: #ecfdf5;
+        color: #065f46;
+        border-color: #a7f3d0;
+    }
+
+    /* 3D Model Panel */
+    .media-3d-panel {
+        display: none;
+        width: 100%;
+        height: 440px;
+        border-radius: var(--radius-md);
+        background: #f8fafc;
+        border: 1px solid var(--border-subtle);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .media-3d-panel.active {
+        display: block;
+    }
+
+    .hint-3d-overlay {
+        position: absolute;
+        top: 0.85rem;
+        left: 0.85rem;
+        background: rgba(0, 33, 101, 0.85);
+        backdrop-filter: blur(4px);
+        color: #ffffff;
+        padding: 0.3rem 0.75rem;
+        border-radius: var(--radius-full);
+        font-size: 0.72rem;
+        font-weight: 600;
+        pointer-events: none;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    /* Video Panel */
+    .media-video-panel {
+        display: none;
+        width: 100%;
+        height: 440px;
+        border-radius: var(--radius-md);
+        background: #000;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .media-video-panel.active {
+        display: block;
+    }
+
+    /* Thumbnail Strip */
+    .thumbnails-strip {
+        display: flex;
+        gap: 0.65rem;
+        margin-top: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        scrollbar-width: thin;
+    }
+
+    .thumb-item {
+        width: 72px;
+        height: 72px;
+        border-radius: var(--radius-sm);
+        border: 2px solid var(--border-subtle);
+        background: #ffffff;
+        cursor: pointer;
+        flex-shrink: 0;
+        overflow: hidden;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .thumb-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 4px;
+    }
+
+    .thumb-item:hover {
+        border-color: var(--border-strong);
+    }
+
+    .thumb-item.active {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 2px rgba(0, 33, 101, 0.2);
+    }
+
+    /* Right Column: Product Meta */
+    .product-meta-card {
+        background: #ffffff;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--shadow-sm);
+        padding: 2.25rem;
+    }
+
+    .product-header-tags {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.85rem;
+    }
+
+    .category-badge {
+        background: rgba(0, 33, 101, 0.08);
+        color: var(--brand-primary);
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0.3rem 0.75rem;
+        border-radius: var(--radius-full);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .subcategory-badge {
+        background: rgba(226, 138, 0, 0.12);
+        color: #b45309;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0.3rem 0.75rem;
+        border-radius: var(--radius-full);
+    }
+
+    .product-main-title {
+        font-size: 2.15rem;
+        font-weight: 900;
+        color: var(--brand-primary);
+        line-height: 1.2;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.85rem;
+    }
+
+    .sku-code-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        flex-wrap: wrap;
+    }
+
+    .sku-pill {
+        font-family: monospace;
+        background: var(--bg-canvas);
+        border: 1px solid var(--border-subtle);
+        padding: 0.3rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: var(--brand-primary);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.15s ease;
+    }
+
+    .sku-pill:hover {
+        background: #f1f5f9;
+        border-color: var(--border-strong);
+    }
+
+    /* 3D Option Prominent Banner (if 3D available) */
+    .callout-3d-card {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border: 1.5px solid #fde68a;
+        border-radius: var(--radius-md);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .callout-3d-text {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+
+    .callout-3d-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        background: var(--brand-accent);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .btn-launch-3d {
+        background: var(--brand-accent);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 0.55rem 1.15rem;
+        border-radius: var(--radius-full);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.15s ease;
+        box-shadow: 0 2px 6px rgba(226, 138, 0, 0.25);
+        cursor: pointer;
+    }
+
+    .btn-launch-3d:hover {
+        background: var(--brand-accent-hover);
+        transform: translateY(-1px);
+    }
+
+    /* Key Specs Highlights Box */
+    .specs-highlight-box {
+        background: #f8fafc;
+        border: 1px solid var(--border-subtle);
+        border-left: 4px solid var(--brand-primary);
+        border-radius: var(--radius-md);
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .specs-highlight-title {
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: var(--brand-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+    }
+
+    .specs-quick-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65rem 1.25rem;
+    }
+
+    .specs-quick-item {
+        font-size: 0.86rem;
+    }
+
+    .specs-quick-item .k {
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .specs-quick-item .v {
+        color: var(--text-main);
+        font-weight: 700;
+    }
+
+    /* Variant Selector */
+    .variants-section {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    .variants-title {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .variants-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+        gap: 0.65rem;
+    }
+
+    .variant-chip {
+        display: flex;
+        flex-direction: column;
+        padding: 0.65rem 0.85rem;
+        border-radius: var(--radius-md);
+        border: 1.5px solid var(--border-subtle);
+        background: var(--bg-canvas);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .variant-chip:hover {
+        border-color: var(--border-strong);
+        background: #ffffff;
+    }
+
+    .variant-chip.active {
+        border-color: var(--brand-primary);
+        background: #ffffff;
+        box-shadow: 0 0 0 2px rgba(0, 33, 101, 0.15);
+    }
+
+    .variant-chip-name {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--text-main);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .variant-chip-sku {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-family: monospace;
+        margin-top: 2px;
+    }
+
+    /* ========================================================
+       CONTENT TABS: Modern, Highly Styled & Mobile Friendly
+       ======================================================== */
+    .product-tabs-wrapper {
+        margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(248, 250, 252, 0.96);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-subtle);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    }
+
+    .tabs-nav-scroller {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 0.2rem 0;
+    }
+
+    .tabs-nav-scroller::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.15rem;
+        border-radius: var(--radius-full);
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        background: #ffffff;
+        border: 1.5px solid var(--border-subtle);
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+        flex-shrink: 0;
+        user-select: none;
+    }
+
+    .tab-btn:hover {
+        color: var(--brand-primary);
+        border-color: var(--brand-primary-light);
+        background: #ffffff;
+    }
+
+    .tab-btn.active {
+        color: #ffffff;
+        background: var(--brand-primary);
+        border-color: var(--brand-primary);
+        box-shadow: 0 4px 12px rgba(0, 33, 101, 0.25);
+    }
+
+    .tab-btn .tab-icon {
+        stroke: currentColor;
+        flex-shrink: 0;
+    }
+
+    .tab-count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 0.15rem 0.5rem;
+        border-radius: var(--radius-full);
+        background: #f1f5f9;
+        color: var(--text-secondary);
+        line-height: 1;
+        transition: all 0.2s ease;
+    }
+
+    .tab-btn.active .tab-count-badge {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+    }
+
+    /* Content Panels Container */
+    .tab-panels-wrap {
+        position: relative;
+    }
+
+    .tab-panel {
+        display: none;
+        animation: tabFadeIn 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .tab-panel.active {
+        display: block;
+    }
+
+    @keyframes tabFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Detail Section Card inside Tab */
+    .detail-section-card {
+        background: #ffffff;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--shadow-sm);
+        padding: 2.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .section-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .section-title-wrap h3 {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: var(--brand-primary);
+        letter-spacing: -0.015em;
+    }
+
+    .section-title-wrap svg {
+        color: var(--brand-accent);
+        flex-shrink: 0;
+    }
+
+    /* Specifications Table */
+    .specs-table-wrapper {
+        overflow-x: auto;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+    }
+
+    .specs-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+    }
+
+    .specs-table tr {
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .specs-table tr:last-child {
+        border-bottom: none;
+    }
+
+    .specs-table tr:nth-child(even) {
+        background-color: #f8fafc;
+    }
+
+    .specs-table td {
+        padding: 0.9rem 1.25rem;
+    }
+
+    .specs-param-name {
+        font-weight: 700;
+        color: var(--brand-primary);
+        width: 36%;
+        min-width: 180px;
+        background: rgba(0, 33, 101, 0.02);
+        border-right: 1px solid var(--border-subtle);
+    }
+
+    .specs-param-val {
+        color: var(--text-main);
+        font-weight: 500;
+    }
+
+    /* Features Grid */
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .feature-card {
+        background: #f8fafc;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        background: #ffffff;
+    }
+
+    .feature-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .feature-icon-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #ecfdf5;
+        color: #10b981;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .feature-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--brand-primary);
+    }
+
+    .feature-desc {
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        line-height: 1.55;
+        margin-left: 2.15rem;
+    }
+
+    .feature-subpoints {
+        margin-left: 2.15rem;
+        margin-top: 0.5rem;
+        list-style: disc;
+        padding-left: 1rem;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+    }
+
+    /* Applicable Areas */
+    .areas-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .area-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--bg-canvas);
+        border: 1.5px solid var(--border-subtle);
+        padding: 0.6rem 1rem;
+        border-radius: var(--radius-full);
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--brand-primary);
+        transition: all 0.15s ease;
+    }
+
+    .area-chip:hover {
+        background: #ffffff;
+        border-color: var(--brand-accent);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Certifications & Tests */
+    .cert-tests-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .cert-card {
+        background: #ffffff;
+        border: 1px solid var(--border-subtle);
+        border-left: 4px solid var(--brand-accent);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        box-shadow: var(--shadow-xs);
+    }
+
+    .cert-card h4 {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--brand-primary);
+        margin-bottom: 0.35rem;
+    }
+
+    .cert-card p {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    /* Downloads */
+    .docs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .doc-item-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+        background: var(--bg-canvas);
+        transition: all 0.2s ease;
+    }
+
+    .doc-item-card:hover {
+        border-color: var(--brand-primary);
+        background: #ffffff;
+        box-shadow: var(--shadow-md);
+    }
+
+    .doc-info {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+
+    .doc-icon-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-sm);
+        background: #fef2f2;
+        color: #ef4444;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .doc-title {
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: var(--brand-primary);
+    }
+
+    .doc-meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .btn-download-doc {
+        padding: 0.5rem 0.85rem;
+        background: var(--brand-primary);
+        color: #ffffff;
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: background 0.15s ease;
+    }
+
+    .btn-download-doc:hover {
+        background: var(--brand-primary-light);
+    }
+
+    /* Fullscreen Slideshow / Lightbox Modal */
+    .fullscreen-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 2200;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+    }
+
+    .fullscreen-modal.active {
+        display: flex;
+    }
+
+    .fullscreen-img-wrap {
+        max-width: 90vw;
+        max-height: 85vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .fullscreen-img {
+        max-width: 100%;
+        max-height: 85vh;
+        object-fit: contain;
+    }
+
+    .fullscreen-close-btn {
+        position: absolute;
+        top: 1.25rem;
+        right: 1.25rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        z-index: 2300;
+    }
+
+    .fullscreen-close-btn:hover {
+        background: rgba(255, 255, 255, 0.4);
+    }
+
+    .fullscreen-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        z-index: 2300;
+    }
+
+    .fullscreen-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.35);
+    }
+
+    .fullscreen-prev {
+        left: 1.5rem;
+    }
+
+    .fullscreen-next {
+        right: 1.5rem;
+    }
+
+    .fullscreen-counter {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 700;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 0.35rem 0.85rem;
+        border-radius: var(--radius-full);
+    }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+        .product-hero-grid {
+            grid-template-columns: 1fr;
+            gap: 1.75rem;
+        }
+
+        .slideshow-viewport, .media-3d-panel, .media-video-panel {
+            height: 380px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .slideshow-viewport, .media-3d-panel, .media-video-panel {
+            height: 320px;
+        }
+
+        .product-meta-card {
+            padding: 1.5rem 1.25rem;
+        }
+
+        .product-main-title {
+            font-size: 1.65rem;
+        }
+
+        .specs-quick-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .slide-arrow-btn {
+            width: 38px;
+            height: 38px;
+        }
+
+        .detail-section-card {
+            padding: 1.5rem 1.25rem;
+        }
+
+        .specs-table td {
+            padding: 0.75rem 0.85rem;
+            font-size: 0.85rem;
+        }
+
+        .specs-param-name {
+            width: 45%;
+        }
+
+        .tab-btn {
+            padding: 0.55rem 0.95rem;
+            font-size: 0.82rem;
+        }
+
+        .fullscreen-nav-btn {
+            width: 42px;
+            height: 42px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="public-container showcase-container">
+
+    <!-- Top Hero: Interactive Media Slideshow / 3D Viewer + Product Specifications Header -->
+    <div class="product-hero-grid">
+        
+        <!-- Left: Gallery Media Stage (Slideshow & 3D Viewer) -->
+        <div class="gallery-stage-card">
+            
+            <!-- Mode Switcher -->
+            <div class="media-mode-bar">
+                <div class="media-tabs-group">
+                    <button type="button" class="media-pill-btn active" id="btnModePhotos" onclick="switchMediaMode('photos')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <span>Photos ({{ gallery_images|length }})</span>
+                    </button>
+
+                    {% if three_d_url %}
+                    <button type="button" class="media-pill-btn btn-3d-pill" id="btnMode3D" onclick="switchMediaMode('3d')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        <span>View 3D Model</span>
+                    </button>
+                    {% endif %}
+
+                    {% if video_url %}
+                    <button type="button" class="media-pill-btn" id="btnModeVideo" onclick="switchMediaMode('video')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                        <span>Video</span>
+                    </button>
+                    {% endif %}
+                </div>
+
+                {% if gallery_images|length > 1 %}
+                <button type="button" class="btn-slide-ctrl" id="btnAutoplay" onclick="toggleSlideshowAutoplay()" title="Play automatic slideshow">
+                    <svg width="13" height="13" id="autoplayIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <span id="autoplayText">Play Slideshow</span>
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Photos Slideshow Viewport -->
+            <div class="slideshow-viewport" id="viewportPhotos">
+                {% if gallery_images %}
+                    <!-- Slide Counter -->
+                    <div class="slide-badge-counter" id="slideBadgeCounter">
+                        1 / {{ gallery_images|length }}
+                    </div>
+
+                    <!-- Slide Images -->
+                    {% for img in gallery_images %}
+                    <div class="slideshow-slide {% if forloop.first %}active{% endif %}" data-index="{{ forloop.counter0 }}">
+                        <img src="{{ img.url }}" alt="{{ product.name }} slide {{ forloop.counter }}" onclick="openFullscreenSlideshow({{ forloop.counter0 }})">
+                    </div>
+                    {% endfor %}
+
+                    <!-- Navigation Arrows -->
+                    {% if gallery_images|length > 1 %}
+                    <button type="button" class="slide-arrow-btn prev-btn" onclick="prevSlide()" aria-label="Previous Photo">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <button type="button" class="slide-arrow-btn next-btn" onclick="nextSlide()" aria-label="Next Photo">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                    {% endif %}
+
+                    <!-- Bottom Action Controls -->
+                    <div class="slideshow-bottom-bar">
+                        <button type="button" class="btn-slide-ctrl" onclick="openFullscreenCurrentSlide()" aria-label="Fullscreen View">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                            <span>Fullscreen</span>
+                        </button>
+                    </div>
+                {% else %}
+                    <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 0.5rem auto;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <p>No preview photo available.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- 3D Interactive Model Panel (if available) -->
+            {% if three_d_url %}
+            <div class="media-3d-panel" id="viewport3D">
+                <div class="hint-3d-overlay">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                    <span>360° Touch Rotate & Pinch Zoom</span>
+                </div>
+                <model-viewer 
+                    src="{{ three_d_url }}" 
+                    alt="3D Interactive Model of {{ product.name }}" 
+                    auto-rotate 
+                    camera-controls 
+                    touch-action="pan-y" 
+                    shadow-intensity="1" 
+                    ar 
+                    ar-modes="webxr scene-viewer quick-look" 
+                    style="width: 100%; height: 100%; background: #f8fafc;">
+                    <div slot="ar-button" style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: var(--brand-primary); color: #fff; padding: 7px 16px; border-radius: 9999px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.25);">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                        <span>View in AR (Your Room)</span>
+                    </div>
+                </model-viewer>
+            </div>
+            {% endif %}
+
+            <!-- Video Panel (if available) -->
+            {% if video_url %}
+            <div class="media-video-panel" id="viewportVideo">
+                <video controls playsinline preload="metadata" style="width: 100%; height: 100%; object-fit: contain; background: #000;">
+                    <source src="{{ video_url }}">
+                    Your browser does not support HTML5 video playback.
+                </video>
+            </div>
+            {% endif %}
+
+            <!-- Thumbnail Strip for Slideshow -->
+            {% if gallery_images|length > 1 %}
+            <div class="thumbnails-strip" aria-label="Photo thumbnails">
+                {% for img in gallery_images %}
+                <button type="button" class="thumb-item {% if forloop.first %}active{% endif %}" onclick="goToSlide({{ forloop.counter0 }})" aria-label="View photo {{ forloop.counter }}">
+                    <img src="{{ img.url }}" alt="{{ product.name }} thumbnail {{ forloop.counter }}">
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Right: Product Meta & Technical Summary -->
+        <div class="product-meta-card">
+            
+            <!-- Category Badges -->
+            <div class="product-header-tags">
+                {% if product.category %}
+                <span class="category-badge">{{ product.category.name }}</span>
+                {% endif %}
+                {% if product.sub_category %}
+                <span class="subcategory-badge">{{ product.sub_category.name }}</span>
+                {% endif %}
+                {% if product.is_variant %}
+                <span class="category-badge" style="background: rgba(14, 165, 233, 0.1); color: #0369a1;">Variant Specification</span>
+                {% endif %}
+            </div>
+
+            <!-- Product Title -->
+            <h1 class="product-main-title">{{ product.name }}</h1>
+
+            <!-- SKU Code with Copy -->
+            <div class="sku-code-row">
+                <span>Product Code / SKU:</span>
+                <button type="button" class="sku-pill" onclick="copyText('{{ product.sku }}', 'SKU {{ product.sku }} copied!')" title="Click to copy SKU">
+                    <span>{{ product.sku }}</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+            </div>
+
+            <!-- Option to View 3D Model Prominent Callout (if 3D available) -->
+            {% if three_d_url %}
+            <div class="callout-3d-card">
+                <div class="callout-3d-text">
+                    <div class="callout-3d-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    </div>
+                    <div>
+                        <strong style="color: #92400e; font-size: 0.92rem; display: block;">Interactive 3D Model Available</strong>
+                        <span style="font-size: 0.78rem; color: #b45309;">Explore 360° structure and AR placement</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-launch-3d" onclick="switchMediaMode('3d')">
+                    <span>Open 3D View</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- Technical Summary Box -->
+            {% if specs_list %}
+            <div class="specs-highlight-box">
+                <div class="specs-highlight-title">Technical Highlights</div>
+                <div class="specs-quick-grid">
+                    {% for item in specs_list|slice:":4" %}
+                    <div class="specs-quick-item">
+                        <span class="k">{{ item.key }}:</span> <span class="v">{{ item.value }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Model Configurations / Variant Sizes (if available) -->
+            {% if has_variants %}
+            <div class="variants-section">
+                <div class="variants-title">
+                    <span>Available Model Configurations / Sizes:</span>
+                    <small style="color: var(--brand-accent); font-weight: 700;">{{ variants_list|length }} Configurations</small>
+                </div>
+                <div class="variants-grid">
+                    {% for var in variants_list %}
+                    <a href="{% url 'public_product_detail' var.id %}" class="variant-chip {% if var.is_current %}active{% endif %}">
+                        <span class="variant-chip-name">{{ var.display_name }}</span>
+                        <span class="variant-chip-sku">{{ var.sku }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <!-- ========================================================
+         CONTENT TABS BAR: Stylish, Modern & Segmented
+         (Only renders tabs that contain REAL data)
+         ======================================================== -->
+    <div class="product-tabs-wrapper">
+        <div class="tabs-nav-scroller" role="tablist" aria-label="Product Information Tabs">
+            
+            {% if specs_list %}
+            <button type="button" class="tab-btn {% if default_tab == 'specs' %}active{% endif %}" role="tab" aria-selected="{% if default_tab == 'specs' %}true{% else %}false{% endif %}" aria-controls="pane-specs" id="tab-specs" onclick="selectContentTab('specs')">
+                <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                <span>Specifications</span>
+                <span class="tab-count-badge">{{ specs_list|length }}</span>
+            </button>
+            {% endif %}
+
+            {% if product.description %}
+            <button type="button" class="tab-btn {% if default_tab == 'overview' %}active{% endif %}" role="tab" aria-selected="{% if default_tab == 'overview' %}true{% else %}false{% endif %}" aria-controls="pane-overview" id="tab-overview" onclick="selectContentTab('overview')">
+                <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span>Description</span>
+            </button>
+            {% endif %}
+
+            {% if features_list %}
+            <button type="button" class="tab-btn {% if default_tab == 'features' %}active{% endif %}" role="tab" aria-selected="{% if default_tab == 'features' %}true{% else %}false{% endif %}" aria-controls="pane-features" id="tab-features" onclick="selectContentTab('features')">
+                <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                <span>Features</span>
+                <span class="tab-count-badge">{{ features_list|length }}</span>
+            </button>
+            {% endif %}
+
+            {% if areas_list %}
+            <button type="button" class="tab-btn {% if default_tab == 'applications' %}active{% endif %}" role="tab" aria-selected="{% if default_tab == 'applications' %}true{% else %}false{% endif %}" aria-controls="pane-applications" id="tab-applications" onclick="selectContentTab('applications')">
+                <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <span>Applicable Areas</span>
+                <span class="tab-count-badge">{{ areas_list|length }}</span>
+            </button>
+            {% endif %}
+
+            {% if certs_list or tests_list %}
+            <button type="button" class="tab-btn {% if default_tab == 'testing' %}active{% endif %}" role="tab" aria-selected="{% if default_tab == 'testing' %}true{% else %}false{% endif %}" aria-controls="pane-testing" id="tab-testing" onclick="selectContentTab('testing')">
+                <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                <span>Certifications & Testing</span>
+            </button>
+            {% endif %}
+
+            {% if documents %}
+            <button type="button" class="tab-btn {% if default_tab == 'documents' %}active{% endif %}" role="tab" aria-selected="{% if default_tab == 'documents' %}true{% else %}false{% endif %}" aria-controls="pane-documents" id="tab-documents" onclick="selectContentTab('documents')">
+                <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Documents</span>
+                <span class="tab-count-badge">{{ documents|length }}</span>
+            </button>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <!-- ========================================================
+         TAB CONTENT PANELS: Switched Cleanly via Tabs
+         ======================================================== -->
+    <div class="tab-panels-wrap">
+
+        <!-- TAB PANE 1: Technical Specifications -->
+        {% if specs_list %}
+        <div class="tab-panel {% if default_tab == 'specs' %}active{% endif %}" id="pane-specs" role="tabpanel" aria-labelledby="tab-specs">
+            <section class="detail-section-card">
+                <div class="section-title-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                    <h3>Technical Specifications</h3>
+                </div>
+                <div class="specs-table-wrapper">
+                    <table class="specs-table">
+                        <tbody>
+                            <tr>
+                                <td class="specs-param-name">Product Model / SKU</td>
+                                <td class="specs-param-val"><code>{{ product.sku }}</code></td>
+                            </tr>
+                            {% if product.category %}
+                            <tr>
+                                <td class="specs-param-name">Category</td>
+                                <td class="specs-param-val">{{ product.category.name }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if product.sub_category %}
+                            <tr>
+                                <td class="specs-param-name">Product Classification</td>
+                                <td class="specs-param-val">{{ product.sub_category.name }}</td>
+                            </tr>
+                            {% endif %}
+                            {% for item in specs_list %}
+                            <tr>
+                                <td class="specs-param-name">{{ item.key }}</td>
+                                <td class="specs-param-val">{{ item.value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
+        <!-- TAB PANE 2: Product Overview & Description -->
+        {% if product.description %}
+        <div class="tab-panel {% if default_tab == 'overview' %}active{% endif %}" id="pane-overview" role="tabpanel" aria-labelledby="tab-overview">
+            <section class="detail-section-card">
+                <div class="section-title-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    <h3>Product Description</h3>
+                </div>
+                <div style="font-size: 1rem; line-height: 1.8; color: var(--text-secondary); max-width: 950px;">
+                    <p>{{ product.description|linebreaksbr }}</p>
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
+        <!-- TAB PANE 3: Key Features -->
+        {% if features_list %}
+        <div class="tab-panel {% if default_tab == 'features' %}active{% endif %}" id="pane-features" role="tabpanel" aria-labelledby="tab-features">
+            <section class="detail-section-card">
+                <div class="section-title-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                    <h3>Key Features</h3>
+                </div>
+                <div class="features-grid">
+                    {% for feat in features_list %}
+                    <div class="feature-card">
+                        <div class="feature-head">
+                            <div class="feature-icon-badge">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <span class="feature-title">{{ feat.title }}</span>
+                        </div>
+                        {% if feat.description %}
+                        <p class="feature-desc">{{ feat.description }}</p>
+                        {% endif %}
+                        {% if feat.sub_points %}
+                        <ul class="feature-subpoints">
+                            {% for p in feat.sub_points %}
+                            <li>{{ p }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
+        <!-- TAB PANE 4: Applicable Installation & Industry Areas -->
+        {% if areas_list %}
+        <div class="tab-panel {% if default_tab == 'applications' %}active{% endif %}" id="pane-applications" role="tabpanel" aria-labelledby="tab-applications">
+            <section class="detail-section-card">
+                <div class="section-title-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <h3>Applicable Installation & Industry Areas</h3>
+                </div>
+                <div class="areas-grid">
+                    {% for area in areas_list %}
+                    <div class="area-chip">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent)" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                        <span>{{ area }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
+        <!-- TAB PANE 5: Quality Testing & Certifications -->
+        {% if certs_list or tests_list %}
+        <div class="tab-panel {% if default_tab == 'testing' %}active{% endif %}" id="pane-testing" role="tabpanel" aria-labelledby="tab-testing">
+            <section class="detail-section-card">
+                <div class="section-title-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                    <h3>Quality Testing & Compliance Standards</h3>
+                </div>
+                
+                <div class="cert-tests-grid">
+                    {% for c in certs_list %}
+                    <div class="cert-card">
+                        <h4>{{ c.title }}</h4>
+                        {% if c.description %}
+                        <p>{{ c.description }}</p>
+                        {% endif %}
+                        {% if c.tests %}
+                        <div style="margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 4px;">
+                            {% for t in c.tests %}
+                            <span style="font-size: 0.72rem; background: var(--bg-canvas); border: 1px solid var(--border-subtle); padding: 2px 6px; border-radius: 4px; color: var(--brand-primary); font-weight: 600;">{{ t }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    {% for t in tests_list %}
+                    <div class="cert-card" style="border-left-color: var(--brand-primary);">
+                        <h4>{{ t.title }}</h4>
+                        {% if t.description %}
+                        <p>{{ t.description }}</p>
+                        {% endif %}
+                        {% if t.tests %}
+                        <div style="margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 4px;">
+                            {% for st in t.tests %}
+                            <span style="font-size: 0.72rem; background: var(--bg-canvas); border: 1px solid var(--border-subtle); padding: 2px 6px; border-radius: 4px; color: var(--brand-primary); font-weight: 600;">{{ st }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
+        <!-- TAB PANE 6: Technical Downloads & PDF Documentation -->
+        {% if documents %}
+        <div class="tab-panel {% if default_tab == 'documents' %}active{% endif %}" id="pane-documents" role="tabpanel" aria-labelledby="tab-documents">
+            <section class="detail-section-card">
+                <div class="section-title-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <h3>Technical Datasheets & Documentation</h3>
+                </div>
+                <div class="docs-grid">
+                    {% for doc in documents %}
+                    <div class="doc-item-card">
+                        <div class="doc-info">
+                            <div class="doc-icon-badge">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            </div>
+                            <div>
+                                <div class="doc-title">{{ doc.title }}</div>
+                                <div class="doc-meta">PDF Document {% if doc.file_size_mb %}• {{ doc.file_size_mb|floatformat:1 }} MB{% endif %}</div>
+                            </div>
+                        </div>
+                        <a href="{{ doc.url }}" target="_blank" rel="noopener noreferrer" class="btn-download-doc">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Download</span>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<!-- Fullscreen Slideshow Modal -->
+<div class="fullscreen-modal" id="fullscreenModal" onclick="closeFullscreenModal(event)">
+    <button type="button" class="fullscreen-close-btn" onclick="closeFullscreenModalDirect()" aria-label="Close Fullscreen">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+    
+    {% if gallery_images|length > 1 %}
+    <button type="button" class="fullscreen-nav-btn fullscreen-prev" onclick="prevSlide(true)" aria-label="Previous Slide">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <button type="button" class="fullscreen-nav-btn fullscreen-next" onclick="nextSlide(true)" aria-label="Next Slide">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+    {% endif %}
+
+    <div class="fullscreen-img-wrap">
+        <img src="" alt="Enlarged view" class="fullscreen-img" id="fullscreenImg">
+    </div>
+
+    <div class="fullscreen-counter" id="fullscreenCounter">
+        1 / {{ gallery_images|length }}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // ==========================================
+    // CONTENT TABS SWITCHING LOGIC
+    // ==========================================
+    function selectContentTab(tabKey) {
+        const targetBtn = document.getElementById('tab-' + tabKey);
+        const targetPane = document.getElementById('pane-' + tabKey);
+        if (!targetBtn || !targetPane) return;
+
+        // Update all tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-selected', 'false');
+        });
+
+        // Update all panels
+        document.querySelectorAll('.tab-panel').forEach(pane => {
+            pane.classList.remove('active');
+        });
+
+        // Activate selected tab button and panel
+        targetBtn.classList.add('active');
+        targetBtn.setAttribute('aria-selected', 'true');
+        targetPane.classList.add('active');
+
+        // Center active tab in scrollable tabs bar for mobile
+        targetBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    // Ensure first available tab is selected if none is active
+    document.addEventListener('DOMContentLoaded', () => {
+        const activeTab = document.querySelector('.tab-btn.active');
+        if (!activeTab) {
+            const firstTab = document.querySelector('.tab-btn');
+            if (firstTab) {
+                firstTab.click();
+            }
+        }
+    });
+
+    // ==========================================
+    // MEDIA SLIDESHOW & GALLERY LOGIC
+    // ==========================================
+    let currentSlideIdx = 0;
+    const slides = document.querySelectorAll('.slideshow-slide');
+    const thumbs = document.querySelectorAll('.thumb-item');
+    const totalSlides = slides.length;
+    let autoplayInterval = null;
+    let isAutoplaying = false;
+
+    // Gallery images URLs array for fullscreen
+    const galleryUrls = [
+        {% for img in gallery_images %}"{{ img.url }}"{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    function updateSlideDisplay(index) {
+        if (totalSlides === 0) return;
+        currentSlideIdx = (index + totalSlides) % totalSlides;
+
+        slides.forEach((slide, idx) => {
+            if (idx === currentSlideIdx) {
+                slide.classList.add('active');
+            } else {
+                slide.classList.remove('active');
+            }
+        });
+
+        thumbs.forEach((thumb, idx) => {
+            if (idx === currentSlideIdx) {
+                thumb.classList.add('active');
+                thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            } else {
+                thumb.classList.remove('active');
+            }
+        });
+
+        const counter = document.getElementById('slideBadgeCounter');
+        if (counter) {
+            counter.textContent = `${currentSlideIdx + 1} / ${totalSlides}`;
+        }
+
+        const fsImg = document.getElementById('fullscreenImg');
+        const fsCounter = document.getElementById('fullscreenCounter');
+        if (fsImg && galleryUrls[currentSlideIdx]) {
+            fsImg.src = galleryUrls[currentSlideIdx];
+        }
+        if (fsCounter) {
+            fsCounter.textContent = `${currentSlideIdx + 1} / ${totalSlides}`;
+        }
+    }
+
+    function nextSlide(keepFullscreen) {
+        updateSlideDisplay(currentSlideIdx + 1);
+    }
+
+    function prevSlide(keepFullscreen) {
+        updateSlideDisplay(currentSlideIdx - 1);
+    }
+
+    function goToSlide(index) {
+        switchMediaMode('photos');
+        updateSlideDisplay(index);
+    }
+
+    // Autoplay Slideshow
+    function toggleSlideshowAutoplay() {
+        const btn = document.getElementById('btnAutoplay');
+        const icon = document.getElementById('autoplayIcon');
+        const text = document.getElementById('autoplayText');
+
+        if (isAutoplaying) {
+            clearInterval(autoplayInterval);
+            isAutoplaying = false;
+            if (btn) btn.classList.remove('playing');
+            if (icon) icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+            if (text) text.textContent = 'Play Slideshow';
+        } else {
+            switchMediaMode('photos');
+            isAutoplaying = true;
+            if (btn) btn.classList.add('playing');
+            if (icon) icon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+            if (text) text.textContent = 'Pause';
+            autoplayInterval = setInterval(() => {
+                nextSlide();
+            }, 3200);
+        }
+    }
+
+    // Touch Swipe gestures for Mobile
+    const viewport = document.getElementById('viewportPhotos');
+    if (viewport) {
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        viewport.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const diff = touchEndX - touchStartX;
+            if (Math.abs(diff) > 40) {
+                if (diff < 0) {
+                    nextSlide(); // Swiped left -> next
+                } else {
+                    prevSlide(); // Swiped right -> prev
+                }
+            }
+        }
+    }
+
+    // Switch between Photos, 3D Model, and Video
+    function switchMediaMode(mode) {
+        const vpPhotos = document.getElementById('viewportPhotos');
+        const vp3D = document.getElementById('viewport3D');
+        const vpVideo = document.getElementById('viewportVideo');
+
+        const btnPhotos = document.getElementById('btnModePhotos');
+        const btn3D = document.getElementById('btnMode3D');
+        const btnVideo = document.getElementById('btnModeVideo');
+
+        if (vpPhotos) vpPhotos.style.display = 'none';
+        if (vp3D) vp3D.classList.remove('active');
+        if (vpVideo) vpVideo.classList.remove('active');
+
+        if (btnPhotos) btnPhotos.classList.remove('active');
+        if (btn3D) btn3D.classList.remove('active');
+        if (btnVideo) btnVideo.classList.remove('active');
+
+        if (mode === 'photos') {
+            if (vpPhotos) vpPhotos.style.display = 'flex';
+            if (btnPhotos) btnPhotos.classList.add('active');
+        } else if (mode === '3d') {
+            if (isAutoplaying) toggleSlideshowAutoplay();
+            if (vp3D) vp3D.classList.add('active');
+            if (btn3D) btn3D.classList.add('active');
+        } else if (mode === 'video') {
+            if (isAutoplaying) toggleSlideshowAutoplay();
+            if (vpVideo) vpVideo.classList.add('active');
+            if (btnVideo) btnVideo.classList.add('active');
+        }
+    }
+
+    // Fullscreen Slideshow Modal
+    function openFullscreenCurrentSlide() {
+        openFullscreenSlideshow(currentSlideIdx);
+    }
+
+    function openFullscreenSlideshow(index) {
+        const modal = document.getElementById('fullscreenModal');
+        updateSlideDisplay(index);
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeFullscreenModal(e) {
+        if (e.target.id === 'fullscreenModal') {
+            closeFullscreenModalDirect();
+        }
+    }
+
+    function closeFullscreenModalDirect() {
+        const modal = document.getElementById('fullscreenModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    // Keyboard controls for slideshow
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+            nextSlide();
+        } else if (e.key === 'ArrowLeft') {
+            prevSlide();
+        } else if (e.key === 'Escape') {
+            closeFullscreenModalDirect();
+        }
+    });
+</script>
+{% endblock %}

@@ -126,6 +126,9 @@
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 <span>Specs & Media</span>
                             </a>
+                            <a href="{% url 'public_product_detail' p.id %}" target="_blank" rel="noopener noreferrer" class="action-icon-btn" style="border-color: #bae6fd; color: #0284c7; background: #f0f9ff;" title="View Public Product Page">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                            </a>
                             <!-- Delete Button -->
                             <form action="{% url 'admin_products' %}" method="post" style="display: inline;" onsubmit="return confirm('Delete product {{ p.name }}?');">
                                 {% csrf_token %}
@@ -182,6 +185,9 @@
                             <a href="{% url 'admin_product_detail' v.id %}" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.72rem; padding: 0.25rem 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;" title="Edit Child Variant">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 <span>Edit</span>
+                            </a>
+                            <a href="{% url 'public_product_detail' v.id %}" target="_blank" rel="noopener noreferrer" class="action-icon-btn" style="border-color: #bae6fd; color: #0284c7; background: #f0f9ff; padding: 0.25rem;" title="View Public Variant Page">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                             </a>
                             <form action="{% url 'admin_products' %}" method="post" style="display: inline;" onsubmit="return confirm('Delete child variant {{ v.name }}?');">
                                 {% csrf_token %}
