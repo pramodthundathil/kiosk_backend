@@ -29,10 +29,137 @@ User = get_user_model()
 
 
 def admin_dashboard(request):
-    """Overview dashboard view with system-wide stats and alerts."""
+    """Overview dashboard view with system-wide stats, quick-actions, and live telemetry."""
     if not request.user.is_authenticated:
         return redirect('signin')
 
+    if request.method == "POST":
+        action = request.POST.get('action')
+
+        # ── Quick Action: Create Store ──
+        if action == "quick_add_store":
+            name = request.POST.get('name', '').strip()
+            code = request.POST.get('code', '').strip().upper()
+            city = request.POST.get('city', '').strip()
+            state = request.POST.get('state', '').strip()
+            contact_person = request.POST.get('contact_person', '').strip()
+            contact_phone = request.POST.get('contact_phone', '').strip()
+            if not name or not code:
+                messages.error(request, "Store Name and Code are required.")
+            elif Store.objects.filter(code=code).exists():
+                messages.error(request, f"Store code '{code}' already exists.")
+            else:
+                s = Store.objects.create(
+                    name=name,
+                    code=code,
+                    city=city,
+                    state=state,
+                    contact_person=contact_person,
+                    contact_phone=contact_phone
+                )
+                messages.success(request, f"Store '{s.name}' ({s.code}) registered successfully!")
+            return redirect('admin_dashboard')
+
+        # ── Quick Action: Create Category ──
+        elif action == "quick_add_category":
+            name = request.POST.get('name', '').strip()
+            code = request.POST.get('code', '').strip().upper()
+            description = request.POST.get('description', '').strip()
+            image = request.FILES.get('image')
+            if not name or not code:
+                messages.error(request, "Category Name and Code are required.")
+            elif Category.objects.filter(code=code).exists():
+                messages.error(request, f"Category code '{code}' already exists.")
+            else:
+                cat = Category.objects.create(name=name, code=code, description=description)
+                if image:
+                    cat.image = image
+                    cat.save(update_fields=['image'])
+                messages.success(request, f"Category '{cat.name}' ({cat.code}) created successfully!")
+            return redirect('admin_dashboard')
+
+        # ── Quick Action: Register Kiosk Terminal ──
+        elif action == "quick_add_kiosk":
+            device_id = request.POST.get('device_id', '').strip()
+            name = request.POST.get('name', '').strip()
+            store_id = request.POST.get('store_id', '').strip()
+            custom_secret = request.POST.get('custom_secret', '').strip()
+            if not device_id:
+                messages.error(request, "Device ID / MAC is required to register a kiosk.")
+            elif KioskDevice.objects.filter(device_id=device_id).exists():
+                messages.error(request, f"Device ID '{device_id}' is already registered.")
+            else:
+                try:
+                    store = Store.objects.filter(id=store_id).first() if store_id else None
+                    profile, _ = KioskProfile.objects.get_or_create(
+                        code="STANDARD",
+                        defaults={'name': 'Standard Kiosk Profile', 'description': 'Default layout'}
+                    )
+                    kiosk, raw_secret = register_kiosk_device(
+                        name=name if name else f"Kiosk-{device_id}",
+                        device_id=device_id,
+                        store=store,
+                        profile=profile,
+                        custom_secret=custom_secret,
+                        is_deployed=True if store else False
+                    )
+                    messages.success(
+                        request,
+                        f"Kiosk [{kiosk.device_id}] registered successfully! PIN / Device Secret: '{raw_secret}'"
+                    )
+                except Exception as e:
+                    messages.error(request, f"Error registering kiosk: {str(e)}")
+            return redirect('admin_dashboard')
+
+        # ── Quick Action: Create Product ──
+        elif action == "quick_add_product":
+            name = request.POST.get('name', '').strip()
+            sku = request.POST.get('sku', '').strip()
+            category_id = request.POST.get('category_id', '').strip()
+            price = request.POST.get('price', '0.00').strip()
+            stock = request.POST.get('stock', '100').strip()
+            description = request.POST.get('description', '').strip()
+            image = request.FILES.get('image')
+
+            if not name:
+                messages.error(request, "Product Name is required.")
+            elif sku and Product.objects.filter(sku=sku).exists():
+                messages.error(request, f"Product SKU '{sku}' already exists.")
+            else:
+                cat = Category.objects.filter(id=category_id).first() if category_id else None
+                try:
+                    price_val = float(price) if price else 0.0
+                except ValueError:
+                    price_val = 0.0
+                try:
+                    stock_val = int(stock) if stock else 100
+                except ValueError:
+                    stock_val = 100
+
+                prod = Product.objects.create(
+                    name=name,
+                    sku=sku,
+                    category=cat,
+                    price=price_val,
+                    stock=stock_val,
+                    description=description,
+                    image=image
+                )
+                messages.success(request, f"Product '{prod.name}' (SKU: {prod.sku}) created successfully!")
+                return redirect('admin_product_detail', product_id=prod.id)
+            return redirect('admin_dashboard')
+
+        # ── Resolve Alert ──
+        elif action == "resolve_alert":
+            alert_id = request.POST.get('alert_id')
+            alert = Alert.objects.filter(id=alert_id, resolved_at__isnull=True).first()
+            if alert:
+                alert.resolved_at = timezone.now()
+                alert.save(update_fields=['resolved_at'])
+                messages.success(request, "Alert marked as resolved.")
+            return redirect('admin_dashboard')
+
+    # Fetch Kiosks with store and profile
     kiosks = KioskDevice.objects.select_related('store', 'profile').all().order_by('-created_at')
     total_kiosks = kiosks.count()
     online_count = 0
@@ -57,21 +184,68 @@ def admin_dashboard(request):
             'id': str(k.id),
             'username': k.name,
             'device_id': k.device_id,
+            'store_id': str(k.store.id) if k.store else '',
             'location': k.store.name if k.store else 'Unspecified Location',
             'status': status,
             'is_online': is_online,
-            'last_sync': k.last_sync_at.strftime('%Y-%m-%d %H:%M:%S') if k.last_sync_at else 'Never Synced',
+            'last_sync': k.last_sync_at.strftime('%Y-%m-%d %H:%M') if k.last_sync_at else 'Never Synced',
             'last_heartbeat': k.last_heartbeat_at.strftime('%Y-%m-%d %H:%M:%S') if k.last_heartbeat_at else 'Never',
             'app_version': k.app_version or 'v1.0.0',
             'device_info': f"{k.manufacturer or ''} {k.device_model or ''}".strip() or 'Android Kiosk Display',
-            'last_boot': k.last_seen_at.strftime('%Y-%m-%d %H:%M:%S') if k.last_seen_at else 'N/A',
-            'profile_name': k.profile.name if k.profile else 'Standard'
+            'last_boot': k.last_seen_at.strftime('%Y-%m-%d %H:%M') if k.last_seen_at else 'N/A',
+            'profile_name': k.profile.name if k.profile else 'Standard',
+            'update_status': k.get_update_status_display() if hasattr(k, 'get_update_status_display') else k.update_status,
+            'battery_percentage': k.battery_percentage,
         })
 
     open_alerts = Alert.objects.filter(resolved_at__isnull=True).select_related('kiosk', 'kiosk__store')[:15]
     total_products = Product.objects.filter(is_active=True).count()
     total_stores = Store.objects.filter(is_active=True).count()
     total_users = User.objects.count()
+
+    # ── Extra Features from Real App Data (Zero Slowness - fast indexed queries) ──
+    # 1. Inventory & Low Stock Real Insight
+    low_stock_products = list(Product.objects.filter(is_active=True, stock__lt=10).select_related('category')[:5])
+    low_stock_count = Product.objects.filter(is_active=True, stock__lt=10).count()
+    total_categories_count = Category.objects.filter(is_active=True).count()
+
+    # 2. App Releases & OTA Adoption
+    latest_release = AppRelease.objects.filter(is_published=True).order_by('-version_code').first()
+    up_to_date_kiosks_count = KioskDevice.objects.filter(update_status=KioskDevice.UpdateStatus.UP_TO_DATE).count()
+
+    # 3. Customer & Staff Engagement Pulse (Real Telemetry)
+    total_interactions = ProductInteraction.objects.count()
+    total_shares = ProductShare.objects.count()
+    active_screensavers = Screensaver.objects.filter(is_active=True).count()
+
+    # 4. Top Interacted Products on Kiosks (Real telemetry)
+    top_products_data = list(
+        ProductInteraction.objects.filter(product__isnull=False)
+        .values('product_id', 'product__name', 'product__sku', 'product__price', 'product__stock', 'product__category__name')
+        .annotate(views=Count('id'))
+        .order_by('-views')[:5]
+    )
+    if not top_products_data:
+        fallback_prods = Product.objects.filter(is_active=True).select_related('category')[:5]
+        top_products_data = [
+            {
+                'product_id': p.id,
+                'product__name': p.name,
+                'product__sku': p.sku,
+                'product__price': p.price,
+                'product__stock': p.stock,
+                'product__category__name': p.category.name if p.category else 'General',
+                'views': 0
+            }
+            for p in fallback_prods
+        ]
+
+    # 5. Recent System Events
+    recent_events = list(KioskEvent.objects.select_related('kiosk', 'kiosk__store').order_by('-created_at')[:8])
+
+    # 6. Real Active Stores and Categories for Dashboard Filter and Quick-Modals
+    real_stores = list(Store.objects.filter(is_active=True).order_by('name'))
+    real_categories = list(Category.objects.filter(is_active=True).order_by('display_order', 'name'))
 
     context = {
         'kiosks': kiosk_list,
@@ -85,6 +259,19 @@ def admin_dashboard(request):
         'total_users': total_users,
         'open_alerts': open_alerts,
         'active_tab': 'dashboard',
+        # Extra real data features:
+        'low_stock_products': low_stock_products,
+        'low_stock_count': low_stock_count,
+        'total_categories_count': total_categories_count,
+        'latest_release': latest_release,
+        'up_to_date_kiosks_count': up_to_date_kiosks_count,
+        'total_interactions': total_interactions,
+        'total_shares': total_shares,
+        'active_screensavers': active_screensavers,
+        'top_products': top_products_data,
+        'recent_events': recent_events,
+        'real_stores': real_stores,
+        'real_categories': real_categories,
     }
     return render(request, "admin/dashboard.html", context)
 

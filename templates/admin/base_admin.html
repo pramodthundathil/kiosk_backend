@@ -133,58 +133,130 @@
                 </div>
             </nav>
             
-            <!-- User / Admin Dropdown -->
-            <div class="nav-user-wrapper">
-                <button type="button" class="user-dropdown-btn {% if active_tab == 'users' or active_tab == 'media' or active_tab == 'profile' or active_tab == 'settings' or active_tab == 'releases' %}active{% endif %}" id="userDropdownBtn" onclick="toggleUserDropdown(event)" aria-expanded="false" aria-label="User Account Menu">
-                    <div class="user-badge">
-                        <div class="user-avatar">
-                            {{ user.username|slice:":1"|upper }}
+            <!-- Navigation Actions Group (Compact Notification Bell + User Profile) -->
+            <div class="nav-actions-group">
+                <!-- Top Notification Bell Dropdown -->
+                <div class="nav-notification-wrapper">
+                    <button type="button" class="nav-notification-btn" id="navNotificationBtn" onclick="toggleNotificationDropdown(event)" aria-expanded="false" aria-label="System Notifications" title="System Alerts">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        {% if top_alerts_count and top_alerts_count > 0 %}
+                        <span class="nav-notification-badge">{{ top_alerts_count }}</span>
+                        {% endif %}
+                    </button>
+                    <div class="nav-notification-dropdown" id="navNotificationDropdown">
+                        <div class="notification-dropdown-header">
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span class="notification-title">System Alerts</span>
+                                {% if top_alerts_count and top_alerts_count > 0 %}
+                                <span class="notification-count-badge">{{ top_alerts_count }} Active</span>
+                                {% else %}
+                                <span class="notification-count-badge badge-ok">All Normal</span>
+                                {% endif %}
+                            </div>
+                            <a href="{% url 'admin_monitoring' %}" class="notification-header-link">Live Telemetry &rarr;</a>
                         </div>
-                        <div class="user-info-text">
-                            <span class="user-name">{{ user.username }}</span>
-                            <span class="user-role-label">{% if user.get_role_display %}{{ user.get_role_display }}{% else %}Admin{% endif %}</span>
+                        <div class="notification-dropdown-list">
+                            {% if top_alerts %}
+                                {% for alert in top_alerts %}
+                                <div class="notification-item alert-sev-{{ alert.severity|lower }}">
+                                    <div class="notification-item-icon">
+                                        {% if alert.severity == 'CRITICAL' %}
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        {% elif alert.severity == 'ERROR' or alert.severity == 'WARNING' %}
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        {% else %}
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                        {% endif %}
+                                    </div>
+                                    <div class="notification-item-content">
+                                        <div class="notification-item-title">{{ alert.get_alert_type_display|default:alert.alert_type }}</div>
+                                        <div class="notification-item-meta">
+                                            <span>{{ alert.kiosk.name }}</span> &bull; <span>{{ alert.kiosk.device_id }}</span>
+                                            {% if alert.kiosk.store %} &bull; <span>{{ alert.kiosk.store.name }}</span>{% endif %}
+                                        </div>
+                                        <div class="notification-item-msg">{{ alert.message|truncatechars:95 }}</div>
+                                        <div class="notification-item-time">{{ alert.opened_at|timesince }} ago</div>
+                                    </div>
+                                    <div class="notification-item-actions">
+                                        <a href="{% url 'admin_kiosk_detail' alert.kiosk.id %}" class="notification-btn-inspect" title="Inspect Terminal">
+                                            &rarr;
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                            <div class="notification-empty-state">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                <div class="notification-empty-title">All Systems Operational</div>
+                                <div class="notification-empty-desc">All registered kiosk terminals are communicating normally.</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="notification-dropdown-footer">
+                            <a href="{% url 'admin_monitoring' %}">Open Fleet Monitoring Console &rarr;</a>
                         </div>
                     </div>
-                    <svg class="user-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-                <div class="user-dropdown-menu" id="userDropdownMenu">
-                    <div class="dropdown-header">
-                        <div class="user-avatar-large">
-                            {{ user.username|slice:":1"|upper }}
+                </div>
+
+                <!-- User / Admin Dropdown -->
+                <div class="nav-user-wrapper">
+                    <button type="button" class="user-dropdown-btn {% if active_tab == 'users' or active_tab == 'media' or active_tab == 'profile' or active_tab == 'settings' or active_tab == 'releases' %}active{% endif %}" id="userDropdownBtn" onclick="toggleUserDropdown(event)" aria-expanded="false" aria-label="User Account Menu">
+                        <div class="user-badge">
+                            <div class="user-avatar">
+                                {{ user.username|slice:":1"|upper }}
+                            </div>
+                            <div class="user-info-text">
+                                <span class="user-name">{{ user.username }}</span>
+                                <span class="user-role-label">{% if user.get_role_display %}{{ user.get_role_display }}{% else %}Admin{% endif %}</span>
+                            </div>
                         </div>
-                        <div class="user-header-info">
-                            <span class="dropdown-user-title">{{ user.username }}</span>
-                            <span class="dropdown-user-email">{{ user.email|default:"admin@excelearning.com" }}</span>
+                        <svg class="user-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="user-dropdown-menu" id="userDropdownMenu">
+                        <div class="dropdown-header">
+                            <div class="user-avatar-large">
+                                {{ user.username|slice:":1"|upper }}
+                            </div>
+                            <div class="user-header-info">
+                                <span class="dropdown-user-title">{{ user.username }}</span>
+                                <span class="dropdown-user-email">{{ user.email|default:"admin@excelearning.com" }}</span>
+                            </div>
                         </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="{% url 'admin_profile' %}" class="user-dropdown-item {% if active_tab == 'profile' %}active{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span>Profile</span>
+                        </a>
+                        <a href="{% url 'admin_releases' %}" class="user-dropdown-item {% if active_tab == 'releases' %}active{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>App Releases (OTA)</span>
+                        </a>
+                        <a href="{% url 'admin_users' %}" class="user-dropdown-item {% if active_tab == 'users' %}active{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            <span>Staff & Users</span>
+                        </a>
+                        <a href="{% url 'admin_media' %}" class="user-dropdown-item {% if active_tab == 'media' %}active{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polygon points="12 11 12 17 17 14 12 11"></polygon></svg>
+                            <span>Media Assets</span>
+                        </a>
+                        <a href="{% url 'admin_settings' %}" class="user-dropdown-item {% if active_tab == 'settings' %}active{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            <span>Settings</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{% url 'signout' %}" class="user-dropdown-item dropdown-item-danger">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            <span>Logout</span>
+                        </a>
                     </div>
-                    <div class="dropdown-divider"></div>
-                    <a href="{% url 'admin_profile' %}" class="user-dropdown-item {% if active_tab == 'profile' %}active{% endif %}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <span>Profile</span>
-                    </a>
-                    <a href="{% url 'admin_releases' %}" class="user-dropdown-item {% if active_tab == 'releases' %}active{% endif %}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span>App Releases (OTA)</span>
-                    </a>
-                    <a href="{% url 'admin_users' %}" class="user-dropdown-item {% if active_tab == 'users' %}active{% endif %}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                        <span>Staff & Users</span>
-                    </a>
-                    <a href="{% url 'admin_media' %}" class="user-dropdown-item {% if active_tab == 'media' %}active{% endif %}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polygon points="12 11 12 17 17 14 12 11"></polygon></svg>
-                        <span>Media Assets</span>
-                    </a>
-                    <a href="{% url 'admin_settings' %}" class="user-dropdown-item {% if active_tab == 'settings' %}active{% endif %}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                        <span>Settings</span>
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a href="{% url 'signout' %}" class="user-dropdown-item dropdown-item-danger">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                        <span>Logout</span>
-                    </a>
                 </div>
             </div>
 
@@ -260,21 +332,55 @@
             if (collapse) collapse.classList.toggle('active');
         }
 
+        // Close all dropdowns helper
+        function closeAllNavDropdowns(exceptId) {
+            const dropdowns = [
+                { id: 'navMoreDropdown', btn: '.nav-more-btn' },
+                { id: 'navNotificationDropdown', btn: '#navNotificationBtn' },
+                { id: 'userDropdownMenu', btn: '#userDropdownBtn' }
+            ];
+            dropdowns.forEach(d => {
+                if (d.id !== exceptId) {
+                    const el = document.getElementById(d.id);
+                    const btn = document.querySelector(d.btn);
+                    if (el && el.classList.contains('show')) {
+                        el.classList.remove('show');
+                        if (btn) {
+                            btn.classList.remove('open');
+                            btn.setAttribute('aria-expanded', 'false');
+                        }
+                    }
+                }
+            });
+        }
+
         // Toggle desktop "More ▾" navigation overflow menu
         function toggleNavMoreMenu(event) {
             if (event) event.stopPropagation();
             const dropdown = document.getElementById('navMoreDropdown');
             const btn = document.querySelector('.nav-more-btn');
-            // Close User dropdown if open
-            const userDropdown = document.getElementById('userDropdownMenu');
-            const userBtn = document.getElementById('userDropdownBtn');
-            if (userDropdown && userDropdown.classList.contains('show')) {
-                userDropdown.classList.remove('show');
-                if (userBtn) {
-                    userBtn.classList.remove('open');
-                    userBtn.setAttribute('aria-expanded', 'false');
+            closeAllNavDropdowns('navMoreDropdown');
+
+            if (dropdown && btn) {
+                const isOpen = dropdown.classList.contains('show');
+                if (isOpen) {
+                    dropdown.classList.remove('show');
+                    btn.classList.remove('open');
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    dropdown.classList.add('show');
+                    btn.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
                 }
             }
+        }
+
+        // Toggle Top Notification Dropdown
+        function toggleNotificationDropdown(event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('navNotificationDropdown');
+            const btn = document.getElementById('navNotificationBtn');
+            closeAllNavDropdowns('navNotificationDropdown');
 
             if (dropdown && btn) {
                 const isOpen = dropdown.classList.contains('show');
@@ -295,16 +401,7 @@
             if (event) event.stopPropagation();
             const dropdown = document.getElementById('userDropdownMenu');
             const btn = document.getElementById('userDropdownBtn');
-            // Close More dropdown if open
-            const moreDropdown = document.getElementById('navMoreDropdown');
-            const moreBtn = document.querySelector('.nav-more-btn');
-            if (moreDropdown && moreDropdown.classList.contains('show')) {
-                moreDropdown.classList.remove('show');
-                if (moreBtn) {
-                    moreBtn.classList.remove('open');
-                    moreBtn.setAttribute('aria-expanded', 'false');
-                }
-            }
+            closeAllNavDropdowns('userDropdownMenu');
 
             if (dropdown && btn) {
                 const isOpen = dropdown.classList.contains('show');
@@ -322,50 +419,20 @@
 
         // Close dropdowns when clicking anywhere outside
         document.addEventListener('click', (event) => {
-            // More Dropdown
-            const moreDropdown = document.getElementById('navMoreDropdown');
-            const moreWrapper = document.querySelector('.nav-more-wrapper');
-            if (moreDropdown && moreDropdown.classList.contains('show')) {
-                if (!moreWrapper || !moreWrapper.contains(event.target)) {
-                    moreDropdown.classList.remove('show');
-                    const btn = document.querySelector('.nav-more-btn');
-                    if (btn) {
-                        btn.classList.remove('open');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                }
-            }
-
-            // User Dropdown
-            const userDropdown = document.getElementById('userDropdownMenu');
-            const userWrapper = document.querySelector('.nav-user-wrapper');
-            if (userDropdown && userDropdown.classList.contains('show')) {
-                if (!userWrapper || !userWrapper.contains(event.target)) {
-                    userDropdown.classList.remove('show');
-                    const btn = document.getElementById('userDropdownBtn');
-                    if (btn) {
-                        btn.classList.remove('open');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                }
+            const wrappers = ['.nav-more-wrapper', '.nav-notification-wrapper', '.nav-user-wrapper'];
+            const clickedInside = wrappers.some(selector => {
+                const el = document.querySelector(selector);
+                return el && el.contains(event.target);
+            });
+            if (!clickedInside) {
+                closeAllNavDropdowns(null);
             }
         });
 
         // Close dropdowns on Escape key
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
-                const moreDropdown = document.getElementById('navMoreDropdown');
-                if (moreDropdown && moreDropdown.classList.contains('show')) {
-                    moreDropdown.classList.remove('show');
-                    const btn = document.querySelector('.nav-more-btn');
-                    if (btn) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
-                }
-                const userDropdown = document.getElementById('userDropdownMenu');
-                if (userDropdown && userDropdown.classList.contains('show')) {
-                    userDropdown.classList.remove('show');
-                    const btn = document.getElementById('userDropdownBtn');
-                    if (btn) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
-                }
+                closeAllNavDropdowns(null);
             }
         });
     </script>
