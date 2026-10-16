@@ -62,12 +62,9 @@ class MediaLibraryListAPIView(views.APIView):
         total_all_count = sum(type_counts.values())
 
         categories_summary = [
-            {'id': 'ALL', 'name': 'All Media', 'icon': 'layers', 'count': total_all_count},
             {'id': 'IMAGE', 'name': 'Images', 'icon': 'image', 'count': type_counts.get('IMAGE', 0)},
+            {'id': 'THREE_D', 'name': '3D Images', 'icon': 'box', 'count': type_counts.get('THREE_D', 0)},
             {'id': 'PDF_BROCHURE', 'name': 'Brochures', 'icon': 'file-text', 'count': type_counts.get('PDF_BROCHURE', 0)},
-            {'id': 'THREE_D', 'name': '3D Assets', 'icon': 'box', 'count': type_counts.get('THREE_D', 0)},
-            {'id': 'TECH_SHEET', 'name': 'Tech Sheets', 'icon': 'file-check', 'count': type_counts.get('TECH_SHEET', 0)},
-            {'id': 'VIDEO', 'name': 'Videos', 'icon': 'video', 'count': type_counts.get('VIDEO', 0)},
         ]
 
         qs = base_qs
