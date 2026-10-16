@@ -50,6 +50,7 @@ urlpatterns = [
     path("api/kiosk/", include("kiosks.urls")),
     path("api/kiosk/", include("monitoring.urls")),
     path("api/products/", include("products.urls")),
+    path("api/media-library/", include("content.urls")),
     path("api/product-shares/", ProductShareListCreateAPIView.as_view(), name="product_shares_root_api"),
     path("api/categories/", CategoryListAPIView.as_view(), name="categories_api"),
     path("api/subcategories/", SubCategoryListAPIView.as_view(), name="subcategories_api"),
