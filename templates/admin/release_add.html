@@ -48,14 +48,39 @@
                     </div>
                 </div>
 
+                <!-- S3 DIRECT FILE SELECTION -->
+                {% if s3_apks %}
+                <div style="background: rgba(14, 165, 233, 0.07); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <label style="font-size: 0.88rem; font-weight: 700; color: #0284c7; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                            ⚡ Fast Track: Select APK Already on AWS S3 (Instant Publish, No Upload)
+                        </label>
+                        <span style="font-size: 0.75rem; background: #0284c7; color: #fff; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 600;">Recommended</span>
+                    </div>
+                    <select name="existing_s3_key" id="existingS3Select"
+                            style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.9rem; background: var(--bg-card); color: var(--text-primary);">
+                        <option value="">-- Choose an existing APK file on S3 or upload below --</option>
+                        {% for item in s3_apks %}
+                        <option value="{{ item.key }}" {% if form_data.existing_s3_key == item.key or forloop.first %}selected{% endif %}>
+                            {{ item.name }} ({{ item.size_mb }} MB) &bull; s3://{{ item.key }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 0.4rem;">
+                        Files uploaded directly to S3 bucket bypass all Cloudflare and web server upload limits.
+                    </span>
+                </div>
+                {% endif %}
+
                 <div>
                     <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-primary);">
-                        APK Binary File (.apk) <span style="color: #ef4444;">*</span>
+                        Or Upload New APK File (.apk)
                     </label>
-                    <input type="file" name="apk_file" accept=".apk,application/vnd.android.package-archive"
+                    <input type="file" name="apk_file" id="apkFileInput" accept=".apk,application/vnd.android.package-archive"
                            style="width: 100%; padding: 0.6rem; border: 1px dashed var(--border-color); border-radius: var(--radius-md); background: var(--bg-body); cursor: pointer;">
                     <span style="font-size: 0.75rem; color: var(--text-secondary);">
-                        Upload compiled, signed Android APK. SHA-256 and byte size will be computed automatically upon upload.
+                        Upload compiled, signed Android APK. SHA-256 and byte size will be computed automatically.
                     </span>
                 </div>
 
@@ -63,9 +88,9 @@
                     <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-primary);">
                         Alternative: Direct APK Download URL (Optional)
                     </label>
-                    <input type="url" name="apk_url" value="{{ form_data.apk_url|default:'' }}" placeholder="https://s3.amazonaws.com/your-bucket/kiosk-1.0.5.apk"
+                    <input type="url" name="apk_url" id="apkUrlInput" value="{{ form_data.apk_url|default:'' }}" placeholder="https://s3.amazonaws.com/your-bucket/kiosk-1.0.5.apk"
                            style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.9rem; background: var(--bg-card); color: var(--text-primary);">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Used if APK is hosted on an external CDN or high-speed CDN endpoint.</span>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Used if APK is hosted on an external CDN or presigned S3 link.</span>
                 </div>
             </div>
 
@@ -156,6 +181,27 @@
                 </div>
             </div>
 
+            <!-- LIVE UPLOAD PROGRESS BOX -->
+            <div id="uploadProgressContainer" style="display: none; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span id="uploadStatusText" style="font-weight: 600; font-size: 0.9rem; color: var(--primary-color);">
+                        Uploading APK to Server...
+                    </span>
+                    <span id="uploadPercentText" style="font-weight: 700; font-size: 0.9rem; color: var(--accent-color);">
+                        0%
+                    </span>
+                </div>
+                <div style="width: 100%; height: 10px; background: rgba(0,0,0,0.08); border-radius: 9999px; overflow: hidden; margin-bottom: 0.5rem;">
+                    <div id="uploadProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); transition: width 0.2s ease;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-secondary);">
+                    <span id="uploadBytesText">0 MB / 0 MB</span>
+                    <span id="uploadSpeedText">-- MB/s</span>
+                </div>
+            </div>
+
+            <div id="uploadErrorBox" style="display: none; background: #fef2f2; border: 1px solid #f87171; color: #b91c1c; padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem;"></div>
+
             <!-- SECTION 4: PUBLICATION & SUBMISSION -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1.25rem; flex-wrap: wrap; gap: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -167,12 +213,147 @@
 
                 <div style="display: flex; gap: 0.6rem;">
                     <a href="{% url 'admin_releases' %}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-accent" style="font-weight: 700; padding: 0.6rem 1.5rem;">
-                        Save &amp; Publish Release
+                    <button type="submit" id="submitReleaseBtn" class="btn btn-accent" style="font-weight: 700; padding: 0.6rem 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>Save &amp; Publish Release</span>
                     </button>
                 </div>
             </div>
         </form>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submitReleaseBtn');
+    const fileInput = document.getElementById('apkFileInput');
+    const existingS3Select = document.getElementById('existingS3Select');
+    const apkUrlInput = document.getElementById('apkUrlInput');
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const percentText = document.getElementById('uploadPercentText');
+    const statusText = document.getElementById('uploadStatusText');
+    const bytesText = document.getElementById('uploadBytesText');
+    const speedText = document.getElementById('uploadSpeedText');
+    const errorBox = document.getElementById('uploadErrorBox');
+
+    // Auto-clear conflicting inputs when one is selected
+    if (existingS3Select) {
+        existingS3Select.addEventListener('change', function() {
+            if (this.value) {
+                if (fileInput) fileInput.value = '';
+                if (apkUrlInput) apkUrlInput.value = '';
+            }
+        });
+    }
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            if (this.files.length && existingS3Select) {
+                existingS3Select.value = '';
+            }
+        });
+    }
+
+    form.addEventListener('submit', function(e) {
+        // If no binary file selected, perform regular fast submission (e.g. S3 file or URL)
+        if (!fileInput || !fileInput.files.length) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>Saving Release...</span>';
+            return true;
+        }
+
+        e.preventDefault();
+        errorBox.style.display = 'none';
+        errorBox.innerHTML = '';
+
+        const file = fileInput.files[0];
+        const totalBytes = file.size;
+        const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+        progressContainer.style.display = 'block';
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.innerHTML = '<span>Uploading...</span>';
+
+        const formData = new FormData(form);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action || window.location.href, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        let startTime = Date.now();
+        let lastLoaded = 0;
+        let lastTime = startTime;
+
+        xhr.upload.onprogress = function(event) {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                progressBar.style.width = percent + '%';
+                percentText.innerText = percent + '%';
+
+                const loadedMB = (event.loaded / (1024 * 1024)).toFixed(1);
+                bytesText.innerText = loadedMB + ' MB / ' + totalMB + ' MB';
+
+                const now = Date.now();
+                const timeDiff = (now - lastTime) / 1000;
+                if (timeDiff >= 0.5) {
+                    const bytesDiff = event.loaded - lastLoaded;
+                    const speedMBs = ((bytesDiff / (1024 * 1024)) / timeDiff).toFixed(1);
+                    speedText.innerText = speedMBs + ' MB/s';
+                    lastLoaded = event.loaded;
+                    lastTime = now;
+                }
+
+                if (percent >= 100) {
+                    statusText.innerText = 'Upload finished. Verifying APK & syncing to AWS S3... Please wait.';
+                    progressBar.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+                } else {
+                    statusText.innerText = 'Uploading APK to Server (' + percent + '%)...';
+                }
+            }
+        };
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const res = JSON.parse(xhr.responseText);
+                    statusText.innerText = 'Release published successfully! Redirecting...';
+                    window.location.href = res.redirect_url || '{% url "admin_releases" %}';
+                } catch(e) {
+                    window.location.href = '{% url "admin_releases" %}';
+                }
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.innerHTML = '<span>Save &amp; Publish Release</span>';
+                progressContainer.style.display = 'none';
+
+                let errMsg = 'Upload failed with status ' + xhr.status + ': ' + xhr.statusText;
+                try {
+                    const res = JSON.parse(xhr.responseText);
+                    if (res.errors && res.errors.length) {
+                        errMsg = res.errors.join('<br>');
+                    }
+                } catch(e) {}
+                errorBox.innerHTML = '<strong>Upload Error:</strong><br>' + errMsg;
+                errorBox.style.display = 'block';
+            }
+        };
+
+        xhr.onerror = function() {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.innerHTML = '<span>Save &amp; Publish Release</span>';
+            progressContainer.style.display = 'none';
+            errorBox.innerHTML = '<strong>Network Error:</strong> The connection was dropped or timed out by the server. Consider selecting the APK directly from S3 or using a direct URL.';
+            errorBox.style.display = 'block';
+        };
+
+        xhr.send(formData);
+    });
+});
+</script>
+
     </div>
 
 </div>

@@ -2922,25 +2922,50 @@ def admin_release_add(request):
     """
     Upload and configure a new Android APK application release.
     Validates APK structure, computes SHA-256 and byte size, and provisions rollout.
+    Supports direct S3 storage selection, direct APK download URLs, and live upload progress.
     """
     if not request.user.is_authenticated:
         return redirect('signin')
+
+    from django.core.files.storage import default_storage
+    from django.http import JsonResponse
 
     kiosks = KioskDevice.objects.all().order_by('name')
     latest_rel = AppRelease.objects.order_by('-version_code').first()
     suggested_code = (latest_rel.version_code + 1) if latest_rel else 1
 
+    # Discover APKs already stored in S3/media storage
+    s3_apks = []
+    try:
+        _, storage_files = default_storage.listdir('apks')
+        for f in sorted(storage_files, reverse=True):
+            if f.lower().endswith('.apk'):
+                try:
+                    size_mb = round(default_storage.size(f'apks/{f}') / (1024 * 1024), 2)
+                except Exception:
+                    size_mb = 0
+                s3_apks.append({
+                    'name': f,
+                    'key': f'apks/{f}',
+                    'size_mb': size_mb,
+                })
+    except Exception:
+        pass
+
     if request.method == "POST":
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+
         version_name = request.POST.get('version_name', '').strip()
         version_code_str = request.POST.get('version_code', '').strip()
         release_title = request.POST.get('release_title', '').strip()
         release_notes = request.POST.get('release_notes', '').strip()
-        is_mandatory = request.POST.get('is_mandatory') == 'on'
-        is_published = request.POST.get('is_published') == 'on'
-        allow_rollback = request.POST.get('allow_rollback') == 'on'
+        is_mandatory = request.POST.get('is_mandatory') == 'on' or request.POST.get('is_mandatory') == 'true'
+        is_published = request.POST.get('is_published') == 'on' or request.POST.get('is_published') == 'true'
+        allow_rollback = request.POST.get('allow_rollback') == 'on' or request.POST.get('allow_rollback') == 'true'
         target_device_type = request.POST.get('target_device_type', AppRelease.DeviceType.ALL)
         staged_percentage_str = request.POST.get('staged_rollout_percentage', '100').strip()
         target_kiosk_ids = request.POST.getlist('target_kiosks')
+        existing_s3_key = request.POST.get('existing_s3_key', '').strip()
         apk_url = request.POST.get('apk_url', '').strip()
         apk_file = request.FILES.get('apk_file')
 
@@ -2980,12 +3005,22 @@ def admin_release_add(request):
                 f"To override for a rollback build, enable the 'Rollback / Emergency Downgrade' checkbox."
             )
 
-        if not apk_file and not apk_url:
-            errors.append("Please upload an APK file or provide a direct download APK URL.")
+        if not apk_file and not apk_url and not existing_s3_key:
+            errors.append("Please upload an APK file, select an existing S3 APK, or provide a direct download APK URL.")
 
         sha256 = ""
         file_size = 0
-        if apk_file:
+        if existing_s3_key:
+            try:
+                if not default_storage.exists(existing_s3_key):
+                    errors.append(f"Selected S3 file '{existing_s3_key}' was not found in storage.")
+                else:
+                    file_size = default_storage.size(existing_s3_key)
+                    with default_storage.open(existing_s3_key, 'rb') as f_obj:
+                        sha256, _ = compute_file_sha256_and_size(f_obj)
+            except Exception as e:
+                errors.append(f"Error inspecting existing S3 file: {str(e)}")
+        elif apk_file:
             try:
                 validate_apk_file(apk_file)
                 sha256, file_size = compute_file_sha256_and_size(apk_file)
@@ -2993,10 +3028,13 @@ def admin_release_add(request):
                 errors.append(f"APK validation failed: {str(e)}")
 
         if errors:
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': errors}, status=400)
             for err in errors:
                 messages.error(request, err)
             return render(request, "admin/release_add.html", {
                 'kiosks': kiosks,
+                's3_apks': s3_apks,
                 'suggested_code': suggested_code,
                 'target_kiosk_ids': target_kiosk_ids,
                 'target_device_types': AppRelease.DeviceType.choices,
@@ -3014,9 +3052,9 @@ def admin_release_add(request):
             version_code=version_code,
             release_title=release_title,
             release_notes=release_notes,
-            apk_file=apk_file,
+            apk_file=existing_s3_key if existing_s3_key else apk_file,
             apk_url=apk_url,
-            apk_file_size=file_size if apk_file else None,
+            apk_file_size=file_size if (apk_file or existing_s3_key) else None,
             checksum_sha256=sha256,
             is_mandatory=is_mandatory,
             is_published=is_published,
@@ -3036,15 +3074,20 @@ def admin_release_add(request):
             else:
                 KioskDevice.objects.filter(is_active=True).update(force_update_requested=True)
 
-        messages.success(
-            request, 
+        success_msg = (
             f"Release v{release.version_name} ({release.version_code}) successfully created!"
             + (" Published and dispatched to kiosks." if is_published else " Saved as draft.")
         )
+        messages.success(request, success_msg)
+
+        if is_ajax:
+            return JsonResponse({'success': True, 'message': success_msg, 'redirect_url': '/admin_pannel/releases/'})
+
         return redirect('admin_releases')
 
     return render(request, "admin/release_add.html", {
         'kiosks': kiosks,
+        's3_apks': s3_apks,
         'suggested_code': suggested_code,
         'target_device_types': AppRelease.DeviceType.choices,
         'active_tab': 'releases',
