@@ -2177,6 +2177,34 @@ def admin_settings(request):
     return render(request, "admin/settings.html", context)
 
 
+def bump_kiosks_screensaver_version(profile=None, description="Screensaver updated"):
+    """
+    Increments desired_content_version on active kiosks so kiosks immediately pull
+    the latest screensavers on their next heartbeat / sync cycle.
+    """
+    try:
+        kiosks_qs = KioskDevice.objects.filter(is_active=True)
+        if profile:
+            kiosks_qs = kiosks_qs.filter(Q(profile=profile) | Q(profile__isnull=True))
+
+        count = 0
+        for k in kiosks_qs:
+            current_ver = int(k.desired_content_version) if (k.desired_content_version and k.desired_content_version.isdigit()) else 1
+            k.desired_content_version = str(current_ver + 1)
+            k.save(update_fields=['desired_content_version'])
+            KioskEvent.objects.create(
+                kiosk=k,
+                event_type=KioskEvent.EventType.SYNC_STARTED,
+                severity=KioskEvent.Severity.INFO,
+                message=f"{description}. Target content version bumped to v{k.desired_content_version}."
+            )
+            count += 1
+        return count
+    except Exception as e:
+        logger.warning(f"Failed to bump screensaver version on kiosks: {e}")
+        return 0
+
+
 def admin_screensavers(request):
     """Screensavers Management Page: List, Filter, Search, Interactive Slide Simulation Player."""
     if not request.user.is_authenticated:
@@ -2184,12 +2212,18 @@ def admin_screensavers(request):
 
     if request.method == "POST":
         action = request.POST.get('action')
-        if action == "delete_screensaver":
+        if action == "force_sync_screensavers":
+            count = bump_kiosks_screensaver_version(description=f"Force sync triggered by admin ({request.user.username}) from Screensavers Manager")
+            messages.success(request, f"Force sync requested for {count} active kiosk terminal(s). New screensavers will be updated automatically on the next terminal heartbeat.")
+            return redirect('admin_screensavers')
+        elif action == "delete_screensaver":
             screensaver_id = request.POST.get('screensaver_id')
             ss = get_object_or_404(Screensaver, id=screensaver_id)
             title = ss.title
+            profile = ss.kiosk_profile
             ss.delete()
-            messages.success(request, f"Screensaver '{title}' deleted successfully.")
+            bump_kiosks_screensaver_version(profile, f"Screensaver '{title}' deleted by admin ({request.user.username})")
+            messages.success(request, f"Screensaver '{title}' deleted successfully. Kiosks signaled to sync.")
             return redirect('admin_screensavers')
         elif action == "toggle_active":
             screensaver_id = request.POST.get('screensaver_id')
@@ -2197,7 +2231,8 @@ def admin_screensavers(request):
             ss.is_active = not ss.is_active
             ss.save(update_fields=['is_active'])
             status_label = "activated" if ss.is_active else "deactivated"
-            messages.success(request, f"Screensaver '{ss.title}' has been {status_label}.")
+            bump_kiosks_screensaver_version(ss.kiosk_profile, f"Screensaver '{ss.title}' {status_label} by admin ({request.user.username})")
+            messages.success(request, f"Screensaver '{ss.title}' has been {status_label}. Kiosks signaled to sync.")
             return redirect('admin_screensavers')
 
     # Query filtering
@@ -2313,7 +2348,8 @@ def admin_screensaver_add(request):
                 kiosk_profile=profile,
                 is_active=is_active
             )
-            messages.success(request, f"Screensaver '{screensaver.title}' added successfully.")
+            bump_kiosks_screensaver_version(profile, f"New screensaver '{screensaver.title}' added by admin ({request.user.username})")
+            messages.success(request, f"Screensaver '{screensaver.title}' added successfully. Kiosk sync triggered.")
             return redirect('admin_screensavers')
 
     profiles = KioskProfile.objects.filter(is_active=True)
@@ -2393,7 +2429,8 @@ def admin_screensaver_edit(request, screensaver_id):
                 screensaver.image = new_image
 
             screensaver.save()
-            messages.success(request, f"Screensaver '{screensaver.title}' updated successfully.")
+            bump_kiosks_screensaver_version(screensaver.kiosk_profile, f"Screensaver '{screensaver.title}' updated by admin ({request.user.username})")
+            messages.success(request, f"Screensaver '{screensaver.title}' updated successfully. Kiosk sync triggered.")
             return redirect('admin_screensaver_detail', screensaver_id=screensaver.id)
 
     profiles = KioskProfile.objects.filter(is_active=True)
@@ -2417,8 +2454,10 @@ def admin_screensaver_delete(request, screensaver_id):
 
     screensaver = get_object_or_404(Screensaver, id=screensaver_id)
     title = screensaver.title
+    profile = screensaver.kiosk_profile
     screensaver.delete()
-    messages.success(request, f"Screensaver '{title}' deleted successfully.")
+    bump_kiosks_screensaver_version(profile, f"Screensaver '{title}' deleted by admin ({request.user.username})")
+    messages.success(request, f"Screensaver '{title}' deleted successfully. Kiosks signaled to sync.")
     return redirect('admin_screensavers')
 
 
@@ -2431,7 +2470,8 @@ def admin_screensaver_toggle_active(request, screensaver_id):
     screensaver.is_active = not screensaver.is_active
     screensaver.save(update_fields=['is_active'])
     status_label = "activated" if screensaver.is_active else "deactivated"
-    messages.success(request, f"Screensaver '{screensaver.title}' has been {status_label}.")
+    bump_kiosks_screensaver_version(screensaver.kiosk_profile, f"Screensaver '{screensaver.title}' {status_label} by admin ({request.user.username})")
+    messages.success(request, f"Screensaver '{screensaver.title}' has been {status_label}. Kiosks signaled to sync.")
     return redirect(request.META.get('HTTP_REFERER', 'admin_screensavers'))
 
 

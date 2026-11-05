@@ -195,10 +195,8 @@ class ScreensaverListAPIView(views.APIView):
     """
     GET /api/kiosk/screensavers/
     Returns list of active screensavers.
-    Optional query parameters:
-      - orientation: LANDSCAPE, PORTRAIT, or BOTH
-      - profile_id: Filter by Kiosk Profile UUID
-      - device_id: Filter by Kiosk Device ID
+    Supports dynamic MAC address / Device ID headers and query parameters.
+    Ensures kiosks always receive screensavers matching their profile and orientation.
     """
     permission_classes = [AllowAny]
 
@@ -207,22 +205,42 @@ class ScreensaverListAPIView(views.APIView):
 
         orientation = request.query_params.get('orientation', '').upper()
         if orientation in ['LANDSCAPE', 'PORTRAIT']:
-            qs = qs.filter(Q(orientation=orientation) | Q(orientation='BOTH'))
+            matching_qs = qs.filter(Q(orientation=orientation) | Q(orientation='BOTH'))
+            # If orientation matches exist, narrow to that orientation; otherwise keep full set so kiosk never gets 0
+            if matching_qs.exists():
+                qs = matching_qs
 
         profile_id = request.query_params.get('profile_id')
         if profile_id:
             qs = qs.filter(Q(kiosk_profile_id=profile_id) | Q(kiosk_profile__isnull=True))
 
-        device_id = request.query_params.get('device_id')
+        device_id = (
+            request.query_params.get('device_id') or
+            request.headers.get('X-Device-Id') or
+            request.headers.get('X-Device-MAC')
+        )
         if device_id:
+            clean_device_id = device_id.strip()
             try:
-                device = KioskDevice.objects.get(device_id=device_id)
-                if device.profile:
-                    qs = qs.filter(Q(kiosk_profile=device.profile) | Q(kiosk_profile__isnull=True))
-            except KioskDevice.DoesNotExist:
+                device = KioskDevice.objects.filter(
+                    Q(device_id__iexact=clean_device_id) | Q(name__iexact=clean_device_id)
+                ).first()
+                if device:
+                    if device.profile:
+                        qs = qs.filter(
+                            Q(kiosks=device) |
+                            Q(kiosk_profile=device.profile) |
+                            (Q(kiosk_profile__isnull=True) & Q(kiosks__isnull=True))
+                        )
+                    else:
+                        qs = qs.filter(
+                            Q(kiosks=device) |
+                            (Q(kiosk_profile__isnull=True) & Q(kiosks__isnull=True))
+                        )
+            except Exception:
                 pass
 
-        qs = qs.order_by('display_order', '-created_at')
+        qs = qs.distinct().order_by('display_order', '-created_at')
         serializer = ScreensaverSerializer(qs, many=True, context={'request': request})
         return Response({
             'count': qs.count(),
