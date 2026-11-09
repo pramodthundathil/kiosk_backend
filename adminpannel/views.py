@@ -2181,11 +2181,10 @@ def bump_kiosks_screensaver_version(profile=None, description="Screensaver updat
     """
     Increments desired_content_version on active kiosks so kiosks immediately pull
     the latest screensavers on their next heartbeat / sync cycle.
+    Bumps ALL active kiosks to guarantee screensavers are updated across all terminals.
     """
     try:
         kiosks_qs = KioskDevice.objects.exclude(status=KioskDevice.Status.DISABLED)
-        if profile:
-            kiosks_qs = kiosks_qs.filter(Q(profile=profile) | Q(profile__isnull=True))
 
         count = 0
         for k in kiosks_qs:

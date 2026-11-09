@@ -196,7 +196,7 @@ class ScreensaverListAPIView(views.APIView):
     GET /api/kiosk/screensavers/
     Returns list of active screensavers.
     Supports dynamic MAC address / Device ID headers and query parameters.
-    Ensures kiosks always receive screensavers matching their profile and orientation.
+    Ensures kiosks always receive all screensavers matching their profile, device, or global configuration.
     """
     authentication_classes = [KioskJWTAuthentication]
     permission_classes = [AllowAny]
@@ -204,6 +204,7 @@ class ScreensaverListAPIView(views.APIView):
     def get(self, request):
         qs = Screensaver.objects.filter(is_active=True)
 
+        include_all = request.query_params.get('all') in ['true', '1', 'True']
         profile_id = request.query_params.get('profile_id')
 
         # 1. Resolve requesting kiosk device via JWT, headers, or query parameters
@@ -232,25 +233,33 @@ class ScreensaverListAPIView(views.APIView):
                     pass
 
         # 2. Filter by device-specific assignment & profile (or global/unassigned)
-        if device:
-            if device.profile:
-                qs = qs.filter(
-                    Q(kiosks=device) |
-                    (Q(kiosks__isnull=True) & (Q(kiosk_profile=device.profile) | Q(kiosk_profile__isnull=True)))
-                )
-            else:
-                qs = qs.filter(
-                    Q(kiosks=device) |
-                    (Q(kiosks__isnull=True) & Q(kiosk_profile__isnull=True))
-                )
-        elif profile_id:
-            qs = qs.filter(Q(kiosk_profile_id=profile_id) | Q(kiosk_profile__isnull=True))
+        # If include_all is requested (content sync), provide all active screensavers
+        if not include_all:
+            scoped_qs = qs
+            if device:
+                if device.profile:
+                    scoped_qs = scoped_qs.filter(
+                        Q(kiosks=device) |
+                        (Q(kiosks__isnull=True) & (Q(kiosk_profile=device.profile) | Q(kiosk_profile__isnull=True)))
+                    )
+                else:
+                    scoped_qs = scoped_qs.filter(
+                        Q(kiosks=device) |
+                        (Q(kiosks__isnull=True) & Q(kiosk_profile__isnull=True))
+                    )
+            elif profile_id:
+                scoped_qs = scoped_qs.filter(Q(kiosk_profile_id=profile_id) | Q(kiosk_profile__isnull=True))
+
+            # Only apply scoped filter if it actually contains screensavers; otherwise fall back to all
+            # active screensavers so kiosks are NEVER starved down to 0 or missing slides
+            if scoped_qs.exists():
+                qs = scoped_qs
 
         # 3. Filter by orientation AFTER device/profile scoping:
-        # If matching screensavers exist for THIS kiosk, narrow to that orientation;
+        # If matching screensavers exist for THIS kiosk orientation, narrow to that orientation;
         # otherwise keep full set so kiosk never gets 0 screensavers!
         orientation = request.query_params.get('orientation', '').upper()
-        if orientation in ['LANDSCAPE', 'PORTRAIT']:
+        if orientation in ['LANDSCAPE', 'PORTRAIT'] and not include_all:
             matching_qs = qs.filter(Q(orientation=orientation) | Q(orientation='BOTH'))
             if matching_qs.exists():
                 qs = matching_qs

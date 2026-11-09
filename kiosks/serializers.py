@@ -8,12 +8,13 @@ from content.models import Screensaver
 class ScreensaverSerializer(serializers.ModelSerializer):
     orientation_display = serializers.CharField(source='get_orientation_display', read_only=True)
     image_url = serializers.SerializerMethodField()
+    duration = serializers.IntegerField(source='duration_seconds', read_only=True)
 
     class Meta:
         model = Screensaver
         fields = [
             'id', 'title', 'image', 'image_url', 'orientation', 'orientation_display',
-            'duration_seconds', 'display_order', 'caption', 'description',
+            'duration_seconds', 'duration', 'display_order', 'caption', 'description',
             'is_active', 'created_at', 'updated_at'
         ]
 
@@ -73,16 +74,20 @@ class KioskDeviceSerializer(serializers.ModelSerializer):
         qs = Screensaver.objects.filter(is_active=True)
 
         # Filter by device assignment and profile
+        scoped_qs = qs
         if obj.profile:
-            qs = qs.filter(
+            scoped_qs = scoped_qs.filter(
                 models.Q(kiosks=obj) |
                 (models.Q(kiosks__isnull=True) & (models.Q(kiosk_profile=obj.profile) | models.Q(kiosk_profile__isnull=True)))
             )
         else:
-            qs = qs.filter(
+            scoped_qs = scoped_qs.filter(
                 models.Q(kiosks=obj) |
                 (models.Q(kiosks__isnull=True) & models.Q(kiosk_profile__isnull=True))
             )
+
+        if scoped_qs.exists():
+            qs = scoped_qs
 
         if orientation_filter:
             matching_qs = qs.filter(models.Q(orientation=orientation_filter) | models.Q(orientation='BOTH'))

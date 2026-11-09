@@ -65,19 +65,43 @@ class ProductListAPIView(generics.ListCreateAPIView):
             except (ValueError, TypeError):
                 qs = qs.filter(sub_category__code__iexact=sub_cat_param)
 
-        # 3. Check if authenticated via Kiosk JWT Bearer token
+        # 3. Kiosk Identification for terminal-specific catalog scoping:
         kiosk = getattr(self.request, 'kiosk', None)
+        if not kiosk and hasattr(self.request, 'user'):
+            kiosk = getattr(self.request.user, 'kiosk', None)
 
-        # 4. Check query parameters for kiosk_id or device_id
-        kiosk_id = self.request.query_params.get('kiosk_id')
-        device_id = self.request.query_params.get('device_id')
+        # 4. Check query parameters & request headers for kiosk identity
+        kiosk_id = (
+            self.request.query_params.get('kiosk_id') or
+            self.request.headers.get('X-Kiosk-Id') or
+            self.request.META.get('HTTP_X_KIOSK_ID')
+        )
+        device_id = (
+            self.request.query_params.get('device_id') or
+            self.request.query_params.get('mac_address') or
+            self.request.query_params.get('device_mac') or
+            self.request.headers.get('X-Device-Id') or
+            self.request.headers.get('X-Device-MAC') or
+            self.request.META.get('HTTP_X_DEVICE_ID') or
+            self.request.META.get('HTTP_X_DEVICE_MAC')
+        )
+
+        has_kiosk_param = bool(kiosk or kiosk_id or device_id)
 
         if not kiosk and (kiosk_id or device_id):
             query = Q()
             if kiosk_id:
-                query |= Q(id=kiosk_id)
+                try:
+                    uuid_val = uuid.UUID(str(kiosk_id).strip())
+                    query |= Q(id=uuid_val)
+                except (ValueError, TypeError):
+                    query |= Q(device_id__iexact=kiosk_id) | Q(serial_number__iexact=kiosk_id) | Q(name__iexact=kiosk_id)
             if device_id:
-                query |= Q(device_id__iexact=device_id) | Q(serial_number__iexact=device_id)
+                query |= (
+                    Q(device_id__iexact=device_id) |
+                    Q(serial_number__iexact=device_id) |
+                    Q(name__iexact=device_id)
+                )
             kiosk = KioskDevice.objects.filter(query).first()
 
         if kiosk:
@@ -87,6 +111,11 @@ class ProductListAPIView(generics.ListCreateAPIView):
             ).values_list('parent_id', flat=True)
             all_ids = list(set(list(assigned_ids) + list(parent_ids)))
             return qs.filter(id__in=all_ids).distinct()
+
+        # If request explicitly came from a kiosk device (via token, headers, or query params)
+        # but the kiosk was not found or has no assigned products, do NOT leak all products!
+        if has_kiosk_param:
+            return qs.none()
 
         return qs
 
