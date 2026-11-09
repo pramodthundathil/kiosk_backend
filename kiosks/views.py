@@ -198,47 +198,62 @@ class ScreensaverListAPIView(views.APIView):
     Supports dynamic MAC address / Device ID headers and query parameters.
     Ensures kiosks always receive screensavers matching their profile and orientation.
     """
+    authentication_classes = [KioskJWTAuthentication]
     permission_classes = [AllowAny]
 
     def get(self, request):
         qs = Screensaver.objects.filter(is_active=True)
 
-        orientation = request.query_params.get('orientation', '').upper()
-        if orientation in ['LANDSCAPE', 'PORTRAIT']:
-            matching_qs = qs.filter(Q(orientation=orientation) | Q(orientation='BOTH'))
-            # If orientation matches exist, narrow to that orientation; otherwise keep full set so kiosk never gets 0
-            if matching_qs.exists():
-                qs = matching_qs
-
         profile_id = request.query_params.get('profile_id')
-        if profile_id:
-            qs = qs.filter(Q(kiosk_profile_id=profile_id) | Q(kiosk_profile__isnull=True))
+
+        # 1. Resolve requesting kiosk device via JWT, headers, or query parameters
+        device = getattr(request, 'kiosk', None)
+        if not device and hasattr(request.user, 'kiosk'):
+            device = request.user.kiosk
 
         device_id = (
             request.query_params.get('device_id') or
+            request.query_params.get('mac_address') or
+            request.query_params.get('kiosk_id') or
             request.headers.get('X-Device-Id') or
             request.headers.get('X-Device-MAC')
         )
-        if device_id:
-            clean_device_id = device_id.strip()
-            try:
-                device = KioskDevice.objects.filter(
-                    Q(device_id__iexact=clean_device_id) | Q(name__iexact=clean_device_id)
-                ).first()
-                if device:
-                    if device.profile:
-                        qs = qs.filter(
-                            Q(kiosks=device) |
-                            Q(kiosk_profile=device.profile) |
-                            (Q(kiosk_profile__isnull=True) & Q(kiosks__isnull=True))
-                        )
-                    else:
-                        qs = qs.filter(
-                            Q(kiosks=device) |
-                            (Q(kiosk_profile__isnull=True) & Q(kiosks__isnull=True))
-                        )
-            except Exception:
-                pass
+        if not device and device_id:
+            clean_device_id = str(device_id).strip()
+            device = KioskDevice.objects.filter(
+                Q(device_id__iexact=clean_device_id) |
+                Q(serial_number__iexact=clean_device_id) |
+                Q(name__iexact=clean_device_id)
+            ).first()
+            if not device:
+                try:
+                    device = KioskDevice.objects.filter(id=clean_device_id).first()
+                except Exception:
+                    pass
+
+        # 2. Filter by device-specific assignment & profile (or global/unassigned)
+        if device:
+            if device.profile:
+                qs = qs.filter(
+                    Q(kiosks=device) |
+                    (Q(kiosks__isnull=True) & (Q(kiosk_profile=device.profile) | Q(kiosk_profile__isnull=True)))
+                )
+            else:
+                qs = qs.filter(
+                    Q(kiosks=device) |
+                    (Q(kiosks__isnull=True) & Q(kiosk_profile__isnull=True))
+                )
+        elif profile_id:
+            qs = qs.filter(Q(kiosk_profile_id=profile_id) | Q(kiosk_profile__isnull=True))
+
+        # 3. Filter by orientation AFTER device/profile scoping:
+        # If matching screensavers exist for THIS kiosk, narrow to that orientation;
+        # otherwise keep full set so kiosk never gets 0 screensavers!
+        orientation = request.query_params.get('orientation', '').upper()
+        if orientation in ['LANDSCAPE', 'PORTRAIT']:
+            matching_qs = qs.filter(Q(orientation=orientation) | Q(orientation='BOTH'))
+            if matching_qs.exists():
+                qs = matching_qs
 
         qs = qs.distinct().order_by('display_order', '-created_at')
         serializer = ScreensaverSerializer(qs, many=True, context={'request': request})

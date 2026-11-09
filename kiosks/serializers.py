@@ -71,14 +71,26 @@ class KioskDeviceSerializer(serializers.ModelSerializer):
                 orientation_filter = 'PORTRAIT'
         
         qs = Screensaver.objects.filter(is_active=True)
-        if orientation_filter:
-            qs = qs.filter(models.Q(orientation=orientation_filter) | models.Q(orientation='BOTH'))
-        
-        # Filter by profile if set
-        if obj.profile:
-            qs = qs.filter(models.Q(kiosk_profile=obj.profile) | models.Q(kiosk_profile__isnull=True))
 
-        serializer = ScreensaverSerializer(qs.order_by('display_order', '-created_at'), many=True, context=self.context)
+        # Filter by device assignment and profile
+        if obj.profile:
+            qs = qs.filter(
+                models.Q(kiosks=obj) |
+                (models.Q(kiosks__isnull=True) & (models.Q(kiosk_profile=obj.profile) | models.Q(kiosk_profile__isnull=True)))
+            )
+        else:
+            qs = qs.filter(
+                models.Q(kiosks=obj) |
+                (models.Q(kiosks__isnull=True) & models.Q(kiosk_profile__isnull=True))
+            )
+
+        if orientation_filter:
+            matching_qs = qs.filter(models.Q(orientation=orientation_filter) | models.Q(orientation='BOTH'))
+            # If orientation matches exist for this kiosk, narrow; otherwise keep all so terminal is never blank
+            if matching_qs.exists():
+                qs = matching_qs
+
+        serializer = ScreensaverSerializer(qs.distinct().order_by('display_order', '-created_at'), many=True, context=self.context)
         return serializer.data
 
 class KioskRegistrationSerializer(serializers.Serializer):

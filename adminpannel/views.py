@@ -2183,7 +2183,7 @@ def bump_kiosks_screensaver_version(profile=None, description="Screensaver updat
     the latest screensavers on their next heartbeat / sync cycle.
     """
     try:
-        kiosks_qs = KioskDevice.objects.filter(is_active=True)
+        kiosks_qs = KioskDevice.objects.exclude(status=KioskDevice.Status.DISABLED)
         if profile:
             kiosks_qs = kiosks_qs.filter(Q(profile=profile) | Q(profile__isnull=True))
 
